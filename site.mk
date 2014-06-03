@@ -1,3 +1,8 @@
+##	gluon site.mk makefile example
+
+## GLUON_SITE_PACKAGES
+#		specify gluon/openwrt packages to include here
+
 GLUON_SITE_PACKAGES := \
 	gluon-alfred \
 	gluon-autoupdater \
@@ -15,6 +20,12 @@ GLUON_SITE_PACKAGES := \
 	iptables \
 	haveged
 
+
+## DEFAULT_GLUON_RELEASE
+#		version string to use for images
+#		gluon relies on
+#			opkg compare-versions "$1" '>>' "$2"
+#		to decide if a version is newer or not.
 
 DEFAULT_GLUON_RELEASE := 0.4+0-exp$(shell date '+%Y%m%d')
 
