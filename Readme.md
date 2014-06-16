@@ -10,3 +10,4 @@ Other site.conf Repositories:
 * [Mainz](https://github.com/Freifunk-Mainz/site-ffmz)
 * Oldenburg: [gitphp](http://git.freifunk-ol.de/projects/ffol/gluon-siteconf.git) / [redmine](https://ticket.freifunk-ol.de/projects/siteconf-ffol/repository)
 * [Paderborn](https://git.c3pb.de/freifunk-pb/site-ffpb)
+* [Greifswald](https://github.com/lorenzo-greifswald/site-ffhgw)
