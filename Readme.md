@@ -11,6 +11,7 @@ Pull requests solving the issues are welcome.
 ## site-ff*
 
 * [site-ffhh](https://github.com/freifunkhamburg/site-ffhh) (Hamburg)
+* [site-ffhgw](https://github.com/lorenzo-greifswald/site-ffhgw) (Greifswald)
 * [site-ffhl](https://github.com/freifunk-gluon/site-ffhl) (Lübeck)
 * [site-ffmd](https://github.com/FreifunkMD/site-ffmd) (Magdeburg)
 * [site-ffmz](https://github.com/Freifunk-Mainz/site-ffmz) (Mainz)
