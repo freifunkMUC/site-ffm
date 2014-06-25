@@ -10,6 +10,7 @@ Pull requests solving the issues are welcome.
 
 ## site-ff*
 
+* [site-ffhb](https://github.com/FreifunkBremen/gluon-site-ffhb) (Bremen)
 * [site-ffhh](https://github.com/freifunkhamburg/site-ffhh) (Hamburg)
 * [site-ffhgw](https://github.com/lorenzo-greifswald/site-ffhgw) (Greifswald)
 * [site-ffhl](https://github.com/freifunk-gluon/site-ffhl) (Lübeck)
