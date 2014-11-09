@@ -7,12 +7,18 @@ JOBS ?= $(shell cat /proc/cpuinfo | grep processor | wc -l)
 _GIT_DESCRIBE = $(shell git describe --tags 2>&1)
 ifneq (,${_GIT_DESCRIBE})
   GLUON_RELEASE := ${_GIT_DESCRIBE}
+  GLUON_BRANCH ?= stable
+else
+  GLUON_BRANCH ?= nightly
 endif
 
 all: build
 
 build: gluon-prepare
-	(cd ${GLUON_BUILD_DIR} && make update && make -j ${JOBS})
+	cd ${GLUON_BUILD_DIR} \
+	    && make update \
+	    && make -j ${JOBS} \
+	    && make manifest
 
 ${GLUON_BUILD_DIR}:
 	git clone ${GLUON_GIT_URL} ${GLUON_BUILD_DIR}
