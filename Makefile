@@ -1,6 +1,6 @@
 GLUON_BUILD_DIR := gluon-build
 GLUON_GIT_URL := git://github.com/freifunk-gluon/gluon.git
-GLUON_GIT_REF := a8b7c39078aa70291cf5af022f520b624b8f58aa
+GLUON_GIT_REF := 948fcef5dbf33a841aafa74a28ae2fb190c26209
 
 JOBS ?= $(shell cat /proc/cpuinfo | grep processor | wc -l)
 
