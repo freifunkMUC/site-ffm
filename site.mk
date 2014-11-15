@@ -23,7 +23,7 @@ GLUON_SITE_PACKAGES := \
 	haveged
 
 
-DEFAULT_GLUON_RELEASE := nightly~$(shell date '+%Y%m%d')~$(shell git describe --always --abbrev)
+DEFAULT_GLUON_RELEASE := nightly~$(shell date '+%Y%m%d')~$(shell cd ../../../.. && git describe --always --abbrev=8)
 
 # Allow overriding the release number from the command line
 GLUON_RELEASE ?= $(DEFAULT_GLUON_RELEASE)
