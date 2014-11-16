@@ -21,7 +21,7 @@ all: build
 build: gluon-prepare
 	echo '${GLUON_RELEASE} (${GLUON_BRANCH})'
 	${GLUON_MAKE} update
-	${GLUON_MAKE} images
+	${GLUON_MAKE}
 
 manifest: gluon-prepare
 	${GLUON_MAKE} manifest
