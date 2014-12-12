@@ -30,7 +30,7 @@ ${GLUON_BUILD_DIR}:
 	git clone ${GLUON_GIT_URL} ${GLUON_BUILD_DIR}
 
 gluon-prepare: ${GLUON_BUILD_DIR}
-	(cd ${GLUON_BUILD_DIR} && git checkout -q ${GLUON_GIT_REF})
+	(cd ${GLUON_BUILD_DIR} && git fetch && git checkout -q ${GLUON_GIT_REF})
 	ln -sfT .. ${GLUON_BUILD_DIR}/site
 
 clean:
