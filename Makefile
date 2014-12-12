@@ -1,6 +1,6 @@
 GLUON_BUILD_DIR := gluon-build
 GLUON_GIT_URL := git://github.com/freifunk-gluon/gluon.git
-GLUON_GIT_REF := 08ecab23dec1e43b02fdca4caa86d2b7940b2f12
+GLUON_GIT_REF := 3360dcb3090e7da824f787115b8fc0b4335583b9
 
 _GIT_DESCRIBE = $(shell git describe --tags 2>/dev/null)
 ifneq (,${_GIT_DESCRIBE})
