@@ -1,5 +1,8 @@
 # Freifunk München Firmware Changelog
 
+## 2015.1
+ - Updated to Gluon 2014.4 release
+
 ## snapshot~20141119
  - fixed ipv4-prefix to /16 netmask
  - changed gateways ips to domain-names
