@@ -18,17 +18,22 @@ GLUON_MAKE := ${MAKE} -j ${JOBS} -C ${GLUON_BUILD_DIR} \
                       GLUON_RELEASE=${GLUON_RELEASE} \
                       GLUON_BRANCH=${GLUON_BRANCH}
 
-all: build manifest
+all: gluon-clean
+	make manifest
+	make gluon-clean
 
 build: gluon-prepare
-	echo '${GLUON_RELEASE} (${GLUON_BRANCH})'
 	${GLUON_MAKE}
 
-manifest: gluon-prepare
+images: build
+	make images-clean
+	mv ${GLUON_BUILD_DIR}/images .
+
+manifest: images
 	${GLUON_MAKE} manifest
 
-sign: manifest
-	gluon-build/contrib/sign.sh ${SECRET_KEY_FILE} gluon-build/images/sysupgrade/${GLUON_BRANCH}.manifest
+sign: gluon-prepare manifest
+	${GLUON_BUILD_DIR}/contrib/sign.sh ${SECRET_KEY_FILE} images/sysupgrade/${GLUON_BRANCH}.manifest
 
 ${GLUON_BUILD_DIR}:
 	git clone ${GLUON_GIT_URL} ${GLUON_BUILD_DIR}
@@ -38,5 +43,10 @@ gluon-prepare: ${GLUON_BUILD_DIR}
 	ln -sfT .. ${GLUON_BUILD_DIR}/site
 	${GLUON_MAKE} update
 
-clean:
+gluon-clean:
 	rm -rf ${GLUON_BUILD_DIR}
+
+images-clean:
+	rm -rf images
+
+clean: gluon-clean images-clean
