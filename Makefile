@@ -10,6 +10,7 @@ ifneq (,${_GIT_DESCRIBE})
   GLUON_BRANCH := stable
 else
   GLUON_RELEASE ?= snapshot~$(shell date '+%Y%m%d')~$(shell git describe --always)
+  GLUON_BRANCH := experimental
 endif
 
 JOBS ?= $(shell cat /proc/cpuinfo | grep processor | wc -l)
