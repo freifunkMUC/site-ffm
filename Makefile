@@ -20,14 +20,14 @@ GLUON_MAKE := ${MAKE} -j ${JOBS} -C ${GLUON_BUILD_DIR} \
                       GLUON_BRANCH=${GLUON_BRANCH}
 
 all: gluon-clean
-	make manifest
-	make gluon-clean
+	${MAKE} manifest
+	${MAKE} gluon-clean
 
 build: gluon-prepare
 	${GLUON_MAKE}
 
 images: build
-	make images-clean
+	${MAKE} images-clean
 	mv ${GLUON_BUILD_DIR}/images .
 
 manifest: images
