@@ -4,7 +4,7 @@
  - Switched to batman-adv compat version 15
  - Changed channel to 6 with HT20 on 2.4GHz
 
-## 2015.1
+## 2015.1 (NOT RELEASED YET)
  - Updated to Gluon 2014.4 release
 
 ## snapshot~20141119
