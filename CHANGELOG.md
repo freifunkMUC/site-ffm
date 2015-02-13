@@ -2,6 +2,7 @@
 
 ## 2015.1 (NOT RELEASED YET)
  - Updated to Gluon 2014.4 release
+ - Autoupdater was previously disabled per default, now it is enabled
 
 ## snapshot~20141119
  - fixed ipv4-prefix to /16 netmask
