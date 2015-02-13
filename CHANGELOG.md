@@ -1,6 +1,6 @@
 # Freifunk München Firmware Changelog
 
-## 2015.1
+## 2015.1 (NOT RELEASED YET)
  - Updated to Gluon 2014.4 release
 
 ## snapshot~20141119
