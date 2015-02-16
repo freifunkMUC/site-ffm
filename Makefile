@@ -26,20 +26,17 @@ all: gluon-clean
 build: gluon-prepare
 	${GLUON_MAKE}
 
-images: build
-	${MAKE} images-clean
+manifest: build
+	${GLUON_MAKE} manifest
 	mv ${GLUON_BUILD_DIR}/images .
 
-manifest: images
-	${GLUON_MAKE} manifest
-
-sign: gluon-prepare manifest
+sign: manifest
 	${GLUON_BUILD_DIR}/contrib/sign.sh ${SECRET_KEY_FILE} images/sysupgrade/${GLUON_BRANCH}.manifest
 
 ${GLUON_BUILD_DIR}:
 	git clone ${GLUON_GIT_URL} ${GLUON_BUILD_DIR}
 
-gluon-prepare: ${GLUON_BUILD_DIR}
+gluon-prepare: images-clean ${GLUON_BUILD_DIR}
 	(cd ${GLUON_BUILD_DIR} && git fetch origin && git checkout -q ${GLUON_GIT_REF})
 	ln -sfT .. ${GLUON_BUILD_DIR}/site
 	${GLUON_MAKE} update
