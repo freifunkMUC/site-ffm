@@ -1,5 +1,9 @@
 # Freifunk München Firmware Changelog
 
+## v2015.1-altdorf
+ - Changed SSID to altdorf.freifunk.net
+ - Changed Autoupdater URLs for altdorf firmware
+
 ## v2015.1
  - Updated to Gluon 2014.4 release
  - Autoupdater
