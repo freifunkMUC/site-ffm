@@ -1,5 +1,9 @@
 # Freifunk München Firmware Changelog
 
+## v2015.2
+ - Switched to batman-adv compat version 15
+ - Changed channel to 6 with HT20 on 2.4GHz
+
 ## v2015.1
  - Updated to Gluon 2014.4 release
  - Autoupdater
