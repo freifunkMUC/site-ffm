@@ -17,9 +17,17 @@ GLUON_MAKE := ${MAKE} -j ${JOBS} -C ${GLUON_BUILD_DIR} \
                       GLUON_RELEASE=${GLUON_RELEASE} \
                       GLUON_BRANCH=${GLUON_BRANCH}
 
-all: gluon-clean
+all: info
+	${MAKE} gluon-clean
 	${MAKE} manifest
 	${MAKE} gluon-clean
+
+info:
+	@echo
+	@echo '#########################'
+	@echo '# FFMUC Firmare build'
+	@echo '# Building release ${GLUON_RELEASE} for branch ${GLUON_BRANCH}'
+	@echo
 
 build: gluon-prepare
 	${GLUON_MAKE}
