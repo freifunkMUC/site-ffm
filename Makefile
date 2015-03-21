@@ -4,12 +4,10 @@ GLUON_GIT_REF := 754e4af1d738ebb84fd63bd98d6b606613202898
 
 SECRET_KEY_FILE ?= ${HOME}/.gluon-secret-key
 
-_GIT_DESCRIBE = $(shell git describe --tags 2>/dev/null)
-ifneq (,${_GIT_DESCRIBE})
-  GLUON_RELEASE := ${_GIT_DESCRIBE}
+GLUON_RELEASE := $(shell git describe --tags 2>/dev/null)
+ifneq (,$(shell git describe --exact-match --tags 2>/dev/null))
   GLUON_BRANCH := stable
 else
-  GLUON_RELEASE ?= snapshot~$(shell date '+%Y%m%d')~$(shell git describe --always)
   GLUON_BRANCH := experimental
 endif
 
