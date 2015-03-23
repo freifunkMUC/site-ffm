@@ -1,0 +1,4 @@
+GLUON_SITE_FEEDS='ffmuc_packages'
+
+PACKAGES_FFMUC_PACKAGES_REPO=https://github.com/freifunkMUC/gluon-packages.git
+PACKAGES_FFMUC_PACKAGES_COMMIT=c931b5dd497d3e8495dc934faacc71a838c23550
