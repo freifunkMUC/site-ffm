@@ -1,8 +1,22 @@
 # Freifunk München Firmware Changelog
 
 ## v2015.2
+ - Updated to new upstream gluon: 52698e62bac2ec0f8764b12cf437040528e77efb
  - Switched to batman-adv compat version 15
  - Changed channel to 6 with HT20 on 2.4GHz
+ - Added FFMuc custom gluon packages with ebtables rules:
+   - mcast-drop-non-site to prohibit arp traffic except 10.8.0.0/16
+   - mcast-drop-arp to drop arp traffic from/to 0.0.0.0
+   - mcast-allow-cjdns to allow cjdns multicast traffic
+ - Use new gateways with DNS names
+ - Changed default download/upload traffic shaping to 12.000/1.200 kbit/s
+ - Removed keyformular note on end of luci configuration, as we're now
+   blacklisting keys instead of whitelisting
+ - Added information about liquid feedback on end of luci configuration
+ - Use improved version naming scheme for autoupdater compatibility with
+   intermediate versions
+ - Use internal NTP server 0.ntp.ffmuc.net
+ - Connections from nodes to gateways only over IPv4 for now (MTU issues)
 
 ## v2015.1
  - Updated to Gluon 2014.4 release
