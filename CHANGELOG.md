@@ -1,9 +1,7 @@
 # Freifunk München Firmware Changelog
 
 ## v2015.2
- - Updated to new upstream gluon: 52698e62bac2ec0f8764b12cf437040528e…
-…77efb
-
+ - Updated to new upstream gluon: 52698e62bac2ec0f8764b12cf437040528e77efb
  - Switched to batman-adv compat version 15
  - Changed channel to 6 with HT20 on 2.4GHz
  - Added FFMuc custom gluon packages with ebtables rules:
