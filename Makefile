@@ -14,8 +14,8 @@ endif
 JOBS ?= $(shell cat /proc/cpuinfo | grep processor | wc -l)
 
 GLUON_MAKE := ${MAKE} -j ${JOBS} -C ${GLUON_BUILD_DIR} \
-                      GLUON_RELEASE=${GLUON_RELEASE} \
-                      GLUON_BRANCH=${GLUON_BRANCH}
+			GLUON_RELEASE=${GLUON_RELEASE} \
+			GLUON_BRANCH=${GLUON_BRANCH}
 
 all: info
 	${MAKE} gluon-clean
@@ -30,7 +30,10 @@ info:
 	@echo
 
 build: gluon-prepare
-	${GLUON_MAKE}
+	${GLUON_MAKE} GLUON_TARGET=ar71xx-generic
+	${GLUON_MAKE} GLUON_TARGET=ar71xx-nand
+	${GLUON_MAKE} GLUON_TARGET=mpc85xx-generic
+	${GLUON_MAKE} GLUON_TARGET=x86-kvm_guest
 
 manifest: build
 	${GLUON_MAKE} manifest
