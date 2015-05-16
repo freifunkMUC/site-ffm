@@ -4,6 +4,12 @@ GLUON_GIT_REF := v2015.1
 
 SECRET_KEY_FILE ?= ${HOME}/.gluon-secret-key
 
+GLUON_TARGETS ?= \
+	ar71xx-generic \
+	ar71xx-nand \
+	mpc85xx-generic \
+	x86-kvm_guest
+
 GLUON_RELEASE := $(shell git describe --tags 2>/dev/null)
 ifneq (,$(shell git describe --exact-match --tags 2>/dev/null))
   GLUON_BRANCH := stable
@@ -28,10 +34,10 @@ info:
 	@echo
 
 build: gluon-prepare
-	${GLUON_MAKE} GLUON_TARGET=ar71xx-generic
-	${GLUON_MAKE} GLUON_TARGET=ar71xx-nand
-	${GLUON_MAKE} GLUON_TARGET=mpc85xx-generic
-	${GLUON_MAKE} GLUON_TARGET=x86-kvm_guest
+	for target in ${GLUON_TARGETS}; do \
+		echo ""Building target $$target""; \
+		${GLUON_MAKE} GLUON_TARGET="$$target"; \
+	done
 
 manifest: build
 	${GLUON_MAKE} manifest
