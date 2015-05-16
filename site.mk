@@ -34,3 +34,6 @@ DEFAULT_GLUON_RELEASE := snapshot~$(shell date '+%Y%m%d')
 GLUON_RELEASE ?= $(DEFAULT_GLUON_RELEASE)
 
 GLUON_PRIORITY ?= 0
+
+# Languages to include
+GLUON_LANGS ?= en de
