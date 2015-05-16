@@ -18,9 +18,7 @@ GLUON_MAKE := ${MAKE} -j ${JOBS} -C ${GLUON_BUILD_DIR} \
 			GLUON_BRANCH=${GLUON_BRANCH}
 
 all: info
-	${MAKE} gluon-clean
 	${MAKE} manifest
-	${MAKE} gluon-clean
 
 info:
 	@echo
