@@ -1,5 +1,15 @@
 # Freifunk München Firmware Changelog
 
+## v2015.4
+ - Updated to Gluon 2015.1
+   - More supported architectures and router models are available, including x86
+ - Setup Mode
+   - A new wifi configuration page is available to disable client and mesh
+     networks on 2.4 & 5GHz indiviually
+   - Mesh on WAN can now be configured and is enabled by default
+   - Internationalization for German and English is available and will
+     be autodetected depending on the browser setting
+
 ## v2015.3
  - Add 4 new gateways as placeholders (not all are and will be active immediately)
  - Integrated no_rebroadcast fix on mesh-vpn from Gluon Upstream
