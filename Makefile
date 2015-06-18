@@ -47,7 +47,10 @@ ${GLUON_BUILD_DIR}:
 	git clone ${GLUON_GIT_URL} ${GLUON_BUILD_DIR}
 
 gluon-prepare: images-clean ${GLUON_BUILD_DIR}
-	(cd ${GLUON_BUILD_DIR} && git fetch origin && git checkout -q ${GLUON_GIT_REF})
+	(cd ${GLUON_BUILD_DIR} \
+	  && git remote set-url origin ${GLUON_GIT_URL} \
+	  && git fetch origin \
+	  && git checkout -q ${GLUON_GIT_REF})
 	ln -sfT .. ${GLUON_BUILD_DIR}/site
 	${GLUON_MAKE} update
 
