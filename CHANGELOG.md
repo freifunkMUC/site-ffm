@@ -1,6 +1,12 @@
 # Freifunk München Firmware Changelog
 
-## v2015.4
+## v2015.5
+ - Updated to Gluon 2015.1.1
+   - Fixes some problems with mesh ono LAN setups
+ - x86 images now support two network interfaces, eth0 for LAN and eth1 for WAN
+ - Mesh on WAN is disabled by default
+
+## v2015.4 (never released)
  - Updated to Gluon 2015.1
    - More supported architectures and router models are available, including x86
  - Setup Mode
