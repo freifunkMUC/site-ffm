@@ -2,11 +2,13 @@
 
 ## v2015.5
  - Updated to Gluon 2015.1.1
-   - Fixes some problems with mesh ono LAN setups
+   - Fixes some problems with mesh on LAN setups
  - x86 images now support two network interfaces, eth0 for LAN and eth1 for WAN
  - Mesh on WAN is disabled by default
+ - VPN connection limit was decreased from 2 to 1 to divide the broadcast traffic
+   into half and take unnecessary load from overloaded gateways
 
-## v2015.4 (never released)
+## v2015.4 [never released]
  - Updated to Gluon 2015.1
    - More supported architectures and router models are available, including x86
  - Setup Mode
