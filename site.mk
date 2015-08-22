@@ -1,5 +1,5 @@
 GLUON_SITE_PACKAGES := \
-	gluon-mesh-babel \
+	gluon-mesh-batman-adv-15 \
 	gluon-alfred \
 	gluon-announced \
 	gluon-autoupdater \
@@ -23,7 +23,10 @@ GLUON_SITE_PACKAGES := \
 	gluon-status-page \
 	iwinfo \
 	iptables \
-	haveged
+	haveged \
+	gluon-ebtables-filter-arp-ffmuc \
+	gluon-ebtables-filter-multicast-ffmuc
+
 
 DEFAULT_GLUON_RELEASE := snapshot~$(shell date '+%Y%m%d')
 
