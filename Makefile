@@ -34,8 +34,7 @@ info:
 	@echo '# Building release ${GLUON_RELEASE} for branch ${GLUON_BRANCH}'
 	@echo
 
-build: clean
-	gluon-prepare
+build: gluon-prepare
 	for target in ${GLUON_TARGETS}; do \
 		echo ""Building target $$target""; \
 		${GLUON_MAKE} GLUON_TARGET="$$target"; \
@@ -51,7 +50,7 @@ sign: manifest
 ${GLUON_BUILD_DIR}:
 	git clone ${GLUON_GIT_URL} ${GLUON_BUILD_DIR}
 
-gluon-prepare: images-clean ${GLUON_BUILD_DIR}
+gluon-prepare: gluon-clean images-clean ${GLUON_BUILD_DIR}
 	(cd ${GLUON_BUILD_DIR} \
 	  && git remote set-url origin ${GLUON_GIT_URL} \
 	  && git fetch origin \
