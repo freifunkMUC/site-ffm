@@ -34,8 +34,8 @@ info:
 	@echo '# Building release ${GLUON_RELEASE} for branch ${GLUON_BRANCH}'
 	@echo
 
-build: clean 
-  gluon-prepare
+build: clean
+	gluon-prepare
 	for target in ${GLUON_TARGETS}; do \
 		echo ""Building target $$target""; \
 		${GLUON_MAKE} GLUON_TARGET="$$target"; \
