@@ -30,7 +30,7 @@ all: info
 info:
 	@echo
 	@echo '#########################'
-	@echo '# FFMUC Firmare build'
+	@echo '# FFMUC Firmware build'
 	@echo '# Building release ${GLUON_RELEASE} for branch ${GLUON_BRANCH}'
 	@echo
 
