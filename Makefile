@@ -49,7 +49,7 @@ sign: manifest
 ${GLUON_BUILD_DIR}:
 	git clone ${GLUON_GIT_URL} ${GLUON_BUILD_DIR}
 
-gluon-prepare: gluon-clean images-clean ${GLUON_BUILD_DIR}
+gluon-prepare: images-clean ${GLUON_BUILD_DIR}
 	(cd ${GLUON_BUILD_DIR} \
 	  && git remote set-url origin ${GLUON_GIT_URL} \
 	  && git fetch origin \
