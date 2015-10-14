@@ -2,6 +2,7 @@
 
 ## v2015.6.1
  * Added support of site selection in config mode
+ * Switch autoupdater URL back to main firmware repo path
 
 ## v2015.6
  - Updated to Gluon 2015.1.2
