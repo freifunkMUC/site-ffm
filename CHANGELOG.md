@@ -1,5 +1,9 @@
 # Freifunk München Firmware Changelog
 
+## v2015.6.1
+ * Added support of site selection in config mode
+ * Switch autoupdater URL back to main firmware repo path
+
 ## v2015.6
  - Updated to Gluon 2015.1.2
    - Changes: https://gluon.readthedocs.org/en/v2015.1.2/releases/v2015.1.2.html
