@@ -1,5 +1,8 @@
 # Freifunk München Firmware Changelog
 
+## v2015.6.2
+ * Bugfix build for welcome version
+
 ## v2015.6.1
  * Added support of site selection in config mode
  * Switch autoupdater URL back to main firmware repo path
