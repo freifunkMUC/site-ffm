@@ -1,12 +1,14 @@
 GLUON_BUILD_DIR := gluon-build
-GLUON_GIT_URL := https://github.com/freifunk-gluon/gluon.git
-GLUON_GIT_REF := v2015.1.1
+GLUON_GIT_URL := https://github.com/freifunkMUC/gluon.git
+GLUON_GIT_REF := 6490cb34142ff75a500aa64b248c8fa32fec0042
 
 SECRET_KEY_FILE ?= ${HOME}/.gluon-secret-key
 
 GLUON_TARGETS ?= \
 	ar71xx-generic \
 	ar71xx-nand \
+	mpc85xx-generic \
+	x86-generic \
 	x86-kvm_guest
 
 GLUON_RELEASE := $(shell git describe --tags 2>/dev/null)
@@ -16,7 +18,9 @@ else
   GLUON_BRANCH := experimental
 endif
 
-GLUON_MAKE := ${MAKE} -C ${GLUON_BUILD_DIR} \
+JOBS ?= $(shell cat /proc/cpuinfo | grep processor | wc -l)
+
+GLUON_MAKE := ${MAKE} -j ${JOBS} -C ${GLUON_BUILD_DIR} \
 			GLUON_RELEASE=${GLUON_RELEASE} \
 			GLUON_BRANCH=${GLUON_BRANCH}
 
@@ -26,7 +30,7 @@ all: info
 info:
 	@echo
 	@echo '#########################'
-	@echo '# FFMUC Firmare build'
+	@echo '# FFMUC Firmware build'
 	@echo '# Building release ${GLUON_RELEASE} for branch ${GLUON_BRANCH}'
 	@echo
 
