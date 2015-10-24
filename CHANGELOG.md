@@ -1,5 +1,8 @@
 # Freifunk München Firmware Changelog
 
+## v2015.7
+ * New stable unified firmware for all segments with site-select feature
+
 ## v2015.6.2
  * Bugfix build for welcome version
 
