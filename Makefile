@@ -42,15 +42,15 @@ build: gluon-prepare
 
 manifest: build
 	${GLUON_MAKE} manifest
-	mv ${GLUON_BUILD_DIR}/images .
+	mv ${GLUON_BUILD_DIR}/output .
 
 sign: manifest
-	${GLUON_BUILD_DIR}/contrib/sign.sh ${SECRET_KEY_FILE} images/sysupgrade/${GLUON_BRANCH}.manifest
+	${GLUON_BUILD_DIR}/contrib/sign.sh ${SECRET_KEY_FILE} output/images/sysupgrade/${GLUON_BRANCH}.manifest
 
 ${GLUON_BUILD_DIR}:
 	git clone ${GLUON_GIT_URL} ${GLUON_BUILD_DIR}
 
-gluon-prepare: images-clean ${GLUON_BUILD_DIR}
+gluon-prepare: output-clean ${GLUON_BUILD_DIR}
 	(cd ${GLUON_BUILD_DIR} \
 	  && git remote set-url origin ${GLUON_GIT_URL} \
 	  && git fetch origin \
@@ -61,7 +61,7 @@ gluon-prepare: images-clean ${GLUON_BUILD_DIR}
 gluon-clean:
 	rm -rf ${GLUON_BUILD_DIR}
 
-images-clean:
-	rm -rf images
+output-clean:
+	rm -rf output
 
-clean: gluon-clean images-clean
+clean: gluon-clean output-clean
