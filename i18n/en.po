@@ -17,6 +17,7 @@ msgstr ""
 
 msgid "gluon-config-mode:pubkey"
 msgstr ""
+" "
 
 msgid "gluon-config-mode:reboot"
 msgstr ""
