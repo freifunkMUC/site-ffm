@@ -1,6 +1,6 @@
 GLUON_BUILD_DIR := gluon-build
 GLUON_GIT_URL := https://github.com/freifunk-gluon/gluon.git
-GLUON_GIT_REF := 86bd5a1da5afcf02b45df2c8ea93c93f2e8676a2
+GLUON_GIT_REF := c456fb231f7d9bce29017e828b0f3dede96cd351
 
 SECRET_KEY_FILE ?= ${HOME}/.gluon-secret-key
 
@@ -42,15 +42,15 @@ build: gluon-prepare
 
 manifest: build
 	${GLUON_MAKE} manifest
-	mv ${GLUON_BUILD_DIR}/images .
+	mv ${GLUON_BUILD_DIR}/output .
 
 sign: manifest
-	${GLUON_BUILD_DIR}/contrib/sign.sh ${SECRET_KEY_FILE} images/sysupgrade/${GLUON_BRANCH}.manifest
+	${GLUON_BUILD_DIR}/contrib/sign.sh ${SECRET_KEY_FILE} output/images/sysupgrade/${GLUON_BRANCH}.manifest
 
 ${GLUON_BUILD_DIR}:
 	git clone ${GLUON_GIT_URL} ${GLUON_BUILD_DIR}
 
-gluon-prepare: images-clean ${GLUON_BUILD_DIR}
+gluon-prepare: output-clean ${GLUON_BUILD_DIR}
 	(cd ${GLUON_BUILD_DIR} \
 	  && git remote set-url origin ${GLUON_GIT_URL} \
 	  && git fetch origin \
@@ -61,7 +61,7 @@ gluon-prepare: images-clean ${GLUON_BUILD_DIR}
 gluon-clean:
 	rm -rf ${GLUON_BUILD_DIR}
 
-images-clean:
-	rm -rf images
+output-clean:
+	rm -rf output
 
-clean: gluon-clean images-clean
+clean: gluon-clean output-clean
