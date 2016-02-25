@@ -1,5 +1,17 @@
 # Freifunk München Firmware Changelog
 
+## v2016.1 (not released yet)
+ - Updated to Gluon v2016.1
+   - Changes: https://gluon.readthedocs.org/en/v2016.1/releases/v2016.1.html
+   - FFMuc Fork contains additionally:
+     - Backport of Futro support (d5f9cd07a72f5cac52f0487db1283569b80a34f3)
+     - mesh_no_rebroadcast for mesh-on-wan (8b66da95f1887fc6068a6e9d6b6494c2ff4d2fb4)
+ - site.conf
+   - disabled IPv4-only fastd
+   - Changed MTU size to 1280
+ - site.mk
+   - added USB support for various devices 
+ 
 ## v2015.7
  * New stable unified firmware for all segments with site-select feature
  * Raised required signatures for stable release to 3
