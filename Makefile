@@ -8,6 +8,7 @@ GLUON_TARGETS ?= \
 	ar71xx-generic \
 	ar71xx-nand \
 	mpc85xx-generic \
+	x86-64 \
 	x86-generic \
 	x86-kvm_guest
 
