@@ -1,10 +1,13 @@
 # Freifunk München Firmware Changelog
 
 ## v2016.1 (not released yet)
- - Updated to Gluon v2016.1.1
+ - Updated to Gluon v2016.1.1 (tecff fork)
    - Changes:
      - https://gluon.readthedocs.org/en/v2016.1/releases/v2016.1.html
      - https://gluon.readthedocs.org/en/v2016.1.1/releases/v2016.1.html
+     - Futro support (d5f9cd07a72f5cac52f0487db1283569b80a34f3)
+     - mesh_no_rebroadcast for mesh-on-wan (8b66da95f1887fc6068a6e9d6b6494c2ff4d2fb4)
+     - preserve wifi channels feature (76a77902e3624167e81ca6e200519468bb66d5f7)
  - site.conf
    - disabled IPv4-only fastd
    - Changed MTU size to 1280
