@@ -1,4 +1,10 @@
 node {
-  git url: 'https://github.com/freifunkMUC/site-ffm.git'
+  stage 'Checkout'
+  checkout scm
+  
+  stage 'Build'
   sh "make V=s"
+  
+  stage 'Archive'
+  archive 'output/**/*'
 }
