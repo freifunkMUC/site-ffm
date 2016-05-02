@@ -8,6 +8,7 @@
      - https://gluon.readthedocs.org/en/v2016.1.2/releases/v2016.1.2.html
      - https://gluon.readthedocs.org/en/v2016.1.3/releases/v2016.1.3.html
      - https://gluon.readthedocs.org/en/v2016.1.4/releases/v2016.1.4.html
+     - ar71xx-generic: remove BROKEN for TL-WR841N/ND v11  (ce563f25adf08d6284ea92c81b6d30c0601df3b8)
      - mesh_no_rebroadcast for mesh-on-wan (8b66da95f1887fc6068a6e9d6b6494c2ff4d2fb4)
      - preserve wifi channels feature (76a77902e3624167e81ca6e200519468bb66d5f7)
  - site.conf
