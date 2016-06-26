@@ -3,7 +3,7 @@ node {
   checkout scm
   
   stage 'Build'
-  sh "make V=s"
+  sh "make sign V=s"
   
   stage 'Archive'
   archive 'output/**/*'
