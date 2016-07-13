@@ -26,8 +26,8 @@ GLUON_SITE_PACKAGES := \
 	iptables \
 	haveged \
 	gluon-ebtables-filter-arp-ffmuc \
-	gluon-ebtables-filter-multicast-ffmuc
-
+	gluon-ebtables-filter-multicast-ffmuc \
+	tecff-ath9k-broken-wifi-workaround
 
 # basic support for USB stack
 USB_PACKAGES_BASIC := \

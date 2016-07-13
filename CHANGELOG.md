@@ -11,12 +11,13 @@
      - https://gluon.readthedocs.org/en/v2016.1.5/releases/v2016.1.5.html
      - mesh_no_rebroadcast for mesh-on-wan (8b66da95f1887fc6068a6e9d6b6494c2ff4d2fb4)
      - preserve wifi channels feature (76a77902e3624167e81ca6e200519468bb66d5f7)
+     - new package tecff-ath9k-broken-wifi-workaround (freifunkmuc/gluon-packages)
  - site.conf
    - disabled IPv4-only fastd
    - Changed MTU size to 1280
  - site.mk
-   - added USB support for various devices 
- 
+   - added USB support for various devices
+
 ## v2015.7
  * New stable unified firmware for all segments with site-select feature
  * Raised required signatures for stable release to 3
