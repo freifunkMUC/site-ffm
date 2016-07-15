@@ -6,7 +6,7 @@
 5,M_Au,Au-Haidhausen,0,10025
 6,M_Sendling,Sendling,0,10026
 7,M_Sendl_Westpark,Sendling-Westpark,0,10027
-8,M_Schwanthalerhöhe,Schwanthalerhöhe,0,10028
+8,M_Schwanthalerhoehe,Schwanthalerhöhe,0,10028
 9,M_Neuhausen,Neuhausen-Nymphenburg,0,10029
 10,M_Moosach,Moosach,0,10030
 11,M_Milbertshofen,Milbertshofen-Am-Hart,0,10031
