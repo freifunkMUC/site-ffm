@@ -1,0 +1,35 @@
+#idx,id,description,segment_id,port
+1,M_Altstadt,Altstadt-Lehel,0,10021
+2,M_Ludwigsvorstadt,Ludwigsvorstadt-Isarvorstadt,0,10022
+3,M_Maxvorstadt,Maxvorstadt,0,10023
+4,M_Schwabing_West,Schwabing-West,0,10024
+5,M_Au,Au-Haidhausen,0,10025
+6,M_Sendling,Sendling,0,10026
+7,M_Sendl_Westpark,Sendling-Westpark,0,10027
+8,M_Schwanthalerhoehe,Schwanthalerhöhe,0,10028
+9,M_Neuhausen,Neuhausen-Nymphenburg,0,10029
+10,M_Moosach,Moosach,0,10030
+11,M_Milbertshofen,Milbertshofen-Am-Hart,0,10031
+12,M_Schwabing_Freimann,Schwabing-Freimann,0,10032
+13,M_Bogenhausen,Bogenhausen,0,10033
+14,M_BergAmLaim,Berg am Laim,0,10034
+15,M_Trudering,Trudering-Riem,0,10035
+16,M_Ramersdorf,Ramersdorf-Perlach,0,10036
+17,M_Obergiesing,Obergiesing-Fasangarten,0,10037
+18,M_Untergiesing,Untergiesing-Harlaching,0,10038
+19,M_Thalkirchen,Thalkirchen-Obersendling-Forstenried-Fürstenried-Solln,0,10039
+20,M_Hadern,Hadern,0,10040
+21,M_Pasing,Pasing-Obermenzing,0,10041
+22,M_Aubing,Aubing-Lochhausen-Langwied,0,10042
+23,M_Allach,Allach-Untermenzing,0,10043
+24,M_Feldmoching,Feldmoching-Hasenbergl,0,10044
+25,M_Laim,Laim,0,10045
+26,LK_M_Land,München-Land,1,10046
+27,LK_STA,Landkreis Starnberg (STA),1,10047
+28,LK_FFB,Landkreis Fürstenfeldbruck (FFB),1,10048
+29,LK_DAH,Landkreis Dachau (DAH),1,10049
+30,LK_FS,Landkreis Freising (FS),1,10050
+31,LK_ED,Landkreis Erding (ED),1,10061
+32,LK_EBE,Landkreis Ebersberg (EBE),1,10062
+33,LK_TOEL,Landkreis Bad Tölz-Wolfratshausen (TÖL),1,10063
+34,LK_Outback,Alle weiteren Landkreise,1,10064
