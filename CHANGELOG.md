@@ -1,6 +1,6 @@
 # Freifunk München Firmware Changelog
 
-## v2016.1 (not released yet)
+## v2016.0
  - Updated to Gluon v2016.1.5 (ffmuc fork)
    - Changes:
      - https://gluon.readthedocs.org/en/v2016.1/releases/v2016.1.html
@@ -14,8 +14,8 @@
      - new package tecff-ath9k-broken-wifi-workaround (freifunkmuc/gluon-packages)
      - added fix for autoupdater (8f5a7c90019085dd8f02f96ab0e7a905f82e1be0)
 - site.conf
-   - disabled IPv4-only fastd
-   - Changed MTU size to 1280
+   - changed MTU size to 1280
+   - due to the decreased MTU fastd can now support IPv6
  - site.mk
    - added USB support for various devices
 
