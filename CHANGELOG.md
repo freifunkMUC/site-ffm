@@ -1,5 +1,9 @@
 # Freifunk München Firmware Changelog
 
+## v2016.1
+
+UNRELEASED
+
 ## v2016.0
  - Updated to Gluon v2016.1.5 (ffmuc fork)
    - Changes:
