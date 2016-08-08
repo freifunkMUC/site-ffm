@@ -29,7 +29,7 @@
 28,LK_FFB,Landkreis Fürstenfeldbruck (FFB),1,10048
 29,LK_DAH,Landkreis Dachau (DAH),1,10049
 30,LK_FS,Landkreis Freising (FS),1,10050
-31,LK_ED,Landkreis Erding (ED),1,10031
-32,LK_EBE,Landkreis Ebersberg (EBE),1,10032
-33,LK_TOEL,Landkreis Bad Tölz-Wolfratshausen (TÖL),1,10033
-34,LK_Outback,Alle weiteren Landkreise,1,10034
+31,LK_ED,Landkreis Erding (ED),1,10061
+32,LK_EBE,Landkreis Ebersberg (EBE),1,10062
+33,LK_TOEL,Landkreis Bad Tölz-Wolfratshausen (TÖL),1,10063
+34,LK_Outback,Alle weiteren Landkreise,1,10064
