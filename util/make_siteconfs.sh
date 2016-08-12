@@ -4,8 +4,8 @@
 
 cat makefile_prefix > new/Makefile-site-select
 
-cat stadtteile_idx.txt|grep -e '^[^#]'|grep -v LK_|while IFS=, read nr id desc port prefix4; do cp ../extra/ffmuc.conf new/$id.conf; done
-cat stadtteile_idx.txt|grep -e '^[^#]'|grep LK_|while IFS=, read nr id desc port prefix4; do cp ../extra/ffmuc_umland.conf new/$id.conf; done
+cat stadtteile_idx.txt|grep -e '^[^#]'|grep ffmuc|while IFS=, read nr id desc port prefix4; do cp ../extra/ffmuc.conf new/$id.conf; done
+cat stadtteile_idx.txt|grep -e '^[^#]'|grep ffbay|while IFS=, read nr id desc port prefix4; do cp ../extra/ffmuc_umland.conf new/$id.conf; done
 
 cat stadtteile_idx.txt | grep -e '^[^#]' \
     | while IFS=, read nr id desc seg_id port prefix4 prefix6 next_node4 next_node6; do (
