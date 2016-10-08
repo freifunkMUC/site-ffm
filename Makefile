@@ -10,7 +10,9 @@ GLUON_TARGETS ?= \
 	mpc85xx-generic \
 	x86-64 \
 	x86-generic \
-	x86-kvm_guest
+	x86-kvm_guest \
+	brcm2708-bcm2708 \
+	brcm2708-bcm2709
 
 GLUON_RELEASE := $(shell git describe --tags 2>/dev/null)
 ifneq (,$(shell git describe --exact-match --tags 2>/dev/null))
