@@ -4,6 +4,12 @@
 
 UNRELEASED
 
+- Updated to Gluon v2016.2 (upstream)
+  - Changes:
+    https://gluon.readthedocs.org/en/v2016.2/releases/v2016.2.html
+- site.mk
+  - added GLUON_REGION = eu setting
+
 ## v2016.0
  - Updated to Gluon v2016.1.5 (ffmuc fork)
    - Changes:
