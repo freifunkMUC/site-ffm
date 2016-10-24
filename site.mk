@@ -26,7 +26,8 @@ GLUON_SITE_PACKAGES := \
 	haveged \
 	gluon-ebtables-filter-arp-ffmuc \
 	gluon-ebtables-filter-multicast-ffmuc \
-	tecff-ath9k-broken-wifi-workaround
+	tecff-ath9k-broken-wifi-workaround \
+	tecff-respondd-watchdog
 
 # basic support for USB stack
 USB_PACKAGES_BASIC := \
