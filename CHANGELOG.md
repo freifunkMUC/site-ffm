@@ -4,15 +4,16 @@
 
 UNRELEASED
 
-- Updated to Gluon v2016.2.3 (upstream)
-  - Changes:
-    - https://gluon.readthedocs.io/en/v2016.2.3/releases/v2016.1.6.html
-    - https://gluon.readthedocs.io/en/v2016.2.3/releases/v2016.2.html
-    - https://gluon.readthedocs.io/en/v2016.2.3/releases/v2016.2.1.html
-    - https://gluon.readthedocs.io/en/v2016.2.3/releases/v2016.2.2.html
-    - https://gluon.readthedocs.io/en/v2016.2.3/releases/v2016.2.3.html
-- site.mk
-  - added GLUON_REGION = eu setting
+ - Updated to Gluon v2016.2.4 (upstream)
+   - Changes:
+     - https://gluon.readthedocs.io/en/v2016.2.3/releases/v2016.1.6.html
+     - https://gluon.readthedocs.io/en/v2016.2.3/releases/v2016.2.html
+     - https://gluon.readthedocs.io/en/v2016.2.3/releases/v2016.2.1.html
+     - https://gluon.readthedocs.io/en/v2016.2.3/releases/v2016.2.2.html
+     - https://gluon.readthedocs.io/en/v2016.2.3/releases/v2016.2.3.html
+     - https://gluon.readthedocs.io/en/v2016.2.3/releases/v2016.2.4.html
+ - site.mk
+   - added GLUON_REGION = eu setting
 
 ## v2016.0
  - Updated to Gluon v2016.1.5 (ffmuc fork)
@@ -27,7 +28,7 @@ UNRELEASED
      - preserve wifi channels feature (76a77902e3624167e81ca6e200519468bb66d5f7)
      - new package tecff-ath9k-broken-wifi-workaround (freifunkmuc/gluon-packages)
      - added fix for autoupdater (8f5a7c90019085dd8f02f96ab0e7a905f82e1be0)
-- site.conf
+ - site.conf
    - changed MTU size to 1280
    - due to the decreased MTU fastd can now support IPv6
  - site.mk
