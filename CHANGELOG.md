@@ -4,7 +4,7 @@
 
 UNRELEASED
 
- - Updated to Gluon v2016.2.4 (upstream)
+ - Updated to Gluon v2016.2.6 (upstream)
    - Changes:
      - https://gluon.readthedocs.io/en/v2016.2.3/releases/v2016.1.6.html
      - https://gluon.readthedocs.io/en/v2016.2.3/releases/v2016.2.html
@@ -12,6 +12,8 @@ UNRELEASED
      - https://gluon.readthedocs.io/en/v2016.2.3/releases/v2016.2.2.html
      - https://gluon.readthedocs.io/en/v2016.2.3/releases/v2016.2.3.html
      - https://gluon.readthedocs.io/en/v2016.2.3/releases/v2016.2.4.html
+     - https://gluon.readthedocs.io/en/v2016.2.3/releases/v2016.2.5.html
+     - https://gluon.readthedocs.io/en/v2016.2.3/releases/v2016.2.6.html
  - site.mk
    - added GLUON_REGION = eu setting
 
