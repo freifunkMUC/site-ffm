@@ -1,8 +1,6 @@
 # Freifunk München Firmware Changelog
 
-## v2016.1
-
-UNRELEASED
+## v2017.0
 
  - Updated to Gluon v2016.2.6 (upstream)
    - Changes:
