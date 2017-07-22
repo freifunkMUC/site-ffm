@@ -1,22 +1,19 @@
 GLUON_SITE_PACKAGES := \
-	gluon-mesh-batman-adv-15 \
 	gluon-respondd \
 	gluon-autoupdater \
-	gluon-config-mode-core \
 	gluon-config-mode-autoupdater \
+	gluon-config-mode-contact-info \
+	gluon-config-mode-core \
+	gluon-config-mode-geo-location \
 	gluon-config-mode-hostname \
 	gluon-config-mode-mesh-vpn \
-	gluon-config-mode-geo-location \
-	gluon-config-mode-contact-info \
-	gluon-config-mode-site-select \
 	gluon-ebtables-filter-multicast \
 	gluon-ebtables-filter-ra-dhcp \
-	gluon-luci-admin \
-	gluon-luci-autoupdater \
-	gluon-luci-portconfig \
-	gluon-luci-wifi-config \
-	gluon-luci-private-wifi \
-	gluon-next-node \
+	gluon-web-admin \
+	gluon-web-autoupdater \
+	gluon-web-network \
+	gluon-web-wifi-config \
+	gluon-mesh-batman-adv-15 \
 	gluon-mesh-vpn-fastd \
 	gluon-radvd \
 	gluon-setup-mode \
