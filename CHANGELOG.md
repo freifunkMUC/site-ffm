@@ -1,17 +1,23 @@
 # Freifunk München Firmware Changelog
 
+## v2017.1
+
+ - Updated to Gluon v2017.7
+   - Changes:
+     - https://gluon.readthedocs.io/en/v2016.2.7/releases/v2016.1.7.html
+
 ## v2017.0
 
  - Updated to Gluon v2016.2.6 (upstream)
    - Changes:
-     - https://gluon.readthedocs.io/en/v2016.2.3/releases/v2016.1.6.html
-     - https://gluon.readthedocs.io/en/v2016.2.3/releases/v2016.2.html
-     - https://gluon.readthedocs.io/en/v2016.2.3/releases/v2016.2.1.html
-     - https://gluon.readthedocs.io/en/v2016.2.3/releases/v2016.2.2.html
-     - https://gluon.readthedocs.io/en/v2016.2.3/releases/v2016.2.3.html
-     - https://gluon.readthedocs.io/en/v2016.2.3/releases/v2016.2.4.html
-     - https://gluon.readthedocs.io/en/v2016.2.3/releases/v2016.2.5.html
-     - https://gluon.readthedocs.io/en/v2016.2.3/releases/v2016.2.6.html
+     - https://gluon.readthedocs.io/en/v2016.2.7/releases/v2016.1.6.html
+     - https://gluon.readthedocs.io/en/v2016.2.7/releases/v2016.2.html
+     - https://gluon.readthedocs.io/en/v2016.2.7/releases/v2016.2.1.html
+     - https://gluon.readthedocs.io/en/v2016.2.7/releases/v2016.2.2.html
+     - https://gluon.readthedocs.io/en/v2016.2.7/releases/v2016.2.3.html
+     - https://gluon.readthedocs.io/en/v2016.2.7/releases/v2016.2.4.html
+     - https://gluon.readthedocs.io/en/v2016.2.7/releases/v2016.2.5.html
+     - https://gluon.readthedocs.io/en/v2016.2.7/releases/v2016.2.6.html
  - site.mk
    - added GLUON_REGION = eu setting
 
