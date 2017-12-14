@@ -2,9 +2,9 @@
 
 ## v2017.1
 
- - Updated to Gluon v2017.7
+ - Updated to Gluon v2016.2.7
    - Changes:
-     - https://gluon.readthedocs.io/en/v2016.2.7/releases/v2016.1.7.html
+     - https://gluon.readthedocs.io/en/v2016.2.7/releases/v2016.2.7.html
 
 ## v2017.0
 
