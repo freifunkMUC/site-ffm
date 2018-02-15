@@ -1,6 +1,6 @@
 # Freifunk München Firmware Changelog
 
-## v2017.2
+## v2018.0
 
 UNRELEASED
 
