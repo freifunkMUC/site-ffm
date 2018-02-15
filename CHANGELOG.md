@@ -4,14 +4,18 @@
 
 UNRELEASED
 
+ - Updated to Gluon v2016.2.7-2-g3d824bd2
+   - ar71xx: fix MAC addresses on TP-Link TL-WR1043ND v4
+   - modules: update url to chaos calmer git repository after upstream move
+
  - Makefile
    - Enabled firmware with ath10k WLAN driver
 
 ## v2017.1
 
- - Updated to Gluon v2017.7
+ - Updated to Gluon v2016.2.7
    - Changes:
-     - https://gluon.readthedocs.io/en/v2016.2.7/releases/v2016.1.7.html
+     - https://gluon.readthedocs.io/en/v2016.2.7/releases/v2016.2.7.html
 
 ## v2017.0
 
