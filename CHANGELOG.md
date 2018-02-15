@@ -1,5 +1,12 @@
 # Freifunk München Firmware Changelog
 
+## v2017.2
+
+UNRELEASED
+
+ - Makefile
+   - Enabled firmware with ath10k WLAN driver
+
 ## v2017.1
 
  - Updated to Gluon v2017.7
