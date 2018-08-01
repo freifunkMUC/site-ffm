@@ -1,3 +1,5 @@
+GLUON_MULTIDOMAIN=1
+
 GLUON_FEATURES := \
 	respondd \
 	autoupdater \
@@ -11,11 +13,11 @@ GLUON_FEATURES := \
 	mesh-batman-adv-15 \
 	mesh-vpn-fastd \
 	radvd \
-	setup-mode \
 	status-page \
-	config-mode-site-select \
+	config-mode-domain-select \
 	ebtables-filter-arp-ffmuc \
-	ebtables-filter-multicast-ffmuc
+	ebtables-filter-multicast-ffmuc \
+	domain-migration-ffmuc
 
 GLUON_SITE_PACKAGES := \
 	iwinfo \
