@@ -4,6 +4,7 @@ GLUON_FEATURES := \
 	respondd \
 	autoupdater \
 	web-wizard \
+	ebtables-limit-arp \
 	ebtables-filter-multicast \
 	ebtables-filter-ra-dhcp \
 	web-admin \
