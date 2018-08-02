@@ -1,5 +1,5 @@
 GLUON_SITE_FEEDS='ffmuc'
 
-PACKAGES_FFMUC_REPO=https://github.com/freifunkMUC/gluon-packages.git
-PACKAGES_FFMUC_BRANCH=master
-PACKAGES_FFMUC_COMMIT=5632eaba747ac356b68f5d40f30233eafc785975
+PACKAGES_FFMUC_REPO=https://github.com/krombel/gluon-packages.git
+PACKAGES_FFMUC_BRANCH=add_domain-migration-ffmuc
+PACKAGES_FFMUC_COMMIT=f9db13e6a4721beaf8dda28f7f161a22aec51a4e
