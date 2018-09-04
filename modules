@@ -2,4 +2,4 @@ GLUON_SITE_FEEDS='ffmuc'
 
 PACKAGES_FFMUC_REPO=https://github.com/krombel/gluon-packages.git
 PACKAGES_FFMUC_BRANCH=add_domain-migration-ffmuc
-PACKAGES_FFMUC_COMMIT=f9db13e6a4721beaf8dda28f7f161a22aec51a4e
+PACKAGES_FFMUC_COMMIT=d529439a7e9c90a74617158b96e2e538cb777962
