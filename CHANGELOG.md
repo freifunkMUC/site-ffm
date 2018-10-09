@@ -1,5 +1,25 @@
 # Freifunk München Firmware Changelog
 
+## v2019.0
+ - Updated to Gluon v2018.1.1
+   - Changes:
+     - https://gluon.readthedocs.io/en/v2018.1.1/releases/v2017.1.html
+     - https://gluon.readthedocs.io/en/v2018.1.1/releases/v2017.1.1.html
+     - https://gluon.readthedocs.io/en/v2018.1.1/releases/v2017.1.2.html
+     - https://gluon.readthedocs.io/en/v2018.1.1/releases/v2017.1.3.html
+     - https://gluon.readthedocs.io/en/v2018.1.1/releases/v2017.1.4.html
+     - https://gluon.readthedocs.io/en/v2018.1.1/releases/v2017.1.5.html
+     - https://gluon.readthedocs.io/en/v2018.1.1/releases/v2017.1.6.html
+     - https://gluon.readthedocs.io/en/v2018.1.1/releases/v2017.1.7.html
+     - https://gluon.readthedocs.io/en/v2018.1.1/releases/v2017.1.8.html
+     - https://gluon.readthedocs.io/en/v2018.1.1/releases/v2018.1.html
+     - https://gluon.readthedocs.io/en/v2018.1.1/releases/v2018.1.1.html
+ - site.conf
+   - use multidomain config
+   - update translations (de,en) and added french
+   - use GLUON_FEATURES
+   - use GLUON_FEATURE web-wizard to have less packages
+
 ## v2018.0
 
  - Updated to Gluon v2016.2.7-3-g35c9f9ae
