@@ -16,8 +16,6 @@ GLUON_FEATURES := \
 	radvd \
 	status-page \
 	config-mode-domain-select \
-	ebtables-filter-arp-ffmuc \
-	ebtables-filter-multicast-ffmuc \
 	domain-migration-ffmuc
 
 GLUON_SITE_PACKAGES := \
