@@ -166,6 +166,9 @@ GLUON_TLWDR4900_SITE_PACKAGES := $(USB_PACKAGES_BASIC) $(TOOLS_PACKAGES) $(USB_P
 
 DEFAULT_GLUON_RELEASE := snapshot~$(shell date '+%Y%m%d')
 
+# default to ibss meshing (legacy)
+GLUON_WLAN_MESH = ibss
+
 # Allow overriding the release number from the command line
 GLUON_RELEASE ?= $(DEFAULT_GLUON_RELEASE)
 
