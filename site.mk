@@ -166,6 +166,9 @@ GLUON_TLWDR4900_SITE_PACKAGES := $(USB_PACKAGES_BASIC) $(TOOLS_PACKAGES) $(USB_P
 
 DEFAULT_GLUON_RELEASE := snapshot~$(shell date '+%Y%m%d')
 
+# default to 11s meshing
+GLUON_WLAN_MESH = 11s
+
 # Allow overriding the release number from the command line
 GLUON_RELEASE ?= $(DEFAULT_GLUON_RELEASE)
 
