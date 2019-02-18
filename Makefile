@@ -13,7 +13,14 @@ GLUON_TARGETS ?= \
 	x86-generic \
 	x86-geode \
 	brcm2708-bcm2708 \
-	brcm2708-bcm2709
+	brcm2708-bcm2709 \
+	ipq40xx \
+	ipq806x \
+	ramips-mt7620 \
+	ramips-mt7621 \
+	ramips-mt76x8 \
+	ramips-rt305x \
+	sunxi
 
 GLUON_RELEASE := $(shell git describe --tags 2>/dev/null)
 ifneq (,$(shell git describe --exact-match --tags 2>/dev/null))
