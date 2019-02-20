@@ -1,5 +1,15 @@
 # Freifunk München Firmware Changelog
 
+## v2018.0
+
+ - Updated to Gluon v2016.2.7-3-g35c9f9ae
+   - ar71xx: fix MAC addresses on TP-Link TL-WR1043ND v4
+   - modules: update url to chaos calmer git repository after upstream move
+   - ar71xx: sysupgrade: improve CPE/WBS 210/510 validation
+
+ - Makefile
+   - Enabled firmware with ath10k WLAN driver
+
 ## v2017.1
 
  - Updated to Gluon v2016.2.7
