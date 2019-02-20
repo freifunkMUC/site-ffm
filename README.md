@@ -10,5 +10,5 @@ make
 
 ## Further Resources
 
-Look at the [site configuration related Gluon documentation](https://gluon.readthedocs.io/en/v2017.1.x/user/site.html)
+Look at the [site configuration related Gluon documentation](https://gluon.readthedocs.io/en/v2018.2/user/site.html)
 for information on site configuration options and examples from other communities.
