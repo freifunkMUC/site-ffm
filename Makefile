@@ -8,19 +8,18 @@ GLUON_TARGETS ?= \
 	ar71xx-generic \
 	ar71xx-tiny \
 	ar71xx-nand \
-	mpc85xx-generic \
-	x86-64 \
-	x86-generic \
-	x86-geode \
 	brcm2708-bcm2708 \
 	brcm2708-bcm2709 \
-	ipq40xx \
-	ipq806x \
-	ramips-mt7620 \
+	mpc85xx-generic \
 	ramips-mt7621 \
+	sunxi-cortexa7 \
+	x86-generic \
+	x86-geode \
+	x86-64 \
+	ipq40xx \
+	ramips-mt7620 \
 	ramips-mt76x8 \
-	ramips-rt305x \
-	sunxi
+	ramips-rt305x
 
 GLUON_RELEASE := $(shell git describe --tags 2>/dev/null)
 ifneq (,$(shell git describe --exact-match --tags 2>/dev/null))
