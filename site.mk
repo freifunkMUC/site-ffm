@@ -7,6 +7,7 @@ GLUON_FEATURES := \
 	ebtables-limit-arp \
 	ebtables-filter-multicast \
 	ebtables-filter-ra-dhcp \
+	ebtables-source-filter \
 	web-admin \
 	web-autoupdater \
 	web-network \
