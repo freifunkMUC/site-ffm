@@ -23,6 +23,7 @@ GLUON_SITE_PACKAGES := \
 	iwinfo \
 	iptables \
 	haveged \
+	ffho-autoupdater-wifi-fallback \
 	tecff-ath9k-broken-wifi-workaround
 
 # basic support for USB stack

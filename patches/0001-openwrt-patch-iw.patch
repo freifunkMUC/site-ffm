@@ -1,0 +1,33 @@
+From: Karsten Böddeker <freifunk@kb-light.de>
+Date: Sat, 23 Apr 2016 15:20:30 +0200
+Subject: openwrt: patch iw
+
+diff --git a/patches/openwrt/1001-iw-patch-200-reduce-size-patch.patch b/patches/openwrt/1001-iw-patch-200-reduce-size-patch.patch
+new file mode 100644
+index 0000000..09c978e
+--- /dev/null
++++ b/patches/openwrt/1001-iw-patch-200-reduce-size-patch.patch
+@@ -0,0 +1,23 @@
++From: Karsten Böddeker <freifunk@kb-light.de>
++Date: Sat, 23 Apr 2016 15:20:29 +0200
++Subject: iw: patch 200-reduce_size.patch
++
++diff --git a/package/network/utils/iw/patches/200-reduce_size.patch b/package/network/utils/iw/patches/200-reduce_size.patch
++index dea24fb..fefbf1f 100644
++--- a/package/network/utils/iw/patches/200-reduce_size.patch
+++++ b/package/network/utils/iw/patches/200-reduce_size.patch
++@@ -1,12 +1,11 @@
++ --- a/Makefile
++ +++ b/Makefile
++-@@ -15,8 +15,8 @@ CFLAGS += -Wall -Wundef -Wstrict-prototy
+++@@ -16,7 +16,7 @@ CFLAGS += -Wall -Wundef -Wstrict-prototy
++  OBJS = iw.o genl.o event.o info.o phy.o \
++  	interface.o ibss.o station.o survey.o util.o ocb.o \
++  	mesh.o mpath.o mpp.o scan.o reg.o version.o \
++--	reason.o status.o connect.o link.o offch.o ps.o cqm.o \
+++ 	reason.o status.o connect.o link.o offch.o ps.o cqm.o \
++ -	bitrate.o wowlan.o coalesce.o roc.o p2p.o vendor.o
++-+	reason.o status.o link.o offch.o ps.o cqm.o \
++ +	bitrate.o vendor.o
++  OBJS += sections.o
++  
