@@ -23,8 +23,7 @@ GLUON_SITE_PACKAGES := \
 	iwinfo \
 	iptables \
 	haveged \
-	tecff-ath9k-broken-wifi-workaround \
-	tecff-respondd-watchdog
+	tecff-ath9k-broken-wifi-workaround
 
 # basic support for USB stack
 USB_PACKAGES_BASIC := \
