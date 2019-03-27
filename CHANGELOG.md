@@ -1,5 +1,8 @@
 # Freifunk München Firmware Changelog
 
+## v2018.1
+ - Added sign keys of awlnx, krombel, lukesix to let them sign future releases
+
 ## v2018.0
 
  - Updated to Gluon v2016.2.7-3-g35c9f9ae
