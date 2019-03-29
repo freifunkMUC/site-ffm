@@ -21,6 +21,7 @@
     - update translations (de,en) and added french
     - use GLUON_FEATURES
     - use GLUON_FEATURE web-wizard to have less packages
+    - replace ULA for firmware.ffmuc.net by public v6 address
   - site.mk
     - remove tecff-respondd-watchdog
     - add ffho-autoupdater-wifi-fallback
