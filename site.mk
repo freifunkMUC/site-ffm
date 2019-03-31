@@ -3,15 +3,11 @@ GLUON_MULTIDOMAIN=1
 GLUON_FEATURES := \
 	respondd \
 	autoupdater \
-	web-wizard \
-	ebtables-limit-arp \
 	ebtables-filter-multicast \
 	ebtables-filter-ra-dhcp \
 	ebtables-source-filter \
-	web-admin \
-	web-autoupdater \
-	web-network \
-	web-wifi-config \
+	web-advanced \
+	web-wizard \
 	mesh-batman-adv-15 \
 	mesh-vpn-fastd \
 	radvd \
