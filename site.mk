@@ -13,14 +13,14 @@ GLUON_FEATURES := \
 	radvd \
 	status-page \
 	config-mode-domain-select \
-	domain-migration-ffmuc \
-	ffmuc-persist-mesh-disabled-ibss211s
+	domain-migration-ffmuc
 
 GLUON_SITE_PACKAGES := \
 	iwinfo \
 	iptables \
 	haveged \
 	ffho-autoupdater-wifi-fallback \
+	ffmuc-persist-mesh-disabled-ibss211s \
 	tecff-ath9k-broken-wifi-workaround
 
 # basic support for USB stack
