@@ -13,7 +13,8 @@ GLUON_FEATURES := \
 	radvd \
 	status-page \
 	config-mode-domain-select \
-	domain-migration-ffmuc
+	domain-migration-ffmuc \
+	ffmuc-persist-mesh-disabled-ibss211s
 
 GLUON_SITE_PACKAGES := \
 	iwinfo \
