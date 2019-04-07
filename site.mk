@@ -157,10 +157,7 @@ GLUON_WZRHPAG300H_SITE_PACKAGES := $(USB_PACKAGES_BASIC) $(TOOLS_PACKAGES) $(USB
 GLUON_TLWDR4900_SITE_PACKAGES := $(USB_PACKAGES_BASIC) $(TOOLS_PACKAGES) $(USB_PACKAGES_STORAGE)
 
 
-DEFAULT_GLUON_RELEASE := v2019.0.1~exp$(shell date '+%Y%m%d%H')
-
-# default to 11s meshing
-GLUON_WLAN_MESH = 11s
+DEFAULT_GLUON_RELEASE := v2019.0.2~exp$(shell date '+%Y%m%d%H')
 
 # Allow overriding the release number from the command line
 GLUON_RELEASE ?= $(DEFAULT_GLUON_RELEASE)

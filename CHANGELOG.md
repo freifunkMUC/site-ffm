@@ -1,6 +1,8 @@
 # Freifunk München Firmware Changelog
 
-## v2019.0
+## v2019.0.2
+
+## v2019.0.1
   - Updated to Gluon v2018.2.1
     - Changes:
       - https://gluon.readthedocs.io/en/v2018.1.1/releases/v2017.1.html
