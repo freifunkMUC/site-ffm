@@ -2,6 +2,7 @@
 
 ## v2019.0.2
   - drop ULA support and use public v6 addresses instead
+  - drop IBSS in favor of 11s only mesh
 
 ## v2019.0.1
   - Updated to Gluon v2018.2.1
