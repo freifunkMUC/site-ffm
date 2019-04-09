@@ -7,6 +7,7 @@ GLUON_FEATURES := \
 	ebtables-filter-ra-dhcp \
 	ebtables-source-filter \
 	web-advanced \
+	web-private-wifi \
 	web-wizard \
 	mesh-batman-adv-15 \
 	mesh-vpn-fastd \
