@@ -21,7 +21,6 @@ GLUON_SITE_PACKAGES := \
 	iptables \
 	haveged \
 	ffho-autoupdater-wifi-fallback \
-	ffmuc-persist-mesh-disabled-ibss211s \
 	tecff-ath9k-broken-wifi-workaround
 
 # basic support for USB stack

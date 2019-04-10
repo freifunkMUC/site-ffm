@@ -2,7 +2,8 @@
 
 ## v2019.0.2
   - drop ULA support and use public v6 addresses instead
-  - drop IBSS in favor of 11s only mesh
+  - drop IBSS in favor of 11s only mesh (and disable migration path where
+    11s is disabled if ibss was disabled before)
   - enable configuration of private wifi in configmode
 
 ## v2019.0.1
