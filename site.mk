@@ -7,6 +7,7 @@ GLUON_FEATURES := \
 	ebtables-filter-ra-dhcp \
 	ebtables-source-filter \
 	web-advanced \
+	web-ffmuc-domain-director \
 	web-private-wifi \
 	web-wizard \
 	mesh-batman-adv-15 \
@@ -14,6 +15,7 @@ GLUON_FEATURES := \
 	radvd \
 	status-page \
 	config-mode-domain-select \
+	config-mode-geo-location-osm \
 	domain-migration-ffmuc
 
 GLUON_SITE_PACKAGES := \
@@ -21,6 +23,7 @@ GLUON_SITE_PACKAGES := \
 	iptables \
 	haveged \
 	ffho-autoupdater-wifi-fallback \
+	ffmuc-domain-director \
 	tecff-ath9k-broken-wifi-workaround
 
 # basic support for USB stack
