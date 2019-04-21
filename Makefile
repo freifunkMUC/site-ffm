@@ -26,6 +26,9 @@ ifneq (,$(shell git describe --exact-match --tags 2>/dev/null))
   GLUON_RELEASE := $(shell git describe --tags 2>/dev/null)
 else
   GLUON_BRANCH := experimental
+  EXP_FALLBACK = $(shell date '+%Y%m%d%H')
+  BUILD_NUMBER ?= $(EXP_FALLBACK)
+  GLUON_RELEASE := v2019.0.3~exp$(BUILD_NUMBER)
 endif
 
 JOBS ?= $(shell cat /proc/cpuinfo | grep processor | wc -l)
