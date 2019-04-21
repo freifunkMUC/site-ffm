@@ -21,9 +21,9 @@ GLUON_TARGETS ?= \
 	ramips-mt76x8 \
 	ramips-rt305x
 
-GLUON_RELEASE := $(shell git describe --tags 2>/dev/null)
 ifneq (,$(shell git describe --exact-match --tags 2>/dev/null))
   GLUON_BRANCH := stable
+  GLUON_RELEASE := $(shell git describe --tags 2>/dev/null)
 else
   GLUON_BRANCH := experimental
 endif
