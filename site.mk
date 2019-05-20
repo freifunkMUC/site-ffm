@@ -14,6 +14,7 @@ GLUON_FEATURES := \
 	radvd \
 	status-page \
 	config-mode-domain-select \
+	config-mode-geo-location-osm \
 	domain-migration-ffmuc
 
 GLUON_SITE_PACKAGES := \
