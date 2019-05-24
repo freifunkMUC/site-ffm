@@ -1,0 +1,23 @@
+Set fixed throughput for wired interfaces.
+
+This is taken from Freifunk Chemnitz.
+From https://gitlab.com/FreifunkChemnitz/site-ffc/blob/b89e6568c8b8baf91febe2ce7c919d04f72bf5fb/patches/batman-v-wired-tpo.patch
+
+This is a TEMPORARY workaround for
+https://github.com/freifunkMUC/site-ffm/issues/57
+
+diff --git a/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo b/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo
+new file mode 100755
+index 0000000..7185b4a
+--- /dev/null
++++ b/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo
+@@ -0,0 +1,9 @@
++#!/bin/sh
++
++if [ -f /sys/devices/virtual/net/vx_mesh_lan/batman_adv/throughput_override ]; then echo 1000000 > /sys/devices/virtual/net/vx_mesh_lan/batman_adv/throughput_override; fi
++
++if [ -f /sys/devices/virtual/net/vx_mesh_wan/batman_adv/throughput_override ]; then echo 1000000 > /sys/devices/virtual/net/vx_mesh_wan/batman_adv/throughput_override; fi
++
++if [ -f /sys/devices/virtual/net/br-wan/batman_adv/throughput_override ]; then echo 1000000 > /sys/devices/virtual/net/br-wan/batman_adv/throughput_override; fi
++
++if [ -f /sys/devices/virtual/net/mesh-vpn/batman_adv/throughput_override ]; then echo 1000000 > /sys/devices/virtual/net/mesh-vpn/batman_adv/throughput_override; fi
