@@ -5,10 +5,22 @@ for the new segments (which also use vxlan for meshing)
 This serves as a TEMPORARY workaround 
 (until https://github.com/freifunkMUC/site-ffm/issues/57 is resolved upstream)
 
-diff --git a/openwrt/files/usr/lib/micron.d/static-vxlan-thoughput b/openwrt/files/usr/lib/micron.d/static-vxlan-thoughput
+diff --git a/patches/openwrt/1042-static-vxlan-throughput.patch b/patches/openwrt/1042-static-vxlan-throughput.patch
 new file mode 100644
 --- /dev/null
-+++ b/openwrt/files/usr/lib/micron.d/static-vxlan-thoughput
-@@ -0,0 +1,2 @@
-+* * * * * sh -c 'f=/sys/class/net/vx_mesh_lan/batman_adv/throughput_override; if [ -f "$f" ] && grep -v "^100.0 MBit$" $f 1>/dev/null; then echo 100000 > $f; fi'
-+* * * * * sh -c 'f=/sys/class/net/vx_mesh_wan/batman_adv/throughput_override; if [ -f "$f" ] && grep -v "^100.0 MBit$" $f 1>/dev/null; then echo 100000 > $f; fi'
++++ b/patches/openwrt/1042-static-vxlan-throughput.patch
+@@ -0,0 +1,14 @@
++This is a real dirty patch to prefer vxlan over wifi.
++Currently throuhput detection for BATMAN_V is messed up but we use it
++for the new segments (which also use vxlan for meshing)
++
++This serves as a TEMPORARY workaround
++(until https://github.com/freifunkMUC/site-ffm/issues/57 is resolved upstream)
++
++diff --git a/package/base-files/files/usr/lib/micron.d/static-vxlan-thoughput b/package/base-files/files/usr/lib/micron.d/static-vxlan-thoughput
++new file mode 100644
++--- /dev/null
+++++ b/package/base-files/files/usr/lib/micron.d/static-vxlan-thoughput
++@@ -0,0 +1,2 @@
+++* * * * * sh -c 'f=/sys/class/net/vx_mesh_lan/batman_adv/throughput_override; if [ -f "$f" ] && grep -v "^100.0 MBit$" $f 1>/dev/null; then echo 100000 > $f; fi'
+++* * * * * sh -c 'f=/sys/class/net/vx_mesh_wan/batman_adv/throughput_override; if [ -f "$f" ] && grep -v "^100.0 MBit$" $f 1>/dev/null; then echo 100000 > $f; fi'
