@@ -2,6 +2,7 @@ GLUON_BUILD_DIR := gluon-build
 GLUON_GIT_URL := https://github.com/freifunk-gluon/gluon.git
 GLUON_GIT_REF := v2018.2.1
 
+PATCH_DIR := ${GLUON_BUILD_DIR}/site/patches
 SECRET_KEY_FILE ?= ${HOME}/.gluon-secret-key
 
 GLUON_TARGETS ?= \
@@ -22,13 +23,13 @@ GLUON_TARGETS ?= \
 	ramips-rt305x
 
 ifneq (,$(shell git describe --exact-match --tags 2>/dev/null))
-  GLUON_BRANCH := stable
-  GLUON_RELEASE := $(shell git describe --tags 2>/dev/null)
+	GLUON_BRANCH := stable
+	GLUON_RELEASE := $(shell git describe --tags 2>/dev/null)
 else
-  GLUON_BRANCH := experimental
-  EXP_FALLBACK = $(shell date '+%Y%m%d%H')
-  BUILD_NUMBER ?= $(EXP_FALLBACK)
-  GLUON_RELEASE := v2019.0.3~exp$(BUILD_NUMBER)
+	GLUON_BRANCH := experimental
+	EXP_FALLBACK = $(shell date '+%Y%m%d%H')
+	BUILD_NUMBER ?= $(EXP_FALLBACK)
+	GLUON_RELEASE := v2019.0.3~exp$(BUILD_NUMBER)
 endif
 
 JOBS ?= $(shell cat /proc/cpuinfo | grep processor | wc -l)
@@ -65,11 +66,26 @@ ${GLUON_BUILD_DIR}:
 
 gluon-prepare: output-clean ${GLUON_BUILD_DIR}
 	(cd ${GLUON_BUILD_DIR} \
-	  && git remote set-url origin ${GLUON_GIT_URL} \
-	  && git fetch origin \
-	  && git checkout -q ${GLUON_GIT_REF})
+		&& git remote set-url origin ${GLUON_GIT_URL} \
+		&& git fetch origin \
+		&& git checkout -q ${GLUON_GIT_REF})
 	ln -sfT .. ${GLUON_BUILD_DIR}/site
+	make gluon-patch
 	${GLUON_MAKE} update
+gluon-patch:
+				echo "Applying Patches ..."
+				(cd ${GLUON_BUILD_DIR}; git branch -D patched)
+				(cd ${GLUON_BUILD_DIR}; git checkout -B patching)
+				if [ -d "gluon-build/site/patches" -a "gluon-build/site/patches/*.patch" ]; then \
+								(cd ${GLUON_BUILD_DIR}; git apply --whitespace=nowarn site/patches/*.patch) || ( \
+												cd ${GLUON_BUILD_DIR} \
+												git am --abort \
+												git checkout -B patched \
+												git branch -D patching \
+												false \
+								) \
+				fi
+				(cd ${GLUON_BUILD_DIR}; git branch -M patched)
 
 gluon-clean:
 	rm -rf ${GLUON_BUILD_DIR}
