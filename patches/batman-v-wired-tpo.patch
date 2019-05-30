@@ -1,11 +1,3 @@
-Set fixed throughput for wired interfaces.
-
-This is taken from Freifunk Chemnitz.
-From https://gitlab.com/FreifunkChemnitz/site-ffc/blob/b89e6568c8b8baf91febe2ce7c919d04f72bf5fb/patches/batman-v-wired-tpo.patch
-
-This is a TEMPORARY workaround for
-https://github.com/freifunkMUC/site-ffm/issues/57
-
 diff --git a/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo b/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo
 new file mode 100755
 index 0000000..7185b4a
