@@ -1,5 +1,25 @@
 # Freifunk München Firmware Changelog
 
+## v2019.0.3
+
+  - Domains:
+    - add "ALT:" prefix for old/deprecated Segments
+    - add domain-config for new segments
+      - ffmuc_muc_cty, ffmuc_muc_nord, ffmuc_muc_ost, ffmuc_muc_sued,
+        ffmuc_muc_west, ffmuc_uml_nord, ffmuc_uml_ost, ffmuc_uml_sued,
+        ffmuc_uml_west
+    - set new default_domain to ffmuc_welt
+    - drop files for disabled domains
+  - site.conf:
+    - allow setting node location via map
+    - implement usage if domain_director to let nodes ask for a domain it
+      should switch to
+  - Makefile:
+    - setup Makefile to apply patches
+      - add patches to fix BATMAN_V support (from ff chemnitz) for new
+        segments
+
+
 ## v2019.0.2
   - drop ULA support and use public v6 addresses instead
   - drop IBSS in favor of 11s only mesh (and disable migration path where
