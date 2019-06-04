@@ -1,5 +1,11 @@
 # Freifunk München Firmware Changelog
 
+## v2019.0.4
+  - Domains:
+    - add ffmuc_freising and ffmuc_gauting
+  - Doc:
+    - add hint to liquid feedback as it is offline for at least a year
+
 ## v2019.0.3
 
   - Domains:

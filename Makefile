@@ -29,14 +29,14 @@ else
 	GLUON_BRANCH := experimental
 	EXP_FALLBACK = $(shell date '+%Y%m%d%H')
 	BUILD_NUMBER ?= $(EXP_FALLBACK)
-	GLUON_RELEASE := v2019.0.3~exp$(BUILD_NUMBER)
+	GLUON_RELEASE := v2019.0.4~exp$(BUILD_NUMBER)
 endif
 
 JOBS ?= $(shell cat /proc/cpuinfo | grep processor | wc -l)
 
 GLUON_MAKE := ${MAKE} -j ${JOBS} -C ${GLUON_BUILD_DIR} \
-			GLUON_RELEASE=${GLUON_RELEASE} \
-			GLUON_BRANCH=${GLUON_BRANCH}
+	GLUON_RELEASE=${GLUON_RELEASE} \
+	GLUON_BRANCH=${GLUON_BRANCH}
 
 all: info
 	${MAKE} manifest
@@ -73,19 +73,19 @@ gluon-prepare: output-clean ${GLUON_BUILD_DIR}
 	make gluon-patch
 	${GLUON_MAKE} update
 gluon-patch:
-				echo "Applying Patches ..."
-				(cd ${GLUON_BUILD_DIR}; git branch -D patched)
-				(cd ${GLUON_BUILD_DIR}; git checkout -B patching)
-				if [ -d "gluon-build/site/patches" -a "gluon-build/site/patches/*.patch" ]; then \
-								(cd ${GLUON_BUILD_DIR}; git apply --whitespace=nowarn site/patches/*.patch) || ( \
-												cd ${GLUON_BUILD_DIR} \
-												git am --abort \
-												git checkout -B patched \
-												git branch -D patching \
-												false \
-								) \
-				fi
-				(cd ${GLUON_BUILD_DIR}; git branch -M patched)
+	echo "Applying Patches ..."
+	(cd ${GLUON_BUILD_DIR}; git branch -D patched)
+	(cd ${GLUON_BUILD_DIR}; git checkout -B patching)
+	if [ -d "gluon-build/site/patches" -a "gluon-build/site/patches/*.patch" ]; then \
+		(cd ${GLUON_BUILD_DIR}; git apply --whitespace=nowarn site/patches/*.patch) || ( \
+			cd ${GLUON_BUILD_DIR} \
+			git am --abort \
+			git checkout -B patched \
+			git branch -D patching \
+			false \
+		) \
+	fi
+	(cd ${GLUON_BUILD_DIR}; git branch -M patched)
 
 gluon-clean:
 	rm -rf ${GLUON_BUILD_DIR}
