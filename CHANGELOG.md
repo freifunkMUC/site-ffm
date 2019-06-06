@@ -1,5 +1,9 @@
 # Freifunk München Firmware Changelog
 
+## v2019.0.5
+  - Domains:
+    - add gw07 for new segments
+
 ## v2019.0.4
   - Domains:
     - add ffmuc_freising and ffmuc_gauting
