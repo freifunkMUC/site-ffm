@@ -3,6 +3,11 @@
 ## v2019.0.5
   - Domains:
     - add gw07 for new segments
+    - remove legacy domains (will fallback to ffmuc_wiki)
+  - Docs:
+    - remove hint to lqfb.freifunk-muenchen.de as it is offline
+      (thanks to @T0biii in #59)
+    - change url from ffmuc.net/map to map.ffmuc.net
 
 ## v2019.0.4
   - Domains:
