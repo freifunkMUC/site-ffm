@@ -1,5 +1,9 @@
 # Freifunk München Firmware Changelog
 
+## v2019.0.6
+  - Domains:
+    - fix for muc_ost: Wrong prefix for local IP and duplicate domain_seed
+
 ## v2019.0.5
   - Domains:
     - add gw07 for new segments
