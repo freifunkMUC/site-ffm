@@ -1,6 +1,6 @@
 GLUON_BUILD_DIR := gluon-build
 GLUON_GIT_URL := https://github.com/freifunk-gluon/gluon.git
-GLUON_GIT_REF := v2018.2.1
+GLUON_GIT_REF := v2018.2.2
 
 PATCH_DIR := ${GLUON_BUILD_DIR}/site/patches
 SECRET_KEY_FILE ?= ${HOME}/.gluon-secret-key
@@ -29,7 +29,7 @@ else
 	GLUON_BRANCH := experimental
 	EXP_FALLBACK = $(shell date '+%Y%m%d%H')
 	BUILD_NUMBER ?= $(EXP_FALLBACK)
-	GLUON_RELEASE := v2019.0.5~exp$(BUILD_NUMBER)
+	GLUON_RELEASE := v2019.0.6~exp$(BUILD_NUMBER)
 endif
 
 JOBS ?= $(shell cat /proc/cpuinfo | grep processor | wc -l)
