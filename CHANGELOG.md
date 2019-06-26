@@ -1,6 +1,8 @@
 # Freifunk München Firmware Changelog
 
 ## v2019.0.6
+  - Updated to Gluon v2018.2.2
+    - Changes: https://gluon.readthedocs.io/en/v2018.2.2/releases/v2018.2.2.html
   - Domains:
     - fix for muc_ost: Wrong prefix for local IP and duplicate domain_seed
 
