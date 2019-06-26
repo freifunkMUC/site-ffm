@@ -7,7 +7,7 @@
 ## v2019.0.5
   - Domains:
     - add gw07 for new segments
-    - remove legacy domains (will fallback to ffmuc_world)
+    - remove legacy domains (will fallback to ffmuc_welt)
   - Docs:
     - remove hint to lqfb.freifunk-muenchen.de as it is offline
       (thanks to @T0biii in #59)
