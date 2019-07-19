@@ -23,8 +23,7 @@ GLUON_SITE_PACKAGES := \
 	iptables \
 	haveged \
 	ffho-autoupdater-wifi-fallback \
-	ffmuc-domain-director \
-	tecff-ath9k-broken-wifi-workaround
+	ffmuc-domain-director
 
 # basic support for USB stack
 USB_PACKAGES_BASIC := \
