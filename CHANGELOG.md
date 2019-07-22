@@ -1,5 +1,10 @@
 # Freifunk München Firmware Changelog
 
+## v2019.0.7
+  - Drop config for ffmuc_testing (not used anymore)
+  - disable ath9k-broken-wifi-workaround
+  - reset batman_adv.gw_sel_class to default (atm 5000)
+
 ## v2019.0.6
   - Updated to Gluon v2018.2.2
     - Changes: https://gluon.readthedocs.io/en/v2018.2.2/releases/v2018.2.2.html
