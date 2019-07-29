@@ -23,6 +23,8 @@ GLUON_SITE_PACKAGES := \
 	iptables \
 	haveged \
 	ffho-autoupdater-wifi-fallback \
+	ffho-ap-timer \
+	ffho-web-ap-timer \
 	ffmuc-domain-director
 
 # basic support for USB stack
