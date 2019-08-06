@@ -68,7 +68,9 @@ gluon-prepare: output-clean ${GLUON_BUILD_DIR}
 	(cd ${GLUON_BUILD_DIR} \
 		&& git remote set-url origin ${GLUON_GIT_URL} \
 		&& git fetch origin \
-		&& git checkout -q ${GLUON_GIT_REF})
+		&& git checkout -q ${GLUON_GIT_REF}) \
+		&& git cherry-pick 8dd13cbbca649967137f6eb392267dec444dfc4e \
+		&& git cherry-pick 3d3617ed2c85c24be1b8c2de876045381d9adf0e
 	ln -sfT .. ${GLUON_BUILD_DIR}/site
 	make gluon-patch
 	${GLUON_MAKE} update
