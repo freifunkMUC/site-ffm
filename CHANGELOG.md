@@ -4,6 +4,7 @@
   - add ap-timer to allow setting on and off times for client wifi
   - update gluon to use batman-adv-v2019.2
   - Use Skript of ffda to determine which packages should be included in device firmware
+  - Add sign key of @django
 
 ## v2019.0.7
   - Drop config for ffmuc_testing (not used anymore)
