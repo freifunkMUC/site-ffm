@@ -1,7 +1,8 @@
 # Freifunk München Firmware Changelog
 
 ## v2019.0.9
-  - <to be filled>
+  - Patches:
+    - use wifi tx bitrate as fallback throughput
 
 ## v2019.0.8
   - add ap-timer to allow setting on and off times for client wifi
