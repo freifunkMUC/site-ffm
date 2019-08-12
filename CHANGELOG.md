@@ -1,5 +1,8 @@
 # Freifunk München Firmware Changelog
 
+## v2019.0.9
+  - <to be filled>
+
 ## v2019.0.8
   - add ap-timer to allow setting on and off times for client wifi
   - update gluon to use batman-adv-v2019.2

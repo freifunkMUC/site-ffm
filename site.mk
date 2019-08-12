@@ -27,7 +27,7 @@ GLUON_SITE_PACKAGES := \
 	ffho-web-ap-timer \
 	ffmuc-domain-director
 
-DEFAULT_GLUON_RELEASE := v2019.0.8~exp$(shell date '+%Y%m%d%H')
+DEFAULT_GLUON_RELEASE := v2019.0.9~exp$(shell date '+%Y%m%d%H')
 
 # Allow overriding the release number from the command line
 GLUON_RELEASE ?= $(DEFAULT_GLUON_RELEASE)
