@@ -3,6 +3,7 @@
 ## v2019.0.9
   - Patches:
     - use wifi tx bitrate as fallback throughput
+    - add kernel module required by simple-tc
 
 ## v2019.0.8
   - add ap-timer to allow setting on and off times for client wifi
