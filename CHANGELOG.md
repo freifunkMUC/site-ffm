@@ -1,5 +1,9 @@
 # Freifunk München Firmware Changelog
 
+## v2019.0.10
+  - Updated to Gluon v2018.2.3
+    - https://gluon.readthedocs.io/en/v2018.2.3/releases/v2018.2.3.html
+
 ## v2019.0.9
   - Patches:
     - use wifi tx bitrate as fallback throughput
