@@ -19,13 +19,14 @@ GLUON_FEATURES := \
 	domain-migration-ffmuc
 
 GLUON_SITE_PACKAGES := \
-	iwinfo \
-	iptables \
-	haveged \
 	ffho-autoupdater-wifi-fallback \
 	ffho-ap-timer \
 	ffho-web-ap-timer \
-	ffmuc-domain-director
+	ffmuc-domain-director \
+	haveged \
+	iwinfo \
+	iptables \
+	respondd-module-airtime
 
 DEFAULT_GLUON_RELEASE := v2019.0.10~exp$(shell date '+%Y%m%d%H')
 
