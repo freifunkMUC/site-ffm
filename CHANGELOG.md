@@ -3,6 +3,7 @@
 ## v2019.1.1
   - Updated to Gluon v2019.1
     - https://gluon.readthedocs.io/en/latest/releases/v2019.1.html
+  - remove patches to upgrade to batman-adv-v2019.2
 
 ## v2019.0.10
   - Updated to Gluon v2018.2.3
