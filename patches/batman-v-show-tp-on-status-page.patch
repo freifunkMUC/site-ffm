@@ -50,7 +50,7 @@ index b923d7f1..8fa94d72 100644
  
    opts = batadv_container_of(query_opts, struct neigh_netlink_opts, query_opts);
  
-@@ -43,43 +44,42 @@ static int parse_orig_list_netlink_cb(struct nl_msg *msg, void *arg)
+@@ -43,41 +44,43 @@ static int parse_orig_list_netlink_cb(struct nl_msg *msg, void *arg)
  
    ghdr = nlmsg_data(nlh);
  
@@ -68,9 +68,6 @@ index b923d7f1..8fa94d72 100644
 +	                        BATADV_ARRAY_SIZE(parse_neigh_list_mandatory)))
      return NL_OK;
  
--  if (!attrs[BATADV_ATTR_FLAG_BEST])
--    return NL_OK;
--
 -  orig = nla_data(attrs[BATADV_ATTR_ORIG_ADDRESS]);
 -  dest = nla_data(attrs[BATADV_ATTR_NEIGH_ADDRESS]);
 -  tq = nla_get_u8(attrs[BATADV_ATTR_TQ]);
@@ -97,6 +94,7 @@ index b923d7f1..8fa94d72 100644
  
 -  json_object_object_add(neigh, "tq", json_object_new_int(tq * 100 / 255));
 -  json_object_object_add(neigh, "ifname", json_object_new_string(ifname));
+-  json_object_object_add(neigh, "best", json_object_new_boolean(attrs[BATADV_ATTR_FLAG_BEST]));
 +  for (tp_unit = 0; tp_unit < 4; tp_unit++) {
 +    if (throughput < 1000) break;
 +    throughput /= 1000;
@@ -105,13 +103,14 @@ index b923d7f1..8fa94d72 100644
 +
 +  json_object_object_add(obj, "tp", json_object_new_string(tp_str));
 +  json_object_object_add(obj, "ifname", json_object_new_string(ifname));
++  json_object_object_add(obj, "best", json_object_new_boolean(attrs[BATADV_ATTR_FLAG_BEST]));
  
 -  json_object_object_add(opts->obj, mac1, neigh);
 +  json_object_object_add(opts->obj, mac1, obj);
  
    return NL_OK;
  }
-@@ -96,8 +96,8 @@ static json_object *neighbours(void) {
+@@ -94,8 +97,8 @@ static json_object *neighbours(void) {
    if (!opts.obj)
      return NULL;
  

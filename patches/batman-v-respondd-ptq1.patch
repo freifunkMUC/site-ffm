@@ -2,7 +2,7 @@ diff --git a/package/gluon-mesh-batman-adv/src/respondd.c b/package/gluon-mesh-b
 index ca7ae968..5c3afee6 100644
 --- a/package/gluon-mesh-batman-adv/src/respondd.c
 +++ b/package/gluon-mesh-batman-adv/src/respondd.c
-@@ -584,22 +584,21 @@ static struct json_object * ifnames2addrs(struct json_object *interfaces) {
+@@ -623,22 +623,21 @@ static struct json_object * ifnames2addrs(struct json_object *interfaces) {
  	return ret;
  }
  
@@ -30,7 +30,7 @@ index ca7ae968..5c3afee6 100644
  	uint8_t tq;
  	uint32_t hardif;
  	uint32_t lastseen;
-@@ -615,35 +614,28 @@ static int parse_orig_list_netlink_cb(struct nl_msg *msg, void *arg)
+@@ -654,35 +653,28 @@ static int parse_orig_list_netlink_cb(struct nl_msg *msg, void *arg)
  
  	ghdr = nlmsg_data(nlh);
  
@@ -44,9 +44,6 @@ index ca7ae968..5c3afee6 100644
  
 -	if (batadv_genl_missing_attrs(attrs, parse_orig_list_mandatory,
 -				      BATADV_ARRAY_SIZE(parse_orig_list_mandatory)))
--		return NL_OK;
--
--	if (!attrs[BATADV_ATTR_FLAG_BEST])
 +	if (batadv_genl_missing_attrs(attrs, parse_neigh_list_mandatory,
 +				      BATADV_ARRAY_SIZE(parse_neigh_list_mandatory)))
  		return NL_OK;
@@ -72,7 +69,7 @@ index ca7ae968..5c3afee6 100644
  
  	struct json_object *obj = json_object_new_object();
  	if (!obj)
-@@ -655,6 +647,8 @@ static int parse_orig_list_netlink_cb(struct nl_msg *msg, void *arg)
+@@ -691,6 +686,8 @@ static int parse_orig_list_netlink_cb(struct nl_msg *msg, void *arg)
  		json_object_object_add(opts->interfaces, ifname, interface);
  	}
  
@@ -80,8 +77,8 @@ index ca7ae968..5c3afee6 100644
 +
  	json_object_object_add(obj, "tq", json_object_new_int(tq));
  	json_object_object_add(obj, "lastseen", json_object_new_double(lastseen / 1000.));
- 	json_object_object_add(interface, mac1, obj);
-@@ -674,8 +668,8 @@ static struct json_object * get_batadv(void) {
+ 	json_object_object_add(obj, "best", json_object_new_boolean(attrs[BATADV_ATTR_FLAG_BEST]));
+@@ -711,8 +708,8 @@ static struct json_object * get_batadv(v
  	if (!opts.interfaces)
  		return NULL;
  
