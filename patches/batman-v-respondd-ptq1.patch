@@ -1,5 +1,5 @@
 diff --git a/package/gluon-mesh-batman-adv/src/respondd.c b/package/gluon-mesh-batman-adv/src/respondd.c
-index ca7ae968..5c3afee6 100644
+index 7d84d149..67f5362a 100644
 --- a/package/gluon-mesh-batman-adv/src/respondd.c
 +++ b/package/gluon-mesh-batman-adv/src/respondd.c
 @@ -623,22 +623,21 @@ static struct json_object * ifnames2addrs(struct json_object *interfaces) {
@@ -30,7 +30,7 @@ index ca7ae968..5c3afee6 100644
  	uint8_t tq;
  	uint32_t hardif;
  	uint32_t lastseen;
-@@ -654,35 +653,28 @@ static int parse_orig_list_netlink_cb(struct nl_msg *msg, void *arg)
+@@ -654,32 +653,28 @@ static int parse_orig_list_netlink_cb(struct nl_msg *msg, void *arg)
  
  	ghdr = nlmsg_data(nlh);
  
@@ -78,12 +78,14 @@ index ca7ae968..5c3afee6 100644
  	json_object_object_add(obj, "tq", json_object_new_int(tq));
  	json_object_object_add(obj, "lastseen", json_object_new_double(lastseen / 1000.));
  	json_object_object_add(obj, "best", json_object_new_boolean(attrs[BATADV_ATTR_FLAG_BEST]));
-@@ -711,8 +708,8 @@ static struct json_object * get_batadv(v
+@@ -710,9 +707,9 @@ static struct json_object * get_batadv(void) {
+ 	opts.interfaces = json_object_new_object();
  	if (!opts.interfaces)
  		return NULL;
- 
+-
 -	ret = batadv_genl_query("bat0", BATADV_CMD_GET_ORIGINATORS,
 -				parse_orig_list_netlink_cb, NLM_F_DUMP,
++
 +	ret = batadv_genl_query("bat0", BATADV_CMD_GET_NEIGHBORS,
 +				parse_neigh_list_netlink_cb, NLM_F_DUMP,
  				&opts.query_opts);
