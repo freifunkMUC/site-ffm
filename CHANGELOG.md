@@ -1,7 +1,7 @@
 # Freifunk München Firmware Changelog
 
 ## v2019.1.2
-  - nothing yet
+  - Add patch for identifying network speed on vxlan interfaces
 
 ## v2019.1.1
   - Updated to Gluon v2019.1
