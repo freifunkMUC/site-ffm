@@ -2,6 +2,7 @@
 
 ## v2019.1.2
   - Add patch for identifying network speed on vxlan interfaces
+  - Update GLUON_TARGETS (support new devices)
 
 ## v2019.1.1
   - Updated to Gluon v2019.1
