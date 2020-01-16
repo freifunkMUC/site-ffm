@@ -77,8 +77,7 @@ gluon-prepare: output-clean ${GLUON_BUILD_DIR}
 gluon-patch:
 	echo "Applying Patches ..."
 	(cd ${GLUON_BUILD_DIR} \
-			if [ `git branch --list patched` ] \
-			then \
+			if [ `git branch --list patched` ]; then \
 				git branch -D patched \
 			fi)
 	(cd ${GLUON_BUILD_DIR}; git checkout -B patching)
