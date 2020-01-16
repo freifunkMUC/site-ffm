@@ -76,10 +76,10 @@ gluon-prepare: output-clean ${GLUON_BUILD_DIR}
 	${GLUON_MAKE} update
 gluon-patch:
 	echo "Applying Patches ..."
-	(cd ${GLUON_BUILD_DIR} \
+	(cd ${GLUON_BUILD_DIR})
 			if [ `git branch --list patched` ]; then \
-				git branch -D patched \
-			fi)
+				(git branch -D patched) \
+			fi
 	(cd ${GLUON_BUILD_DIR}; git checkout -B patching)
 	if [ -d "gluon-build/site/patches" -a "gluon-build/site/patches/*.patch" ]; then \
 		(cd ${GLUON_BUILD_DIR}; git apply --whitespace=nowarn site/patches/*.patch) || ( \
