@@ -81,6 +81,7 @@ gluon-patch:
 	if [ -d "gluon-build/site/patches" -a "gluon-build/site/patches/*.patch" ]; then \
 		(cd ${GLUON_BUILD_DIR}; git apply --whitespace=nowarn site/patches/*.patch) || ( \
 			cd ${GLUON_BUILD_DIR} \
+			git clean -fd \
 			git am --abort \
 			git checkout -B patched \
 			git branch -D patching \
