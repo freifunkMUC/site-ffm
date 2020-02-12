@@ -69,6 +69,7 @@ gluon-prepare: output-clean ${GLUON_BUILD_DIR}
 	(cd ${GLUON_BUILD_DIR} \
 		&& git remote set-url origin ${GLUON_GIT_URL} \
 		&& git fetch origin \
+		&& rm -rf package packages \
 		&& git checkout -q --force ${GLUON_GIT_REF}) \
 		&& git clean -fd
 	ln -sfT .. ${GLUON_BUILD_DIR}/site
