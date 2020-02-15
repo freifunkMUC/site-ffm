@@ -28,7 +28,7 @@ GLUON_SITE_PACKAGES := \
 	iptables \
 	respondd-module-airtime
 
-DEFAULT_GLUON_RELEASE := v2019.1.3~exp$(shell date '+%Y%m%d%H')
+DEFAULT_GLUON_RELEASE := v2020.1~exp$(shell date '+%Y%m%d%H')
 
 # Allow overriding the release number from the command line
 GLUON_RELEASE ?= $(DEFAULT_GLUON_RELEASE)
