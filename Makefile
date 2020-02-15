@@ -13,6 +13,9 @@ GLUON_TARGETS ?= \
 	brcm2708-bcm2709 \
 	mpc85xx-generic \
 	mpc85cc-p1020 \
+	lantiq-xway \
+	lantiq-xrx200 \
+	ath79-generic \
 	ramips-mt7621 \
 	sunxi-cortexa7 \
 	x86-generic \
