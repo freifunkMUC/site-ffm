@@ -18,7 +18,8 @@ GLUON_TARGETS ?= \
 	x86-generic \
 	x86-geode \
 	x86-64 \
-	ipq40xx \
+	ipq40xx-generic \
+	ipq806x-generic \
 	ramips-mt7620 \
 	ramips-mt76x8 \
 	ramips-rt305x
