@@ -237,7 +237,7 @@ targets.get('ar71xx-generic'). \
         'tp-link-tl-wr1043n-nd-v1',
         'ubiquiti-airrouter'])
 
-for target in ['ar71xx-nand', 'ipq40xx', 'ipq806x', 'mpc85xx-generic', 'mvebu-cortexa9', 'ramips-mt7620', 'sunxi-cortexa7']:
+for target in ['ar71xx-nand', 'ipq40xx-generic', 'ipq806x-generic', 'mpc85xx-generic', 'mvebu-cortexa9', 'ramips-mt7620', 'sunxi-cortexa7']:
     targets.get(target). \
         add_pkglist(PKGS_USB). \
         add_pkglist(PKGS_USB_NET). \
