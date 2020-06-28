@@ -1,6 +1,6 @@
 GLUON_BUILD_DIR := gluon-build
 GLUON_GIT_URL := https://github.com/freifunk-gluon/gluon.git
-GLUON_GIT_REF := v2020.1
+GLUON_GIT_REF := v2020.1.3
 
 PATCH_DIR := ${GLUON_BUILD_DIR}/site/patches
 SECRET_KEY_FILE ?= ${HOME}/.gluon-secret-key
@@ -87,7 +87,7 @@ gluon-patch:
 			fi
 	(cd ${GLUON_BUILD_DIR}; git checkout -B patching)
 	if [ -d "gluon-build/site/patches" -a "gluon-build/site/patches/*.patch" ]; then \
-		(cd ${GLUON_BUILD_DIR}; git apply --whitespace=nowarn site/patches/*.patch) || ( \
+		(cd ${GLUON_BUILD_DIR}; git apply --ignore-space-change --ignore-whitespace --whitespace=nowarn site/patches/*.patch) || ( \
 			cd ${GLUON_BUILD_DIR} \
 			git clean -fd \
 			git am --abort \
