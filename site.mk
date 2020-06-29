@@ -8,21 +8,18 @@ GLUON_FEATURES := \
 	ebtables-filter-ra-dhcp \
 	ebtables-source-filter \
 	web-advanced \
-	web-ffmuc-domain-director \
 	web-private-wifi \
 	web-wizard \
 	mesh-batman-adv-15 \
 	mesh-vpn-fastd \
 	status-page \
 	config-mode-domain-select \
-	config-mode-geo-location-osm \
-	domain-migration-ffmuc
+	config-mode-geo-location-osm
 
 GLUON_SITE_PACKAGES := \
 	ffho-autoupdater-wifi-fallback \
 	ffho-ap-timer \
 	ffho-web-ap-timer \
-	ffmuc-domain-director \
 	haveged \
 	iwinfo \
 	iptables \
