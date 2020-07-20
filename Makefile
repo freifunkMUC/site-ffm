@@ -1,6 +1,6 @@
 GLUON_BUILD_DIR := gluon-build
 GLUON_GIT_URL := https://github.com/freifunk-gluon/gluon.git
-GLUON_GIT_REF := v2020.1.3
+GLUON_GIT_REF := v2020.2
 
 PATCH_DIR := ${GLUON_BUILD_DIR}/site/patches
 SECRET_KEY_FILE ?= ${HOME}/.gluon-secret-key
@@ -21,6 +21,7 @@ GLUON_TARGETS ?= \
 	x86-generic \
 	x86-geode \
 	x86-64 \
+	x86-legacy \
 	ipq40xx-generic \
 	ipq806x-generic \
 	ramips-mt7620 \
@@ -34,7 +35,7 @@ else
 	GLUON_BRANCH := experimental
 	EXP_FALLBACK = $(shell date '+%Y%m%d%H')
 	BUILD_NUMBER ?= $(EXP_FALLBACK)
-	GLUON_RELEASE := v2020.1~exp$(BUILD_NUMBER)
+	GLUON_RELEASE := v2020.2.1~exp$(BUILD_NUMBER)
 endif
 
 JOBS ?= $(shell cat /proc/cpuinfo | grep processor | wc -l)
