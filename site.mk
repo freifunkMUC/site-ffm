@@ -8,27 +8,23 @@ GLUON_FEATURES := \
 	ebtables-filter-ra-dhcp \
 	ebtables-source-filter \
 	web-advanced \
-	web-ffmuc-domain-director \
 	web-private-wifi \
 	web-wizard \
 	mesh-batman-adv-15 \
 	mesh-vpn-fastd \
 	status-page \
 	config-mode-domain-select \
-	config-mode-geo-location-osm \
-	domain-migration-ffmuc
+	config-mode-geo-location-osm
 
 GLUON_SITE_PACKAGES := \
 	ffho-autoupdater-wifi-fallback \
 	ffho-ap-timer \
 	ffho-web-ap-timer \
-	ffmuc-domain-director \
-	haveged \
 	iwinfo \
 	iptables \
 	respondd-module-airtime
 
-DEFAULT_GLUON_RELEASE := v2020.1~exp$(shell date '+%Y%m%d%H')
+DEFAULT_GLUON_RELEASE := v2020.2~exp$(shell date '+%Y%m%d%H')
 
 # Allow overriding the release number from the command line
 GLUON_RELEASE ?= $(DEFAULT_GLUON_RELEASE)
