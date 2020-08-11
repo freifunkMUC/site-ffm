@@ -1,5 +1,9 @@
-GLUON_SITE_FEEDS='ffmuc'
+GLUON_SITE_FEEDS='ffmuc wireguard'
 
 PACKAGES_FFMUC_REPO=https://github.com/freifunkMUC/gluon-packages.git
 PACKAGES_FFMUC_BRANCH=master
 PACKAGES_FFMUC_COMMIT=c48a64de6fb46ea390ebc4ed264e058434a767eb
+
+PACKAGES_WIREGUARD_REPO=https://github.com/freifunkMUC/gluon-mesh-vpn-wireguard.git
+PACKAGES_WIREGUARD_BRANCH=switch_to_vxlan
+PACKAGES_WIREGUARD_COMMIT=b1d3b83dc59f8b856d16b4d3f748062a8ec72ed8
