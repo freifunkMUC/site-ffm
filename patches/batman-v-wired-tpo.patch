@@ -10,6 +10,8 @@ index 0000000..7185b4a
 +
 +if [ -f /sys/devices/virtual/net/vx_mesh_wan/batman_adv/throughput_override ]; then echo 1000000 > /sys/devices/virtual/net/vx_mesh_wan/batman_adv/throughput_override; fi
 +
++if [ -f /sys/devices/virtual/net/vx_mesh_vpn/batman_adv/throughput_override ]; then echo 1000000 > /sys/devices/virtual/net/vx_mesh_vpn/batman_adv/throughput_override; fi
++
 +if [ -f /sys/devices/virtual/net/br-wan/batman_adv/throughput_override ]; then echo 1000000 > /sys/devices/virtual/net/br-wan/batman_adv/throughput_override; fi
 +
 +if [ -f /sys/devices/virtual/net/mesh-vpn/batman_adv/throughput_override ]; then echo 1000000 > /sys/devices/virtual/net/mesh-vpn/batman_adv/throughput_override; fi

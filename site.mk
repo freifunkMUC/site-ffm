@@ -11,7 +11,6 @@ GLUON_FEATURES := \
 	web-private-wifi \
 	web-wizard \
 	mesh-batman-adv-15 \
-	mesh-vpn-fastd \
 	status-page \
 	config-mode-domain-select \
 	config-mode-geo-location-osm
@@ -22,6 +21,7 @@ GLUON_SITE_PACKAGES := \
 	ffho-web-ap-timer \
 	iwinfo \
 	iptables \
+	gluon-mesh-vpn-wireguard-vxlan \
 	respondd-module-airtime
 
 DEFAULT_GLUON_RELEASE := v2020.2~exp$(shell date '+%Y%m%d%H')
