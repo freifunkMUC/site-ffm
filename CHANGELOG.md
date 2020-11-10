@@ -1,8 +1,31 @@
 # Freifunk München Firmware Changelog
 
+## v2020.2.3
+  - add gw04 andd gw05 (new Location VIE01)
+  - remove gateways from Munich location(gw01, gw02, gw07)
+  - switch IPs to IPs from AS
+
+## v2020.2.2
+  - Update to gluon 2020.2.1
+    - https://gluon.readthedocs.io/en/latest/releases/v2020.2.1.html
+
+## v2020.2.1
+  - Update to gluon 2020.2
+    - https://gluon.readthedocs.io/en/latest/releases/v2020.2.html
+  - add target x86-legacy
+
+## v2020.1.1 (29.06.2020)
+  - Update to gluon 2020.1
+    - https://gluon.readthedocs.io/en/latest/releases/v2020.1.html
+  - Update target definition "ipq40xx" => "ipq40xx-generic";
+  - Add target "ipq806x-generic" (previously "ipq806x" but still not built by us)
+  - build for additional targets (lantiq-xway lantiq-xrx200 ath79-generic)
+  - remove domain directory (as site split is done)
+
 ## v2019.1.3
   - Update to gluon 2019.1.2
     - https://gluon.readthedocs.io/en/latest/releases/v2019.1.2.html
+  - fix Makefile for applying patches
 
 ## v2019.1.2
   - Update to gluon 2019.1.1
