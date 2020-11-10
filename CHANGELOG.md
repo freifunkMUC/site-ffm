@@ -1,5 +1,8 @@
 # Freifunk München Firmware Changelog
 
+## v2020.3.1
+  - switch transport from fastd to wireguard
+
 ## v2020.2.3
   - add gw04 andd gw05 (new Location VIE01)
   - remove gateways from Munich location(gw01, gw02, gw07)
