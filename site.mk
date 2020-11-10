@@ -1,5 +1,5 @@
 GLUON_MULTIDOMAIN=1
-GLUON_DEPRECATED=full
+GLUON_DEPRECATED=upgrade
 
 GLUON_FEATURES := \
 	respondd \
@@ -11,6 +11,7 @@ GLUON_FEATURES := \
 	web-private-wifi \
 	web-wizard \
 	mesh-batman-adv-15 \
+	mesh-vpn-wireguard-vxlan \
 	status-page \
 	config-mode-domain-select \
 	config-mode-geo-location-osm
@@ -21,10 +22,9 @@ GLUON_SITE_PACKAGES := \
 	ffho-web-ap-timer \
 	iwinfo \
 	iptables \
-	gluon-mesh-vpn-wireguard-vxlan \
 	respondd-module-airtime
 
-DEFAULT_GLUON_RELEASE := v2020.2~exp$(shell date '+%Y%m%d%H')
+DEFAULT_GLUON_RELEASE := v2020.3.1~exp$(shell date '+%Y%m%d%H')
 
 # Allow overriding the release number from the command line
 GLUON_RELEASE ?= $(DEFAULT_GLUON_RELEASE)
