@@ -1,6 +1,0 @@
-	DIR=$(1) sh create-config.sh
-	
-	$(call GluonInstallI18N,gluon-config-mode-site-select,$(1))
-endef
-
-$(eval $(call BuildPackage,gluon-config-mode-site-select))
