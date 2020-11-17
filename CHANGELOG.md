@@ -2,6 +2,7 @@
 
 ## v2020.3.2
   - cleanups left over in v2020.3.1 by intention
+    - remove fastd-config
 
 ## v2020.3.1
   - switch transport from fastd to wireguard
