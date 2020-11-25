@@ -57,7 +57,7 @@ info:
 build: gluon-prepare
 	for target in ${GLUON_TARGETS}; do \
 		echo ""Building target $$target""; \
-		${GLUON_MAKE} GLUON_TARGET="$$target"; \
+		${GLUON_MAKE} download all GLUON_TARGET="$$target"; \
 	done
 
 manifest: build
