@@ -1,6 +1,6 @@
 GLUON_BUILD_DIR := gluon-build
 GLUON_GIT_URL := https://github.com/freifunk-gluon/gluon.git
-GLUON_GIT_REF := v2020.2.1
+GLUON_GIT_REF := 2020.2.2
 
 PATCH_DIR := ${GLUON_BUILD_DIR}/site/patches
 SECRET_KEY_FILE ?= ${HOME}/.gluon-secret-key
@@ -35,7 +35,7 @@ else
 	GLUON_BRANCH := experimental
 	EXP_FALLBACK = $(shell date '+%Y%m%d%H')
 	BUILD_NUMBER ?= $(EXP_FALLBACK)
-	GLUON_RELEASE := v2020.3.1~exp$(BUILD_NUMBER)
+	GLUON_RELEASE := v2020.3.2~exp$(BUILD_NUMBER)
 endif
 
 JOBS ?= $(shell cat /proc/cpuinfo | grep processor | wc -l)
@@ -57,7 +57,7 @@ info:
 build: gluon-prepare
 	for target in ${GLUON_TARGETS}; do \
 		echo ""Building target $$target""; \
-		${GLUON_MAKE} GLUON_TARGET="$$target"; \
+		${GLUON_MAKE} download all GLUON_TARGET="$$target"; \
 	done
 
 manifest: build
