@@ -7,7 +7,11 @@ on:
       - stable
 
 jobs:
-  ar71xx-generic:
+  build_firmware:
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [ar71xx-generic, ar71xx-tiny, ar71xx-nand]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -23,10 +27,10 @@ jobs:
         id: compile
         run: |
           git checkout -b patched && git checkout experimental
-          make GLUON_TARGETS='ar71xx-generic'
+          make GLUON_TARGETS=${{ matrix.target }}
       - name: Upload firmware
         uses: actions/upload-artifact@master
         if: steps.compile.outputs.status == 'success'
         with:
-          name: ar71xx-generic_output
+          name: ${{ matrix.target }}_output
           path: ./output
