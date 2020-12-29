@@ -33,7 +33,8 @@ jobs:
         id: compile
         run: |
           git checkout -b patched && git checkout ${{ steps.extract_branch.outputs.branch }}
-          make BROKEN=1 GLUON_TARGETS=${{ matrix.target }} GLUON_RELEASE=${{ steps.vars.outputs.tag }}
+          make BROKEN=1 GLUON_TARGETS=${{ matrix.target }} GLUON_RELEASE=${{ steps.vars.outputs.tag }} V=s
+          echo "::set-output name=status::success"
       - name: Upload firmware ${{ matrix.target }}
         uses: actions/upload-artifact@master
         if: steps.compile.outputs.status == 'success'
