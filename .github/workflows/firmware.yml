@@ -44,6 +44,7 @@ jobs:
 
   create_release:
     runs-on: ubuntu-latest
+    needs: build_firmware
     outputs:
           output1: ${{ steps.create_release.outputs.test }}
     steps:
@@ -64,6 +65,7 @@ jobs:
       matrix:
         target: [ar71xx-nand]
     runs-on: ubuntu-latest
+    needs: create_release
     steps:
       - name: Upload Release Asset
         id: upload-release-asset 
