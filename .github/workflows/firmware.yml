@@ -3,11 +3,8 @@ name: Build ffmuc firmware
 on:
   push:
     branches:
-      - master
-  release:
-    types: published
-  watch:
-    types: started
+      - experimental
+      - stable
 
 jobs:
   build:
