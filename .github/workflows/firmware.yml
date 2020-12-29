@@ -1,4 +1,4 @@
-name: Build r619ac firmware
+name: Build ffmuc firmware
 
 on:
   push:
