@@ -6,15 +6,12 @@ on:
     tags:
       - v*
 
-env:
-  targets: [ar71xx-nand]
-
 jobs:
   build_firmware:
     strategy:
       fail-fast: false
       matrix:
-        target: ${{ targets }}
+        target: [ar71xx-nand]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -63,7 +60,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: ${{ env.targets }}
+        target: [ar71xx-nand]
     runs-on: ubuntu-latest
     steps:
       - name: Upload Release Asset
