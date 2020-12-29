@@ -5,8 +5,9 @@ on:
   create:
     tags:
       - v*
-  env:
-    targets: [ar71xx-nand]
+
+env:
+  targets: [ar71xx-nand]
 
 jobs:
   build_firmware:
