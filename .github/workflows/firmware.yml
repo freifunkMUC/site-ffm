@@ -41,14 +41,15 @@ jobs:
         with:
           name: ${{ matrix.target }}_output
           path: ./output
+
   create_release:
     runs-on: ubuntu-latest
+    outputs:
+          output1: ${{ steps.create_release.outputs.test }}
     steps:
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
-        outputs:
-          output1: ${{ steps.create_release.outputs.test }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -56,6 +57,7 @@ jobs:
           release_name: Release ${{ github.ref }}
           draft: false
           prerelease: false
+
   upload_release:
     strategy:
       fail-fast: false
