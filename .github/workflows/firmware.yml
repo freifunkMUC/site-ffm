@@ -7,7 +7,7 @@ on:
       - stable
 
 jobs:
-  build:
+  ar71xx-generic:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -19,13 +19,14 @@ jobs:
         run: |
           sudo -E apt-get update
           sudo -E apt-get -y install build-essential asciidoc binutils bzip2 gawk gettext git libncurses5-dev libz-dev patch python2.7 python3 unzip zlib1g-dev lib32gcc1 libc6-dev-i386 subversion flex uglifyjs gcc-multilib g++-multilib p7zip p7zip-full msmtp libssl-dev texinfo libglib2.0-dev xmlto qemu-utils upx libelf-dev autoconf automake libtool autopoint device-tree-compiler antlr3 gperf
-      - name: Compile firmware
+      - name: build target
         id: compile
         run: |
           git checkout -b patched && git checkout experimental
-          make
+          make GLUON_TARGETS='ar71xx-generic'
       - name: Upload firmware
         uses: actions/upload-artifact@master
         if: steps.compile.outputs.status == 'success'
         with:
+          name: ar71xx-generic_output
           path: ./output
