@@ -1,10 +1,10 @@
 name: Build ffmuc firmware
 
 on:
-  push:
-    branches:
-      - experimental
-      - stable
+  workflow_dispatch:
+  create:
+    tags:
+      - v*
 
 jobs:
   build_firmware:
