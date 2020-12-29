@@ -46,7 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build_firmware
     outputs:
-          output1: ${{ steps.create_release.outputs.test }}
+          output1: ${{ steps.create_release.outputs.upload_url }}
     steps:
       - name: Create Release
         id: create_release
