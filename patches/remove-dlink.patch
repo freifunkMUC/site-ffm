@@ -1,0 +1,18 @@
+diff --git a/targets/ar71xx-tiny b/targets/ar71xx-tiny
+index a0a8d510..160ac8a4 100644
+--- a/targets/ar71xx-tiny
++++ b/targets/ar71xx-tiny
+@@ -16,13 +16,6 @@ defaults {
+ }
+ 
+ 
+--- D-Link
+-
+-device('d-link-dir-615-rev-c1', 'dir-615-c1', {
+-       profile = 'DIR615C1',
+-})
+-
+-
+ -- TP-Link
+ 
+ local tplink_region_suffix = ''
