@@ -1,3 +1,5 @@
+![Build ffmuc firmware](https://github.com/freifunkMUC/site-ffm/workflows/Build%20ffmuc%20firmware/badge.svg)
+
 ## Building
 
 Check out this repository and execute `make`, i.e. like this:
