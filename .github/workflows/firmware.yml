@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [ar71xx-nand]
+        target: [ar71xx-generic, ar71xx-tiny, ar71xx-nand, ath79-generic, brcm2708-bcm2708, brcm2708-bcm2709, ipq40xx-generic, ipq806x-generic, lantiq-xrx200, lantiq-xway, mpc85xx-generic, mpc85xx-p1020, ramips-mt7620, ramips-mt7621, ramips-mt76x8, ramips-rt305x, sunxi-cortexa7, x86-generic, x86-geode, x86-legacy, x86-64, ar71xx-mikrotik, brcm2708-bcm2710, mvebu-cortexa9]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -33,7 +33,7 @@ jobs:
         id: compile
         run: |
           git checkout -b patched && git checkout ${{ steps.extract_branch.outputs.branch }}
-          mkdir output && touch output/file1 && touch output/file2
+          make BROKEN=1 GLUON_TARGETS=${{ matrix.target }} GLUON_RELEASE=${{ steps.vars.outputs.tag }} V=s
           echo "::set-output name=status::success"
       - name: Upload firmware ${{ matrix.target }}
         uses: actions/upload-artifact@master
@@ -63,7 +63,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [ar71xx-nand]
+        target: [ar71xx-generic, ar71xx-tiny, ar71xx-nand, ath79-generic, brcm2708-bcm2708, brcm2708-bcm2709, ipq40xx-generic, ipq806x-generic, lantiq-xrx200, lantiq-xway, mpc85xx-generic, mpc85xx-p1020, ramips-mt7620, ramips-mt7621, ramips-mt76x8, ramips-rt305x, sunxi-cortexa7, x86-generic, x86-geode, x86-legacy, x86-64, ar71xx-mikrotik, brcm2708-bcm2710, mvebu-cortexa9]
     runs-on: ubuntu-latest
     needs: create_release
     steps:
