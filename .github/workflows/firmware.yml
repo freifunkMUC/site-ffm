@@ -33,7 +33,7 @@ jobs:
         id: compile
         run: |
           git checkout -b patched && git checkout ${{ steps.extract_branch.outputs.branch }}
-          make BROKEN=1 GLUON_TARGETS=${{ matrix.target }} GLUON_RELEASE=${{ steps.vars.outputs.tag }} V=s
+          mkdir output && touch output/file1 && touch output/file2
           echo "::set-output name=status::success"
       - name: Upload firmware ${{ matrix.target }}
         uses: actions/upload-artifact@master
@@ -79,6 +79,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create_release.outputs.output1 }}
-          asset_path: ./${{ matrix.target }}_output.zip
+          asset_path: ./${{ matrix.target }}_output
           asset_name: ${{ matrix.target }}_output.zip
           asset_content_type: application/zip
