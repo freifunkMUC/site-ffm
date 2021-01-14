@@ -6,10 +6,12 @@ PATCH_DIR := ${GLUON_BUILD_DIR}/site/patches
 SECRET_KEY_FILE ?= ${HOME}/.gluon-secret-key
 
 GLUON_TARGETS ?= \
-	brcm27xx-bcm2708 \
-	brcm27xx-bcm2709 \
-	mpc85xx-generic \
-	mpc85cc-p1020 \
+	bcm27xx-bcm2708 \
+	bcm27xx-bcm2709 \
+	bcm27xx-bcm2710 \
+	bcm27xx-bcm2711 \
+	mpc85xx-p1010 \
+	mpc85xx-p1020 \
 	lantiq-xway \
 	lantiq-xrx200 \
 	ath79-generic \
