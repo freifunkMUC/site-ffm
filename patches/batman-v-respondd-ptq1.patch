@@ -91,18 +91,18 @@ index bf5b0315..a7630df9 100644
         if (ret < 0) {
                 json_object_put(opts.interfaces);
 diff --git a/package/libgluonutil/src/libgluonutil.c b/package/libgluonutil/src/libgluonutil.c
-index e7a88fd1..549e5239 100644
+index 0950f0d8..08cf8fbb 100644
 --- a/package/libgluonutil/src/libgluonutil.c
 +++ b/package/libgluonutil/src/libgluonutil.c
-@@ -35,6 +35,7 @@
+@@ -38,6 +38,7 @@
+ #include <string.h>
+ #include <stdlib.h>
  #include <unistd.h>
- #include <limits.h>
- #include <errno.h>
 +#include <math.h>
 
  /**
   * Merges two JSON objects
-@@ -253,6 +253,14 @@ char * gluonutil_get_primary_domain(void) {
+@@ -324,6 +325,14 @@ char * gluonutil_get_primary_domain(void) {
         return strdup(primary_domain_code);
  }
 
@@ -118,13 +118,13 @@ index e7a88fd1..549e5239 100644
  struct json_object * gluonutil_load_site_config(void) {
         char *domain_code = NULL;
 diff --git a/package/libgluonutil/src/libgluonutil.h b/package/libgluonutil/src/libgluonutil.h
-index 39b253ba..2ca171be 100644
+index 34765f6f..82eb64a9 100644
 --- a/package/libgluonutil/src/libgluonutil.h
 +++ b/package/libgluonutil/src/libgluonutil.h
-@@ -44,4 +44,6 @@ bool gluonutil_has_domains(void);
- char * gluonutil_get_domain(void);
+@@ -57,4 +57,6 @@ char * gluonutil_get_domain(void);
+ char * gluonutil_get_primary_domain(void);
  struct json_object * gluonutil_load_site_config(void);
- 
+
 +uint8_t gluonutil_get_pseudo_tq(uint32_t throughput);
 +
  #endif /* _LIBGLUON_LIBGLUON_H_ */
