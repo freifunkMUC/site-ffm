@@ -1,21 +1,19 @@
 GLUON_BUILD_DIR := gluon-build
 GLUON_GIT_URL := https://github.com/freifunk-gluon/gluon.git
-GLUON_GIT_REF := v2020.2.2
+GLUON_GIT_REF := origin/next
 
 PATCH_DIR := ${GLUON_BUILD_DIR}/site/patches
 SECRET_KEY_FILE ?= ${HOME}/.gluon-secret-key
 
 GLUON_TARGETS ?= \
-	ar71xx-generic \
-	ar71xx-tiny \
-	ar71xx-nand \
-	brcm2708-bcm2708 \
-	brcm2708-bcm2709 \
+	brcm27xx-bcm2708 \
+	brcm27xx-bcm2709 \
 	mpc85xx-generic \
 	mpc85cc-p1020 \
 	lantiq-xway \
 	lantiq-xrx200 \
 	ath79-generic \
+	ath79-nand \
 	ramips-mt7621 \
 	sunxi-cortexa7 \
 	x86-generic \
@@ -26,7 +24,8 @@ GLUON_TARGETS ?= \
 	ipq806x-generic \
 	ramips-mt7620 \
 	ramips-mt76x8 \
-	ramips-rt305x
+	ramips-rt305x \
+	rockchip-armv8
 
 ifneq (,$(shell git describe --exact-match --tags 2>/dev/null))
 	GLUON_BRANCH := stable
@@ -35,7 +34,7 @@ else
 	GLUON_BRANCH := experimental
 	EXP_FALLBACK = $(shell date '+%Y%m%d%H')
 	BUILD_NUMBER ?= $(EXP_FALLBACK)
-	GLUON_RELEASE := v2020.3.2.1~exp$(BUILD_NUMBER)
+	GLUON_RELEASE := v2020.3.2.1~next$(BUILD_NUMBER)
 endif
 
 JOBS ?= $(shell cat /proc/cpuinfo | grep processor | wc -l)
