@@ -71,15 +71,16 @@ ${GLUON_BUILD_DIR}:
 	git clone ${GLUON_GIT_URL} ${GLUON_BUILD_DIR}
 
 gluon-prepare: output-clean ${GLUON_BUILD_DIR}
-	(cd ${GLUON_BUILD_DIR} \
+	cd ${GLUON_BUILD_DIR} \
 		&& git remote set-url origin ${GLUON_GIT_URL} \
 		&& git fetch origin \
-		&& rm -rf package packages \
-		&& git checkout -q --force ${GLUON_GIT_REF}) \
-		&& git clean -fd
+		&& rm -rf packages \
+		&& git checkout -q --force ${GLUON_GIT_REF} \
+		&& git clean -fd;
 	ln -sfT .. ${GLUON_BUILD_DIR}/site
 	make gluon-patch
 	${GLUON_MAKE} update
+
 gluon-patch:
 	echo "Applying Patches ..."
 	(cd ${GLUON_BUILD_DIR})
@@ -89,12 +90,11 @@ gluon-patch:
 	(cd ${GLUON_BUILD_DIR}; git checkout -B patching)
 	if [ -d "gluon-build/site/patches" -a "gluon-build/site/patches/*.patch" ]; then \
 		(cd ${GLUON_BUILD_DIR}; git apply --ignore-space-change --ignore-whitespace --whitespace=nowarn site/patches/*.patch) || ( \
-			cd ${GLUON_BUILD_DIR} \
-			git clean -fd \
-			git am --abort \
-			git checkout -B patched \
-			git branch -D patching \
-			false \
+			cd ${GLUON_BUILD_DIR}; \
+			git clean -fd; \
+			git checkout -B patched; \
+			git branch -D patching; \
+			exit 1 \
 		) \
 	fi
 	(cd ${GLUON_BUILD_DIR}; git branch -M patched)
