@@ -7,6 +7,7 @@ GLUON_FEATURES := \
 	ebtables-filter-multicast \
 	ebtables-filter-ra-dhcp \
 	ebtables-source-filter \
+	radv-filterd \
 	web-advanced \
 	web-private-wifi \
 	web-wizard \
