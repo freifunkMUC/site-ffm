@@ -1,5 +1,5 @@
 diff --git a/package/gluon-radv-filterd/src/gluon-radv-filterd.c b/package/gluon-radv-filterd/src/gluon-radv-filterd.c
-index b1620cae..666622a9 100644
+index b1620cae..4dbb2428 100644
 --- a/package/gluon-radv-filterd/src/gluon-radv-filterd.c
 +++ b/package/gluon-radv-filterd/src/gluon-radv-filterd.c
 @@ -59,23 +59,23 @@
@@ -21,7 +21,7 @@ index b1620cae..666622a9 100644
 +// Remember the neighbor of a router for at most this period of time (in
  // seconds). Re-read it from the transtable afterwards.
 -#define ORIGINATOR_CACHE_TTL 300
-+#define neighbor_CACHE_TTL 300
++#define NEIGHBOR_CACHE_TTL 300
  
  // max execution time of a single ebtables call in nanoseconds
  #define EBTABLES_TIMEOUT 500000000 // 500ms
@@ -352,7 +352,7 @@ index b1620cae..666622a9 100644
  
  					next_invalidation = now;
 -					next_invalidation.tv_sec += ORIGINATOR_CACHE_TTL;
-+					next_invalidation.tv_sec += neighbor_CACHE_TTL;
++					next_invalidation.tv_sec += NEIGHBOR_CACHE_TTL;
  				}
  
 -				update_tqs();
