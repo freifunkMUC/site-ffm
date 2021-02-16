@@ -1,5 +1,10 @@
 # Freifunk München Firmware Changelog
 
+## v2020.3.3.7
+ - Add GW07
+ - Enable ffmuc-simple-radv-filter
+ - Fix Wireguard connection problems with v6
+
 ## v2020.3.2
   - cleanups left over in v2020.3.1 by intention
     - remove fastd-config
