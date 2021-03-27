@@ -10,7 +10,6 @@ GLUON_TARGETS ?= \
 	bcm27xx-bcm2709 \
 	bcm27xx-bcm2710 \
 	bcm27xx-bcm2711 \
-	mpc85xx-p1010 \
 	mpc85xx-p1020 \
 	lantiq-xway \
 	lantiq-xrx200 \
