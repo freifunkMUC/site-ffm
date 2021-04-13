@@ -77,7 +77,7 @@ gluon-prepare: output-clean ${GLUON_BUILD_DIR}
 		&& rm -rf packages \
 		&& git checkout -q --force ${GLUON_GIT_REF} \
 		&& git clean -fd;
-	ln -sfT .. ${GLUON_BUILD_DIR}/site
+	ln -sf .. ${GLUON_BUILD_DIR}/site
 	make gluon-patch
 	${GLUON_MAKE} update
 
