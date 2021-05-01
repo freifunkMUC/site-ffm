@@ -20,7 +20,7 @@ GLUON_SITE_PACKAGES := \
 	ffho-autoupdater-wifi-fallback \
 	ffho-ap-timer \
 	ffho-web-ap-timer \
-    	ffmuc-simple-radv-filter \
+	ffmuc-simple-radv-filter \
 	iwinfo \
 	iptables \
 	respondd-module-airtime
