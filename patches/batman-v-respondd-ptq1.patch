@@ -102,7 +102,7 @@ index e7a88fd1..549e5239 100644
 
  /**
   * Merges two JSON objects
-@@ -253,6 +253,14 @@ char * gluonutil_get_primary_domain(void) {
+@@ -254,6 +254,14 @@ char * gluonutil_get_primary_domain(void) {
         return strdup(primary_domain_code);
  }
 
@@ -121,8 +121,8 @@ diff --git a/package/libgluonutil/src/libgluonutil.h b/package/libgluonutil/src/
 index 39b253ba..2ca171be 100644
 --- a/package/libgluonutil/src/libgluonutil.h
 +++ b/package/libgluonutil/src/libgluonutil.h
-@@ -44,4 +44,6 @@ bool gluonutil_has_domains(void);
- char * gluonutil_get_domain(void);
+@@ -45,4 +45,6 @@ bool gluonutil_has_domains(void);
+ char * gluonutil_get_primary_domain(void);
  struct json_object * gluonutil_load_site_config(void);
  
 +uint8_t gluonutil_get_pseudo_tq(uint32_t throughput);
