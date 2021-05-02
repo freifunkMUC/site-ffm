@@ -89,7 +89,7 @@ gluon-patch:
 			fi
 	(cd ${GLUON_BUILD_DIR}; git checkout -B patching)
 	if [ -d "gluon-build/site/patches" -a "gluon-build/site/patches/*.patch" ]; then \
-		(cd ${GLUON_BUILD_DIR}; git apply --ignore-space-change --ignore-whitespace --whitespace=nowarn site/patches/*.patch) || ( \
+		(cd ${GLUON_BUILD_DIR}; git apply --ignore-space-change --ignore-whitespace --whitespace=nowarn --verbose site/patches/*.patch) || ( \
 			cd ${GLUON_BUILD_DIR}; \
 			git clean -fd; \
 			git checkout -B patched; \
