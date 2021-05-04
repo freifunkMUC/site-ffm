@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
-
-## Source: https://git.darmstadt.ccc.de/ffda/site/blob/master/contrib/genpkglist.py
-
 import os
 from collections import defaultdict
 
 from jinja2 import Template
 
 # path to your gluon checkout, will be used to find targets and devices
-GLUON_DIR = '/srv/gluon/'
+GLUON_DIR = './gluon-build/'
 
 
 class PackageList:
@@ -158,7 +155,7 @@ PKGS_USB_NET = PackageList('USB_NET', [
 ])
 pkglists.append(PKGS_USB_NET)
 
-PKGS_PCI = PackageList('USB', ['pciutils'])
+PKGS_PCI = PackageList('PCI', ['pciutils'])
 pkglists.append(PKGS_PCI)
 
 PKGS_PCI_NET = PackageList('PCI_NET', [
@@ -168,7 +165,7 @@ pkglists.append(PKGS_PCI_NET)
 
 PKGS_TLS = PackageList('TLS', [
     'ca-bundle',
-    'libustream-mbedtls'
+    'libustream-openssl'
 ])
 pkglists.append(PKGS_TLS)
 
@@ -176,68 +173,23 @@ pkglists.append(PKGS_TLS)
 # package assignment
 #
 
-targets.get('ar71xx-generic'). \
+targets.get('ath79-generic'). \
     add_pkglist(PKGS_USB). \
     add_pkglist(PKGS_USB_NET). \
     add_pkglist(PKGS_USB_SERIAL). \
     add_pkglist(PKGS_USB_STORAGE). \
     add_pkglist(PKGS_TLS). \
     exclude([  # devices without usb ports
-        'alfa-network-hornet-ub',
-        'alfa-network-tube2h',
-        'alfa-network-n2-n5',
-        'allnet-all0315n',
-        'avm-fritz-wlan-repeater-300e',
-        'avm-fritz-wlan-repeater-450e',
-        'd-link-dap-1330-rev-a1',
-        'd-link-dir-825-rev-b1',
-        'meraki-mr12',
-        'meraki-mr16',
-        'ocedo-koala',
-        'openmesh-mr1750',
-        'openmesh-mr600',
-        'openmesh-mr900',
-        'openmesh-om2p',
-        'openmesh-om5p',
-        'openmesh-om5p-ac',
-        'tp-link-cpe210-v1.0',
-        'tp-link-cpe210-v2.0',
-        'tp-link-cpe210-v3.0',
-        'tp-link-cpe510-v1.0',
-        'tp-link-wbs210-v1.20',
-        'tp-link-wbs510-v1.20',
-        'tp-link-archer-c25-v1',
-        'tp-link-archer-c58-v1',
-        'tp-link-archer-c60-v1',
-        'tp-link-re355',
-        'tp-link-re450',
-        'ubiquiti-airgateway',
-        'ubiquiti-airgateway-pro',
-        'ubiquiti-bullet-m',
-        'ubiquiti-rocket-m',
-        'ubiquiti-nanostation-m',
-        'ubiquiti-loco-m-xw',
-        'ubiquiti-nanostation-m-xw',
-        'ubiquiti-rocket-m-xw',
-        'ubiquiti-rocket-m-ti',
-        'ubiquiti-unifi',
-        'ubiquiti-unifi-ap-pro',
-        'ubiquiti-unifiap-outdoor',
-        'ubiquiti-unifiap-outdoor+',
-        'ubiquiti-ls-sr71',
-        'ubiquiti-unifi-ac-lite',
-        'ubiquiti-unifi-ac-pro',
-        'ubiquiti-unifi-ac-mesh'], pkglists=[PKGS_USB, PKGS_USB_NET, PKGS_USB_SERIAL, PKGS_USB_STORAGE]). \
-    exclude([  # devices with less than 64M memory
-        'linksys-wrt160nl',
-        'tp-link-tl-wr710n-v1',
-        'tp-link-tl-wr710n-v2.1',
-        'tp-link-tl-wr842n-nd-v1',
-        'tp-link-tl-wr842n-nd-v2',
-        'tp-link-tl-wr1043n-nd-v1',
-        'ubiquiti-airrouter'])
+        'devolo-wifi-pro-1200e',
+        'devolo-wifi-pro-1200i',
+        'devolo-wifi-pro-1750c',
+        'devolo-wifi-pro-1750i',
+        'devolo-wifi-pro-1750x',
+        'ocedo-raccoon',
+        'tp-link-archer-c6-v2',
+        'tp-link-cpe220-v3'], pkglists=[PKGS_USB, PKGS_USB_NET, PKGS_USB_SERIAL, PKGS_USB_STORAGE])
 
-for target in ['ar71xx-nand', 'ipq40xx-generic', 'ipq806x-generic', 'mpc85xx-generic', 'mvebu-cortexa9', 'ramips-mt7620', 'sunxi-cortexa7']:
+for target in ['ath79-nand', 'ipq40xx-generic', 'ipq806x-generic', 'lantiq-xway', 'lantiq-xrx200', 'mpc85xx-p1010', 'mpc85xx-p1020', 'mvebu-cortexa9', 'ramips-mt7620', 'ramips-mt7621', 'ramips-rt305x', 'rockchip-armv8', 'sunxi-cortexa7']:
     targets.get(target). \
         add_pkglist(PKGS_USB). \
         add_pkglist(PKGS_USB_NET). \
@@ -245,9 +197,7 @@ for target in ['ar71xx-nand', 'ipq40xx-generic', 'ipq806x-generic', 'mpc85xx-gen
         add_pkglist(PKGS_USB_STORAGE). \
         add_pkglist(PKGS_TLS)
 
-targets.get('mpc85xx-p1020').add_pkglist(PKGS_TLS)
-
-for target in ['brcm2708-bcm2708', 'brcm2708-bcm2709', 'brcm2708-bcm2710']:
+for target in ['bcm27xx-bcm2708', 'bcm27xx-bcm2709', 'bcm27xx-bcm2710', 'bcm27xx-bcm2711']:
     targets.get(target). \
         add_pkglist(PKGS_USB). \
         add_pkglist(PKGS_USB_NET). \
@@ -256,15 +206,8 @@ for target in ['brcm2708-bcm2708', 'brcm2708-bcm2709', 'brcm2708-bcm2710']:
         add_pkglist(PKGS_USB_HID). \
         add_pkglist(PKGS_TLS)
 
-targets.get('ramips-mt7621'). \
-    add_pkglist(PKGS_USB). \
-    add_pkglist(PKGS_USB_NET). \
-    add_pkglist(PKGS_USB_SERIAL). \
-    add_pkglist(PKGS_USB_STORAGE). \
-    add_pkglist(PKGS_TLS). \
-    exclude([  # devices without usb ports
-        'ubnt-erx',
-        'ubnt-erx-sfp'], pkglists=[PKGS_USB, PKGS_USB_NET, PKGS_USB_SERIAL, PKGS_USB_STORAGE])
+targets.get('mediatek-mt7622'). \
+    add_pkglist(PKGS_TLS)
 
 targets.get('ramips-mt76x8'). \
     add_pkglist(PKGS_USB). \
@@ -273,7 +216,11 @@ targets.get('ramips-mt76x8'). \
     add_pkglist(PKGS_USB_STORAGE). \
     add_pkglist(PKGS_TLS). \
     exclude([   # devices without usb ports
+        'cudy-wr1000',
+        'gl.inet-vixmini',
         'tp-link-archer-c50-v3',
+        'tp-link-archer-c50-v4',
+        'tp-link-tl-wa801nd-v5',
         'tp-link-tl-wr841n-v13'], pkglists=[PKGS_USB, PKGS_USB_NET, PKGS_USB_SERIAL, PKGS_USB_STORAGE])
 
 for target in ['x86-64', 'x86-generic', 'x86-geode']:

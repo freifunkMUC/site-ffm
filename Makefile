@@ -6,27 +6,30 @@ PATCH_DIR := ${GLUON_BUILD_DIR}/site/patches
 SECRET_KEY_FILE ?= ${HOME}/.gluon-secret-key
 
 GLUON_TARGETS ?= \
+	ath79-generic \
+	ath79-nand \
 	bcm27xx-bcm2708 \
 	bcm27xx-bcm2709 \
 	bcm27xx-bcm2710 \
 	bcm27xx-bcm2711 \
-	mpc85xx-p1020 \
-	lantiq-xway \
-	lantiq-xrx200 \
-	ath79-generic \
-	ath79-nand \
-	ramips-mt7621 \
-	sunxi-cortexa7 \
-	x86-generic \
-	x86-geode \
-	x86-64 \
-	x86-legacy \
 	ipq40xx-generic \
 	ipq806x-generic \
+	lantiq-xway \
+	lantiq-xrx200 \
+	mediatek-mt7622 \
+	mpc85xx-p1010 \
+	mpc85xx-p1020 \
+	mvebu-cortexa9 \
 	ramips-mt7620 \
+	ramips-mt7621 \
 	ramips-mt76x8 \
 	ramips-rt305x \
-	rockchip-armv8
+	rockchip-armv8 \
+	sunxi-cortexa7 \
+	x86-64 \
+	x86-generic \
+	x86-geode \
+	x86-legacy
 
 ifneq (,$(shell git describe --exact-match --tags 2>/dev/null))
 	GLUON_BRANCH := stable
@@ -89,7 +92,7 @@ gluon-patch:
 			fi
 	(cd ${GLUON_BUILD_DIR}; git checkout -B patching)
 	if [ -d "gluon-build/site/patches" -a "gluon-build/site/patches/*.patch" ]; then \
-		(cd ${GLUON_BUILD_DIR}; git apply --ignore-space-change --ignore-whitespace --whitespace=nowarn site/patches/*.patch) || ( \
+		(cd ${GLUON_BUILD_DIR}; git apply --ignore-space-change --ignore-whitespace --whitespace=nowarn --verbose site/patches/*.patch) || ( \
 			cd ${GLUON_BUILD_DIR}; \
 			git clean -fd; \
 			git checkout -B patched; \
