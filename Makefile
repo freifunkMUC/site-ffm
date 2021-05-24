@@ -31,11 +31,14 @@ GLUON_TARGETS ?= \
 	x86-geode \
 	x86-legacy
 
+
+GLUON_AUTOUPDATER_BRANCH := next
+
 ifneq (,$(shell git describe --exact-match --tags 2>/dev/null))
-	GLUON_BRANCH := stable
+	GLUON_AUTOUPDATER_ENABLED := 1
 	GLUON_RELEASE := $(shell git describe --tags 2>/dev/null)
 else
-	GLUON_BRANCH := experimental
+	GLUON_AUTOUPDATER_ENABLED := 0
 	EXP_FALLBACK = $(shell date '+%Y%m%d%H')
 	BUILD_NUMBER ?= $(EXP_FALLBACK)
 	GLUON_RELEASE := $(shell git describe --tags | cut -d- -f1)~next$(BUILD_NUMBER)
@@ -45,7 +48,8 @@ JOBS ?= $(shell cat /proc/cpuinfo | grep processor | wc -l)
 
 GLUON_MAKE := ${MAKE} -j ${JOBS} -C ${GLUON_BUILD_DIR} \
 	GLUON_RELEASE=${GLUON_RELEASE} \
-	GLUON_BRANCH=${GLUON_BRANCH}
+	GLUON_AUTOUPDATER_BRANCH=${GLUON_AUTOUPDATER_BRANCH} \
+	GLUON_AUTOUPDATER_ENABLED=${GLUON_AUTOUPDATER_ENABLED}
 
 all: info
 	${MAKE} manifest
@@ -54,7 +58,7 @@ info:
 	@echo
 	@echo '#########################'
 	@echo '# FFMUC Firmware build'
-	@echo '# Building release ${GLUON_RELEASE} for branch ${GLUON_BRANCH}'
+	@echo '# Building release ${GLUON_RELEASE} for branch ${GLUON_AUTOUPDATER_BRANCH}'
 	@echo
 
 build: gluon-prepare
@@ -68,7 +72,7 @@ manifest: build
 	mv ${GLUON_BUILD_DIR}/output .
 
 sign: manifest
-	${GLUON_BUILD_DIR}/contrib/sign.sh ${SECRET_KEY_FILE} output/images/sysupgrade/${GLUON_BRANCH}.manifest
+	${GLUON_BUILD_DIR}/contrib/sign.sh ${SECRET_KEY_FILE} output/images/sysupgrade/${GLUON_AUTOUPDATER_BRANCH}.manifest
 
 ${GLUON_BUILD_DIR}:
 	git clone ${GLUON_GIT_URL} ${GLUON_BUILD_DIR}
