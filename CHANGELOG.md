@@ -1,5 +1,11 @@
 # Freifunk München Firmware Changelog
 
+## v2020.3.4.6
+ - Bump Gluon version to 2020.2.3
+ - Fix reconnect issues
+ - Get rid of no longer necessary patches
+ - Switch PubKey exchange to HTTPS for all hardware with enough space for openssl (sorry 841)
+
 ## v2020.3.3.7
  - Add GW07 in MUC01
  - Enable ffmuc-simple-radv-filter
