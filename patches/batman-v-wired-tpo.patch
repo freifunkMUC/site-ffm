@@ -7,6 +7,6 @@ index 00000000..75888537
 +#!/bin/sh
 +
 +if [ "$IFNAME" = "vx_mesh_lan" ] || [ "$IFNAME" = "vx_mesh_wan" ] || [ "$IFNAME" = "mesh-vpn" ]; then
-+        sleep 1;
++        sleep 3;
 +        batctl hardif $IFNAME throughput_override 1000mbit;
 +fi
