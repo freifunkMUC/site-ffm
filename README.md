@@ -13,7 +13,7 @@ make
 
 ## Further Resources
 
-This firmware is based on [Gluon](https://gluon.readthedocs.io/en/v2019.2.1/).
+This firmware is based on [Gluon](https://gluon.readthedocs.io/en/v2020.2.3/).
 
-Look at the [site configuration related Gluon documentation](https://gluon.readthedocs.io/en/v2018.2.1/user/site.html)
+Look at the [site configuration related Gluon documentation](https://gluon.readthedocs.io/en/v2020.2.3/user/site.html)
 for information on site configuration options and examples from other communities.
