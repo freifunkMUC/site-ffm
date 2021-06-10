@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Project-Id-Version: PACKAGE VERSION\n"
-"PO-Revision-Date: 2019-06-07 20:14+0200\n"
+"PO-Revision-Date: 2021-06-10 11:00+0200\n"
 "Last-Translator: Matthias Kesler <krombel@krombel.de>\n"
 "Language-Team: German\n"
 "Language: de\n"
@@ -29,6 +29,16 @@ msgid "gluon-config-mode:pubkey"
 msgstr ""
 " "
 
+msgid "gluon-config-mode:novpn"
+msgstr ""
+"<p><strong>Du hast ausgewählt die Internetverbindung (Mesh-VPN) nicht zu "
+"nutzen</strong>. Dein Knoten kann also nur dann eine Verbindung zum "
+"Freifunk-Netz aufbauen, wenn andere Freifunk-Knoten in WLAN-Reichweite sind."
+"<p>Dein Knoten <em><%= pcdata(hostname) %></em> startet gerade neu und wird "
+"anschließend versuchen, sich mit anderen Freifunkknoten in seiner Nähe über "
+"WLAN zu verbinden.</p>"
+
+
 
 msgid "gluon-config-mode:reboot"
 msgstr ""
@@ -41,19 +51,11 @@ msgstr ""
 "<a href=\"https://map.ffmuc.net\">map.ffmuc.net</a> "
 "deinen Knoten finden.</p> "
 "<p>Um zu dieser Konfigurationsseite zurückzugelangen, drücke im normalen "
-"Betrieb für drei Sekunden den Reset-Button. Das Gerät wird dann im Config "
+"Betrieb für ca. 10 Sekunden den Reset-Button. Das Gerät wird dann im Config "
 "Mode neustarten.</p>"
 "<p>Wenn Du mehr über Freifunk in München erfahren möchtest, dann besuche "
 "uns doch auf unserem monatlichen Treffen (siehe Webseite).</p>"
 "<p>Viel Spaß mit deinem Knoten und der Erkundung von Freifunk!</p>"
-
-msgid "gluon-config-mode:altitude-label"
-msgstr "Höhe"
-
-msgid "gluon-config-mode:altitude-help"
-msgstr ""
-"Die Höhenangabe ist optional und sollte nur gesetzt werden, wenn ein "
-"exakter Wert bekannt ist."
 
 # Leave empty to use the default text, which can be found in:
 # package/gluon-config-mode-hostname/i18n/
@@ -63,6 +65,9 @@ msgstr ""
 # Leave empty to use the default text, which can be found in:
 # package/gluon-config-mode-geo-location/i18n/
 msgid "gluon-config-mode:geo-location-help"
+msgstr ""
+
+msgid "gluon-config-mode:altitude-label"
 msgstr ""
 
 # Leave empty to use the default text, which can be found in:
