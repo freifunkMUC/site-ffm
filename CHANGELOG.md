@@ -1,5 +1,10 @@
 # Freifunk München Firmware Changelog
 
+## v2021.6.0
+ - Change versioning schema to year.month.release
+ - Bump Gluon to v2021.1 https://gluon.readthedocs.io/en/v2021.1.x/releases/v2021.1.html
+ - Fix issues with v4/v6 only networks https://github.com/freifunkMUC/community-packages/pull/20
+
 ## v2020.3.4.6
  - Bump Gluon version to 2020.2.3
  - Get rid of no longer necessary patches
