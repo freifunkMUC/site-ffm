@@ -14,10 +14,9 @@ GLUON_TARGETS ?= \
 	bcm27xx-bcm2711 \
 	ipq40xx-generic \
 	ipq806x-generic \
-	lantiq-xway \
 	lantiq-xrx200 \
+	lantiq-xway \
 	mediatek-mt7622 \
-	mpc85xx-p1010 \
 	mpc85xx-p1020 \
 	mvebu-cortexa9 \
 	ramips-mt7620 \
