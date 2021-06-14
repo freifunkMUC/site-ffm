@@ -160,6 +160,9 @@ EXCLUDE_TLS := \
 INCLUDE_EOL := \
     ffmuc-eol-ssid
 
+EXCLUDE_EOL := \
+    -ffmuc-eol-ssid
+
 ifeq ($(GLUON_TARGET),ar71xx-generic)
     GLUON_SITE_PACKAGES += $(INCLUDE_TLS) $(INCLUDE_USB) $(INCLUDE_USB_NET) $(INCLUDE_USB_SERIAL) $(INCLUDE_USB_STORAGE)
 
@@ -316,8 +319,10 @@ ifeq ($(GLUON_TARGET),ramips-mt76x8)
     GLUON_tp-link-tl-wr841n-v13_SITE_PACKAGES += $(EXCLUDE_USB) $(EXCLUDE_USB_NET) $(EXCLUDE_USB_SERIAL) $(EXCLUDE_USB_STORAGE)
 endif
 
-# no pkglists for target ramips-rt305x
+ifeq ($(GLUON_TARGET),ramips-rt305x)
+    GLUON_SITE_PACKAGES += $(INCLUDE_EOL)
 
+endif
 
 ifeq ($(GLUON_TARGET),sunxi-cortexa7)
     GLUON_SITE_PACKAGES += $(INCLUDE_TLS) $(INCLUDE_USB) $(INCLUDE_USB_NET) $(INCLUDE_USB_SERIAL) $(INCLUDE_USB_STORAGE)
@@ -340,4 +345,3 @@ ifeq ($(GLUON_TARGET),x86-geode)
 endif
 
 # no pkglists for target x86-legacy
-
