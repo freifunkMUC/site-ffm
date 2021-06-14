@@ -157,6 +157,9 @@ EXCLUDE_TLS := \
     -ca-bundle \
     -libustream-openssl
 
+INCLUDE_EOL := \
+    ffmuc-eol-ssid
+
 ifeq ($(GLUON_TARGET),ar71xx-generic)
     GLUON_SITE_PACKAGES += $(INCLUDE_TLS) $(INCLUDE_USB) $(INCLUDE_USB_NET) $(INCLUDE_USB_SERIAL) $(INCLUDE_USB_STORAGE)
 
@@ -221,8 +224,10 @@ ifeq ($(GLUON_TARGET),ar71xx-nand)
 
 endif
 
-# no pkglists for target ar71xx-tiny
+ifeq ($(GLUON_TARGET),ar71xx-tiny)
+    GLUON_SITE_PACKAGES += $(INCLUDE_EOL)
 
+endif
 
 ifeq ($(GLUON_TARGET),ath79-generic)
     GLUON_SITE_PACKAGES += $(INCLUDE_TLS) $(INCLUDE_USB) $(INCLUDE_USB_NET) $(INCLUDE_USB_SERIAL) $(INCLUDE_USB_STORAGE)
