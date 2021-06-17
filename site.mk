@@ -14,7 +14,8 @@ GLUON_FEATURES := \
 	mesh-vpn-wireguard-vxlan \
 	status-page \
 	config-mode-domain-select \
-	config-mode-geo-location-osm
+	config-mode-geo-location-osm \
+	config-mode-mesh-vpn
 
 GLUON_SITE_PACKAGES := \
 	ffho-autoupdater-wifi-fallback \
