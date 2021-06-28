@@ -14,7 +14,8 @@ GLUON_FEATURES := \
 	mesh-vpn-wireguard-vxlan \
 	status-page \
 	config-mode-domain-select \
-	config-mode-geo-location-osm
+	config-mode-geo-location-osm \
+	config-mode-mesh-vpn
 
 GLUON_SITE_PACKAGES := \
 	ffho-autoupdater-wifi-fallback \
@@ -25,7 +26,7 @@ GLUON_SITE_PACKAGES := \
 	iptables \
 	respondd-module-airtime
 
-DEFAULT_GLUON_RELEASE := v2020.3.2~exp$(shell date '+%Y%m%d%H')
+DEFAULT_GLUON_RELEASE := v2021.6.0~exp$(shell date '+%Y%m%d%H')
 
 # Allow overriding the release number from the command line
 GLUON_RELEASE ?= $(DEFAULT_GLUON_RELEASE)
