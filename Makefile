@@ -30,7 +30,6 @@ GLUON_TARGETS ?= \
 	x86-geode \
 	x86-legacy
 
-
 GLUON_AUTOUPDATER_BRANCH := next
 
 ifneq (,$(shell git describe --exact-match --tags 2>/dev/null))
@@ -67,7 +66,9 @@ build: gluon-prepare
 	done
 
 manifest: build
-	${GLUON_MAKE} manifest
+	for branch in next experimental testing stable; do \
+		${GLUON_MAKE} manifest GLUON_AUTOUPDATER_BRANCH=$$branch;\
+	done
 	mv ${GLUON_BUILD_DIR}/output .
 
 sign: manifest
