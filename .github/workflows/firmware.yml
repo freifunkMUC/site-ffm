@@ -37,9 +37,8 @@ jobs:
           remove-haskell: 'true'
       - name: Checkout
         uses: actions/checkout@master
-      - name: Set tag
-        id: vars
-        run: echo ::set-output name=tag::${GITHUB_BASE_REF:-${GITHUB_REF#refs/*/}}
+        with:
+          fetch-depth: 0
       - name: Initialization environment
         env:
           DEBIAN_FRONTEND: noninteractive
@@ -50,7 +49,7 @@ jobs:
         id: compile
         run: |
           git checkout -b patched ${GITHUB_SHA}
-          make BROKEN=1 GLUON_TARGETS=${{ matrix.target }} GLUON_RELEASE=${{ steps.vars.outputs.tag }} V=s
+          make BROKEN=1 GLUON_TARGETS=${{ matrix.target }} V=s
           echo "::set-output name=status::success"
       - name: Upload firmware ${{ matrix.target }}
         uses: actions/upload-artifact@master
