@@ -1,5 +1,15 @@
 # Freifunk München Firmware Changelog
 
+## V2021.7.3
+ - Migrate autoupdater branch "wireguard" to "experimental"
+ - Remove "wireguard" autoupdater configuration, so it does no longer show up in config UI
+ - Generate manifests for all current autoupdater branches in the build
+
+## v2021.6.6
+ - Adapt gluon-mesh-vpn-wireguard-vxlan package to match framework changes in Gluon v2021.1
+ - Use standard gluon-config-mode-mesh-vpn package instead of custom solution
+ - Fix uci configuration mismatch gluon.mesh_vpn.enabled vs wireguard.mesh_vpn.enabled
+
 ## v2021.6.0
  - Change versioning schema to year.month.release
  - Bump Gluon to v2021.1 https://gluon.readthedocs.io/en/v2021.1.x/releases/v2021.1.html
