@@ -7,3 +7,14 @@ index 00000000..ba631911
 +include 'bcm27xx.inc'
 +
 +device('raspberry-pi-4-model-b', 'rpi-4')
+diff --git a/targets/targets.mk b/targets/targets.mk
+index 92b58ab8..05a74935 100644
+--- a/targets/targets.mk
++++ b/targets/targets.mk
+@@ -22,5 +22,6 @@ $(eval $(call GluonTarget,x86,64))
+ 
+ ifneq ($(BROKEN),)
+ $(eval $(call GluonTarget,bcm27xx,bcm2710)) # BROKEN: Untested
++$(eval $(call GluonTarget,bcm27xx,bcm2711)) # BROKEN: Untested
+ $(eval $(call GluonTarget,mvebu,cortexa9)) # BROKEN: No 11s support
+ endif
