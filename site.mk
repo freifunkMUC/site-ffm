@@ -14,7 +14,7 @@ GLUON_FEATURES := \
 	ebtables-filter-ra-dhcp \
 	ebtables-source-filter \
 	mesh-batman-adv-15 \
-	mesh-vpn-wireguard-vxlan \
+	ffmuc-mesh-vpn-wireguard-vxlan \
 	respondd \
 	status-page \
 	web-advanced \

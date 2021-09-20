@@ -26,8 +26,8 @@ PACKAGES_WIREGUARD_REPO=https://github.com/freifunkMUC/community-packages.git
 
 ##	PACKAGES_WIREGUARD_COMMIT
 #		the version/commit of the git repository to clone
-PACKAGES_WIREGUARD_COMMIT=995c77ec03dc54942abb1bca7870fb9d458a7387
+PACKAGES_WIREGUARD_COMMIT=6bb89614c36f5a08b284a061a5125953706ac94d
 
 ##  PACKAGES_WIREGUARD_BRANCH
 #   the branch to check out
-PACKAGES_WIREGUARD_BRANCH=gluon-mesh-vpn-wireguard-vxlan
+PACKAGES_WIREGUARD_BRANCH=main
