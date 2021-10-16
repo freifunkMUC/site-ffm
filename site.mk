@@ -14,7 +14,6 @@ GLUON_FEATURES := \
 	ebtables-filter-ra-dhcp \
 	ebtables-source-filter \
 	mesh-batman-adv-15 \
-	ffmuc-mesh-vpn-wireguard-vxlan \
 	respondd \
 	status-page \
 	web-advanced \
@@ -36,6 +35,7 @@ GLUON_SITE_PACKAGES := \
 	ffho-ap-timer \
 	ffho-autoupdater-wifi-fallback \
 	ffho-web-ap-timer \
+	ffmuc-mesh-vpn-wireguard-vxlan \
 	ffmuc-simple-radv-filter \
 	iptables \
 	iwinfo \
