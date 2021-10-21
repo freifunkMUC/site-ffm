@@ -11,7 +11,6 @@ GLUON_FEATURES := \
 	web-private-wifi \
 	web-wizard \
 	mesh-batman-adv-15 \
-	mesh-vpn-wireguard-vxlan \
 	status-page \
 	config-mode-domain-select \
 	config-mode-geo-location-osm \
@@ -24,6 +23,7 @@ GLUON_SITE_PACKAGES := \
 	ffmuc-simple-radv-filter \
 	iwinfo \
 	iptables \
+	ffmuc-gluon-mesh-vpn-wireguard-vxlan \
 	respondd-module-airtime
 
 DEFAULT_GLUON_RELEASE := v2021.6.0~exp$(shell date '+%Y%m%d%H')
