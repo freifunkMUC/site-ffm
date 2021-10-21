@@ -69,7 +69,7 @@ manifest: build
 	for branch in next experimental testing stable; do \
 		${GLUON_MAKE} manifest GLUON_AUTOUPDATER_BRANCH=$$branch;\
 	done
-	mv ${GLUON_BUILD_DIR}/output .
+	mv -f ${GLUON_BUILD_DIR}/output/* ./output/
 
 sign: manifest
 	${GLUON_BUILD_DIR}/contrib/sign.sh ${SECRET_KEY_FILE} output/images/sysupgrade/${GLUON_AUTOUPDATER_BRANCH}.manifest
@@ -110,6 +110,7 @@ gluon-clean:
 	rm -rf ${GLUON_BUILD_DIR}
 
 output-clean:
-	rm -rf output
+	mkdir -p output/
+	rm -rf output/*
 
 clean: gluon-clean output-clean
