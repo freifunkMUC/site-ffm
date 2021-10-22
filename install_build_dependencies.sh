@@ -14,44 +14,24 @@ export DEBIAN_FRONTEND=noninteractive
 
 apt-get update
 
+# ca-certificates required for Github git cloning
+apt-get -y --no-install-recommends install ca-certificates
+
 # Install build environment
 apt-get -y --no-install-recommends install \
-    antlr3 \
-    asciidoc \
-    autoconf \
-    automake \
-    autopoint \
-    binutils \
-    build-essential \
+    bash \
     bzip2 \
-    device-tree-compiler \
-    flex \
-    g++-multilib \
+    diffutils \
+    file \
+    g++ \
     gawk \
-    gcc-multilib \
-    gettext \
+    gcc \
     git \
-    gperf \
-    lib32gcc1 \
-    libc6-dev-i386 \
-    libelf-dev \
-    libglib2.0-dev \
     libncurses5-dev \
-    libssl-dev \
-    libtool \
-    libz-dev \
-    msmtp \
-    p7zip \
-    p7zip-full \
+    make \
     patch \
-    python2.7 \
-    python3 \
-    qemu-utils \
-    subversion \
-    texinfo \
-    uglifyjs \
+    perl \
+    python2 \
+    tar \
     unzip \
-    upx \
-    wget \
-    xmlto \
-    zlib1g-dev
+    wget
