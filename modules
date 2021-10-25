@@ -14,7 +14,7 @@ PACKAGES_FFMUC_REPO=https://github.com/freifunkMUC/gluon-packages.git
 
 ##	PACKAGES_FFMUC_COMMIT
 #		the version/commit of the git repository to clone
-PACKAGES_FFMUC_COMMIT=cbacdb48946e32b95a8a07ccd31e7d4363e84ab8
+PACKAGES_FFMUC_COMMIT=b90c1e9d31cfd6d1d4a1ad3c428ea685bee13dd4
 
 ##  PACKAGES_FFMUC_BRANCH
 #   the branch to check out

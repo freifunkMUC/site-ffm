@@ -170,6 +170,11 @@ PKGS_TLS = PackageList('TLS', [
 ])
 pkglists.append(PKGS_TLS)
 
+PKGS_EOL = PackageList('EOL', [
+    'ffmuc-eol-ssid'
+])
+pkglists.append(PKGS_EOL)
+
 #
 # package assignment
 #
@@ -259,6 +264,10 @@ for target in ['ar71xx-nand', 'ipq40xx-generic', 'ipq806x-generic', 'lantiq-xway
 		add_pkglist(PKGS_TLS)
 
 targets.get('mpc85xx-p1020').add_pkglist(PKGS_TLS)
+
+for target in ['ar71xx-tiny', 'ramips-rt305x']:
+    targets.get(target). \
+        add_pkglist(PKGS_EOL)
 
 for target in ['brcm2708-bcm2708', 'brcm2708-bcm2709', 'brcm2708-bcm2710']:
 	targets.get(target). \
