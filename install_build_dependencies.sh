@@ -33,6 +33,7 @@ apt-get -y --no-install-recommends install \
     patch \
     perl \
     python3 \
+    qemu-utils \
     rsync \
     tar \
     unzip \
