@@ -21,9 +21,10 @@ GLUON_SITE_PACKAGES := \
 	ffho-ap-timer \
 	ffho-web-ap-timer \
 	ffmuc-simple-radv-filter \
+	ffmuc-gluon-mesh-vpn-wireguard-vxlan \
+	ffmuc-autoupdater-next \
 	iwinfo \
 	iptables \
-	ffmuc-gluon-mesh-vpn-wireguard-vxlan \
 	respondd-module-airtime
 
 DEFAULT_GLUON_RELEASE := v2021.6.0~exp$(shell date '+%Y%m%d%H')
