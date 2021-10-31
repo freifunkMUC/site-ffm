@@ -21,7 +21,7 @@ GLUON_SITE_PACKAGES := \
 	ffho-ap-timer \
 	ffho-web-ap-timer \
 	ffmuc-simple-radv-filter \
-	ffmuc-gluon-mesh-vpn-wireguard-vxlan \
+	ffmuc-mesh-vpn-wireguard-vxlan \
 	ffmuc-autoupdater-next \
 	iwinfo \
 	iptables \

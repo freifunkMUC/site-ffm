@@ -26,7 +26,7 @@ PACKAGES_WIREGUARD_REPO=https://github.com/freifunkMUC/community-packages.git
 
 ##	PACKAGES_WIREGUARD_COMMIT
 #		the version/commit of the git repository to clone
-PACKAGES_WIREGUARD_COMMIT=1c2980b7cfba92b6a9bf0e446536c5af6206c4f2
+PACKAGES_WIREGUARD_COMMIT=0273c43797600df19e90677b1c09364f6172f8cc
 
 ##  PACKAGES_WIREGUARD_BRANCH
 #   the branch to check out
