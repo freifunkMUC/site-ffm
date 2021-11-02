@@ -27,14 +27,6 @@ jobs:
       matrix: ${{ fromJson(needs.generate_target_matrix.outputs.target_json) }}
     runs-on: ubuntu-latest
     steps:
-      - name: Maximize build space
-        uses: easimon/maximize-build-space@master
-        with:
-          root-reserve-mb: 4096
-          swap-size-mb: 1024
-          remove-dotnet: 'true'
-          remove-android: 'true'
-          remove-haskell: 'true'
       - name: Checkout
         uses: actions/checkout@master
         with:
