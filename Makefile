@@ -1,6 +1,6 @@
 GLUON_BUILD_DIR := gluon-build
 GLUON_GIT_URL := https://github.com/freifunk-gluon/gluon.git
-GLUON_GIT_REF := 68e8d3257076def393d75d988588e4c9d01eb7d3
+GLUON_GIT_REF := 55da2a7b0e78a00f5d4a39067562399f76cd9156
 
 PATCH_DIR := ${GLUON_BUILD_DIR}/site/patches
 SECRET_KEY_FILE ?= ${HOME}/.gluon-secret-key
@@ -81,7 +81,6 @@ gluon-prepare: output-clean ${GLUON_BUILD_DIR}
 	cd ${GLUON_BUILD_DIR} \
 		&& git remote set-url origin ${GLUON_GIT_URL} \
 		&& git fetch origin \
-		&& rm -rf packages \
 		&& git checkout -q --force ${GLUON_GIT_REF} \
 		&& git clean -fd;
 	ln -sfT .. ${GLUON_BUILD_DIR}/site

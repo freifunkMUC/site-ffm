@@ -189,7 +189,7 @@ targets.get('ath79-generic'). \
         'tp-link-archer-c6-v2',
         'tp-link-cpe220-v3'], pkglists=[PKGS_USB, PKGS_USB_NET, PKGS_USB_SERIAL, PKGS_USB_STORAGE])
 
-for target in ['ath79-nand', 'ipq40xx-generic', 'ipq806x-generic', 'lantiq-xway', 'lantiq-xrx200', 'mpc85xx-p1010', 'mpc85xx-p1020', 'mvebu-cortexa9', 'ramips-mt7620', 'ramips-mt7621', 'ramips-rt305x', 'rockchip-armv8', 'sunxi-cortexa7']:
+for target in ['ath79-nand', 'ipq40xx-generic', 'ipq806x-generic', 'lantiq-xway', 'lantiq-xrx200', 'mpc85xx-p1010', 'mpc85xx-p1020', 'mvebu-cortexa9', 'ramips-mt7620', 'ramips-mt7621', 'rockchip-armv8', 'sunxi-cortexa7']:
     targets.get(target). \
         add_pkglist(PKGS_USB). \
         add_pkglist(PKGS_USB_NET). \
