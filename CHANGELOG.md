@@ -1,5 +1,11 @@
 # Freifunk München Firmware Changelog
 
+## v2022.2.1
+ - Fix bug in wireguard package which was causing high CPU load if no WAN was available
+
+## v2021.12.1
+ - Change SSID on deprecated 4/32 devices to "bitte-router-erneuern.ffmuc.net"
+
 ## v2021.10.3
  - Add domain ffmuc_augsburg
  - Move gluon-mesh-vpn-wireguard-vxlan to main branch and make broker URL configurable
