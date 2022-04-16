@@ -201,20 +201,22 @@ pkglists.append(PKGS_TLS)
 #
 
 targets.get('ath79-generic'). \
-    add_pkglist(PKGS_USB). \
-    add_pkglist(PKGS_USB_NET). \
-    add_pkglist(PKGS_USB_SERIAL). \
-    add_pkglist(PKGS_USB_STORAGE). \
-    add_pkglist(PKGS_TLS). \
-    exclude([  # devices without usb ports
-        'devolo-wifi-pro-1200e',
-        'devolo-wifi-pro-1200i',
-        'devolo-wifi-pro-1750c',
-        'devolo-wifi-pro-1750i',
-        'devolo-wifi-pro-1750x',
-        'ocedo-raccoon',
-        'tp-link-archer-c6-v2',
-        'tp-link-cpe220-v3'], pkglists=[PKGS_USB, PKGS_USB_NET, PKGS_USB_SERIAL, PKGS_USB_STORAGE])
+    include([ # 7M usable firmware space + USB port
+        'devolo-wifi-pro-1750e',
+        'gl.inet-gl-ar150',
+        'gl.inet-gl-ar300m-lite',
+        'gl.inet-gl-ar750',
+        'joy-it-jt-or750i',
+        'netgear-wndr3700-v2',
+        'tp-link-archer-a7-v5',
+        'tp-link-archer-c5-v1',
+        'tp-link-archer-c7-v2',
+        'tp-link-archer-c7-v5',
+        'tp-link-archer-c59-v1',
+        'tp-link-tl-wr842n-v3',
+        'tp-link-tl-wr1043nd-v4',
+        'tp-link-tl-wr1043n-v5'
+    ], pkglists=[PKGS_USB, PKGS_USB_NET, PKGS_USB_SERIAL, PKGS_USB_STORAGE])
 
 for target in ['ipq40xx-generic', 'ipq806x-generic', 'lantiq-xway', 'lantiq-xrx200', 'mpc85xx-p1010', 'mpc85xx-p1020', 'mvebu-cortexa9', 'ramips-mt7620', 'rockchip-armv8', 'sunxi-cortexa7']:
     targets.get(target). \
