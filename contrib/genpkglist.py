@@ -41,12 +41,23 @@ class Target:
         self.devices = set()
         self.pkglists = set()
         self.excludes = defaultdict(set)
+        self.includes = defaultdict(set)
 
     def add_device(self, device: str):
         self.devices.add(device)
 
     def add_pkglist(self, pkglist: PackageList):
         self.pkglists.add(pkglist)
+        return self
+
+    def include(self, devices: [str], pkglists: [PackageList]=None):
+        for device in devices:
+            assert(device in self.devices), "Device %s not in target %s" % (device, self.name)
+            if not pkglists:
+                self.includes[device] = self.pkglists
+            else:
+                self.includes[device] = self.includes[device].union(pkglists)
+
         return self
 
     def exclude(self, devices: [str], pkglists: [PackageList]=None):
@@ -60,10 +71,26 @@ class Target:
         return self
 
     def render(self):
-        if not self.pkglists:
+        if bool(self.includes):
+            assert not bool(self.excludes), "A target can either include or exclude devices."
+
+        if not bool(self.includes) and not self.pkglists:
             return """
 # no pkglists for target %s
 """ % self.name
+
+        if bool(self.includes):
+            return Template("""
+ifeq ($(GLUON_TARGET),{{ target }})
+{% for device, include in includes.items() %}
+    GLUON_{{ device }}_SITE_PACKAGES += {% for pkglist in include|sort %}$(INCLUDE_{{ pkglist.name }}){% if not loop.last %} {% endif %}{% endfor %}
+{%- endfor %}
+endif""").render(
+            target=self.name,
+            includes=self.includes
+        )
+
+
         return Template("""
 ifeq ($(GLUON_TARGET),{{ target }})
     GLUON_SITE_PACKAGES += {% for pkglist in pkglists %}$(INCLUDE_{{ pkglist.name }}){% if not loop.last %} {% endif %}{% endfor %}
