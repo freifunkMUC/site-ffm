@@ -261,13 +261,11 @@ targets.get('ramips-mt76x8'). \
     add_pkglist(PKGS_USB_SERIAL). \
     add_pkglist(PKGS_USB_STORAGE). \
     add_pkglist(PKGS_TLS). \
-    exclude([   # devices without usb ports
-        'cudy-wr1000',
-        'gl.inet-vixmini',
-        'tp-link-archer-c50-v3',
-        'tp-link-archer-c50-v4',
-        'tp-link-tl-wa801nd-v5',
-        'tp-link-tl-wr841n-v13'], pkglists=[PKGS_USB, PKGS_USB_NET, PKGS_USB_SERIAL, PKGS_USB_STORAGE])
+    include([ # 7M usable firmware space + USB port
+        'gl-mt300n-v2',
+        'gl.inet-microuter-n300',
+        'netgear-r6120',
+        'ravpower-rp-wd009'], pkglists=[PKGS_USB, PKGS_USB_NET, PKGS_USB_SERIAL, PKGS_USB_STORAGE])
 
 for target in ['x86-64', 'x86-generic', 'x86-geode']:
     targets.get(target). \
