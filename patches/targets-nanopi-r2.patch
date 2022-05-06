@@ -14,13 +14,26 @@ new file mode 100644
 index 00000000..5cf1a021
 --- /dev/null
 +++ b/patches/openwrt/0005-Add-factory-image-for-rockchip-armv8.patch
-@@ -0,0 +1,40 @@
+@@ -0,0 +1,45 @@
 +From: Malte Wedel <ich@malte.de>
-+Date: Thu, 5 May 2022 20:33:37 +0000
++Date: Fri, 26 Mar 2021 12:14:25 +0100
 +Subject: Add factory image for rockchip-armv8
 +
++diff --git a/target/linux/rockchip/image/Makefile b/target/linux/rockchip/image/Makefile
++index f5fdff637f8f24c15720797fffae82f84f03c5c7..c530f11e5d1b711e1e1283e0624d76b1122f5d2a 100644
++--- a/target/linux/rockchip/image/Makefile
+++++ b/target/linux/rockchip/image/Makefile
++@@ -49,7 +49,7 @@ endef
++ define Device/Default
++   PROFILES := Default
++   KERNEL := kernel-bin
++-  IMAGES := sysupgrade.img.gz
+++  IMAGES := factory.img.gz sysupgrade.img.gz
++   DEVICE_DTS = rockchip/$$(SOC)-$(lastword $(subst _, ,$(1)))
++ endef
++
 +diff --git a/target/linux/rockchip/image/armv8.mk b/target/linux/rockchip/image/armv8.mk
-+index 6cc31f1d8c4cbe7a656c31dc4e938cc0d238f67d..e1671f6743d1a533035a7a3e0178d22b4d0bbb32 100644
++index 24b1c38137a4efd4afbf385c284d8276977c69b3..4f39c59379881515a4427c7acd57a7ad8c7c6ee5 100644
 +--- a/target/linux/rockchip/image/armv8.mk
 ++++ b/target/linux/rockchip/image/armv8.mk
 +@@ -7,6 +7,7 @@ define Device/friendlyarm_nanopi-r2s
@@ -31,15 +44,7 @@ index 00000000..5cf1a021
 +   IMAGE/sysupgrade.img.gz := boot-common | boot-script nanopi-r2s | pine64-img | gzip | append-metadata
 +   DEVICE_PACKAGES := kmod-usb-net-rtl8152
 + endef
-+@@ -18,6 +19,7 @@ define Device/friendlyarm_nanopi-r4s
-+   DEVICE_VARIANT := 4GB LPDDR4
-+   SOC := rk3399
-+   UBOOT_DEVICE_NAME := nanopi-r4s-rk3399
-++  IMAGE/factory.img.gz := boot-common | boot-script nanopi-r4s | pine64-img | gzip
-+   IMAGE/sysupgrade.img.gz := boot-common | boot-script nanopi-r4s | pine64-img | gzip | append-metadata
-+   DEVICE_PACKAGES := kmod-r8169
-+ endef
-+@@ -28,6 +30,7 @@ define Device/pine64_rockpro64
++@@ -17,6 +18,7 @@ define Device/pine64_rockpro64
 +   DEVICE_MODEL := RockPro64
 +   SOC := rk3399
 +   UBOOT_DEVICE_NAME := rockpro64-rk3399
@@ -47,12 +52,11 @@ index 00000000..5cf1a021
 +   IMAGE/sysupgrade.img.gz := boot-common | boot-script | pine64-img | gzip | append-metadata
 + endef
 + TARGET_DEVICES += pine64_rockpro64
-+@@ -38,6 +41,7 @@ define Device/radxa_rock-pi-4a
++@@ -27,6 +29,7 @@ define Device/radxa_rock-pi-4
 +   SOC := rk3399
-+   SUPPORTED_DEVICES := radxa,rockpi4a radxa,rockpi4
++   SUPPORTED_DEVICES := radxa,rockpi4
 +   UBOOT_DEVICE_NAME := rock-pi-4-rk3399
 ++  IMAGE/factory.img.gz := boot-common | boot-script | pine64-img | gzip
 +   IMAGE/sysupgrade.img.gz := boot-common | boot-script | pine64-img | gzip | append-metadata
 + endef
-+ TARGET_DEVICES += radxa_rock-pi-4a
-
++ TARGET_DEVICES += radxa_rock-pi-4
