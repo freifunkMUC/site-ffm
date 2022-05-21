@@ -1,0 +1,4 @@
+FROM ubuntu:20.04
+
+ADD ./scripts/install_build_dependencies.sh /
+RUN /install_build_dependencies.sh
