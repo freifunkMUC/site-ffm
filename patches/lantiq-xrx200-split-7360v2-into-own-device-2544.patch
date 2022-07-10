@@ -1,0 +1,29 @@
+From 01a0e42a72209ee4f53b3e1cd9d1e2294475bace Mon Sep 17 00:00:00 2001
+From: "J. Burfeind" <git@aiyionpri.me>
+Date: Tue, 14 Jun 2022 22:16:30 +0200
+Subject: [PATCH] lantiq-xrx200: split 7360v2 into own device (#2544)
+
+---
+ targets/lantiq-xrx200 | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/targets/lantiq-xrx200 b/targets/lantiq-xrx200
+index dd871e95..364c0c31 100644
+--- a/targets/lantiq-xrx200
++++ b/targets/lantiq-xrx200
+@@ -32,7 +32,11 @@ device('avm-fritz-box-3370-rev-2-micron-nand', 'avm_fritz3370-rev2-micron', {
+ 
+ device('avm-fritz-box-7360-sl', 'avm_fritz7360sl', {
+ 	factory = false,
+-	aliases = {'avm-fritz-box-7360-v1', 'avm-fritz-box-7360-v2'},
++	aliases = {'avm-fritz-box-7360-v1'},
++})
++
++device('avm-fritz-box-7360-v2', 'avm_fritz7360-v2', {
++	factory = false,
+ })
+ 
+ device('avm-fritz-box-7362-sl', 'avm_fritz7362sl', {
+-- 
+2.25.1
+
