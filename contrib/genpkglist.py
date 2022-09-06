@@ -24,12 +24,12 @@ class PackageList:
         return Template("""
 INCLUDE_{{ name }} := \\
 {%- for pkg in pkgs %}
-    {{ pkg }}{% if not loop.last %} \{% endif %}
+    {{ pkg }}{% if not loop.last %} \\{% endif %}
 {%- endfor %}
 
 EXCLUDE_{{ name }} := \\
 {%- for pkg in pkgs %}
-    -{{ pkg }}{% if not loop.last %} \{% endif %}
+    -{{ pkg }}{% if not loop.last %} \\{% endif %}
 {%- endfor %}""").render(
             name=self.name,
             pkgs=self.pkgs
