@@ -189,7 +189,7 @@ targets.get('ath79-generic'). \
         'tp-link-archer-c6-v2',
         'tp-link-cpe220-v3'], pkglists=[PKGS_USB, PKGS_USB_NET, PKGS_USB_SERIAL, PKGS_USB_STORAGE])
 
-for target in ['ipq40xx-generic', 'ipq806x-generic', 'lantiq-xway', 'lantiq-xrx200', 'mpc85xx-p1010', 'mpc85xx-p1020', 'mvebu-cortexa9', 'ramips-mt7620', 'ramips-mt7621', 'rockchip-armv8', 'sunxi-cortexa7']:
+for target in ['ipq40xx-generic', 'ipq806x-generic', 'lantiq-xway', 'lantiq-xrx200', 'mpc85xx-p1010', 'mpc85xx-p1020', 'mvebu-cortexa9', 'ramips-mt7620', 'rockchip-armv8', 'sunxi-cortexa7']:
     targets.get(target). \
         add_pkglist(PKGS_USB). \
         add_pkglist(PKGS_USB_NET). \
@@ -207,7 +207,24 @@ for target in ['bcm27xx-bcm2708', 'bcm27xx-bcm2709', 'bcm27xx-bcm2710', 'bcm27xx
         add_pkglist(PKGS_TLS)
 
 targets.get('mediatek-mt7622'). \
-    add_pkglist(PKGS_TLS)
+    add_pkglist(PKGS_USB). \
+    add_pkglist(PKGS_USB_NET). \
+    add_pkglist(PKGS_USB_SERIAL). \
+    add_pkglist(PKGS_USB_STORAGE). \
+    add_pkglist(PKGS_TLS). \
+    exclude([  # devices without usb ports
+        'ubiquiti-unifi-6-lr-v1'], pkglists=[PKGS_USB, PKGS_USB_NET, PKGS_USB_SERIAL, PKGS_USB_STORAGE])
+
+targets.get('ramips-mt7621'). \
+    add_pkglist(PKGS_USB). \
+    add_pkglist(PKGS_USB_NET). \
+    add_pkglist(PKGS_USB_SERIAL). \
+    add_pkglist(PKGS_USB_STORAGE). \
+    add_pkglist(PKGS_TLS). \
+    exclude([  # devices without usb ports
+        'netgear-ex6150',
+        'ubiquiti-edgerouter-x',
+        'ubiquiti-edgerouter-x-sfp'], pkglists=[PKGS_USB, PKGS_USB_NET, PKGS_USB_SERIAL, PKGS_USB_STORAGE])
 
 targets.get('ramips-mt76x8'). \
     add_pkglist(PKGS_USB). \
