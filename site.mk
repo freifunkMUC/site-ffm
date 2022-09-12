@@ -2,27 +2,27 @@ GLUON_MULTIDOMAIN=1
 GLUON_DEPRECATED=upgrade
 
 GLUON_FEATURES := \
-	respondd \
 	autoupdater \
+	config-mode-domain-select \
+	config-mode-geo-location-osm \
+	config-mode-mesh-vpn \
 	ebtables-filter-multicast \
 	ebtables-filter-ra-dhcp \
 	ebtables-source-filter \
+	mesh-batman-adv-15 \
+	respondd \
+	status-page \
 	web-advanced \
 	web-private-wifi \
-	web-wizard \
-	mesh-batman-adv-15 \
-	status-page \
-	config-mode-domain-select \
-	config-mode-geo-location-osm \
-	config-mode-mesh-vpn
+	web-wizard
 
 GLUON_SITE_PACKAGES := \
-	ffho-autoupdater-wifi-fallback \
 	ffho-ap-timer \
+	ffho-autoupdater-wifi-fallback \
 	ffho-web-ap-timer \
-	ffmuc-simple-radv-filter \
-	ffmuc-mesh-vpn-wireguard-vxlan \
 	ffmuc-autoupdater-next \
+	ffmuc-mesh-vpn-wireguard-vxlan \
+	ffmuc-simple-radv-filter \
 	iwinfo \
 	respondd-module-airtime
 
@@ -294,4 +294,3 @@ ifeq ($(GLUON_TARGET),x86-geode)
 endif
 
 # no pkglists for target x86-legacy
-
