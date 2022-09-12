@@ -75,10 +75,10 @@ manifest: build
 sign: manifest
 	${GLUON_BUILD_DIR}/contrib/sign.sh ${SECRET_KEY_FILE} output/images/sysupgrade/${GLUON_AUTOUPDATER_BRANCH}.manifest
 
-${GLUON_BUILD_DIR}:
+${GLUON_BUILD_DIR}/.git:
 	git clone ${GLUON_GIT_URL} ${GLUON_BUILD_DIR}
 
-gluon-prepare: output-clean ${GLUON_BUILD_DIR}
+gluon-prepare: output-clean ${GLUON_BUILD_DIR}/.git
 	cd ${GLUON_BUILD_DIR} \
 		&& git remote set-url origin ${GLUON_GIT_URL} \
 		&& git fetch origin \
@@ -109,6 +109,7 @@ gluon-patch:
 
 gluon-clean:
 	rm -rf ${GLUON_BUILD_DIR}
+	mkdir -p ${GLUON_BUILD_DIR}
 
 output-clean:
 	mkdir -p output/
