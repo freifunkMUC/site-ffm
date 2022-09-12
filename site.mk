@@ -24,7 +24,6 @@ GLUON_SITE_PACKAGES := \
 	ffmuc-mesh-vpn-wireguard-vxlan \
 	ffmuc-autoupdater-next \
 	iwinfo \
-	iptables \
 	respondd-module-airtime
 
 DEFAULT_GLUON_RELEASE := v2021.6.0~exp$(shell date '+%Y%m%d%H')
