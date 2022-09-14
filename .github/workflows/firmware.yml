@@ -33,7 +33,7 @@ jobs:
           fetch-depth: 0
       - name: Install build dependencies
         run: |
-          sudo -E ./install_build_dependencies.sh
+          sudo -E ./scripts/install_build_dependencies.sh
       - name: build target ${{ matrix.target }}
         id: compile
         run: |
