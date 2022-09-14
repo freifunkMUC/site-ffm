@@ -59,7 +59,7 @@ info:
 	@echo '# Building release ${GLUON_RELEASE} for branch ${GLUON_AUTOUPDATER_BRANCH}'
 	@echo
 
-build: gluon-prepare
+build: gluon-prepare output-clean
 	for target in ${GLUON_TARGETS}; do \
 		echo ""Building target $$target""; \
 		${GLUON_MAKE} download all GLUON_TARGET="$$target"; \
@@ -88,7 +88,7 @@ gluon-update: | ${GLUON_BUILD_DIR}/.git
 	cd ${GLUON_BUILD_DIR} && git reset --hard FETCH_HEAD
 	cd ${GLUON_BUILD_DIR} && git clean -fd
 
-gluon-prepare: gluon-update output-clean
+gluon-prepare: gluon-update
 	make gluon-patch
 	ln -sfT .. ${GLUON_BUILD_DIR}/site
 	${GLUON_MAKE} update
