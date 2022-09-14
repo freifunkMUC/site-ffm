@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-set -eEux
+set -eux
 
 # Verify that the script is running in Ubuntu
 . /etc/lsb-release
