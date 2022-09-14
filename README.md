@@ -1,5 +1,15 @@
 ![Build ffmuc firmware](https://github.com/freifunkMUC/site-ffm/workflows/Build%20ffmuc%20firmware/badge.svg)
 
+## Dependencies
+
+* git
+* GNU make
+* GNU patch
+* [Upstream Gluon dependencies](https://gluon.readthedocs.io/en/latest/user/getting_started.html#dependencies)
+
+For convenience, you can find a script to install those dependencies on an Ubuntu-based distribution:\
+ [install_build_dependencies.sh](scripts/install_build_dependencies.sh)
+
 ## Building
 
 Check out this repository and execute `make`, i.e. like this:
