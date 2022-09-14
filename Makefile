@@ -2,7 +2,7 @@ GLUON_BUILD_DIR := gluon-build
 GLUON_GIT_URL := https://github.com/freifunk-gluon/gluon.git
 GLUON_GIT_REF := f54c0e789fbc4904d9d44635db2d8f55166011f7
 
-PATCH_DIR := ${GLUON_BUILD_DIR}/site/patches
+PATCH_DIR := ./patches
 SECRET_KEY_FILE ?= ${HOME}/.gluon-secret-key
 
 GLUON_TARGETS ?= \
@@ -83,27 +83,12 @@ gluon-prepare: output-clean ${GLUON_BUILD_DIR}
 		&& git fetch origin \
 		&& git checkout -q --force ${GLUON_GIT_REF} \
 		&& git clean -fd;
-	ln -sfT .. ${GLUON_BUILD_DIR}/site
 	make gluon-patch
+	ln -sfT .. ${GLUON_BUILD_DIR}/site
 	${GLUON_MAKE} update
 
 gluon-patch:
-	echo "Applying Patches ..."
-	(cd ${GLUON_BUILD_DIR})
-			if [ `git branch --list patched` ]; then \
-				(git branch -D patched) \
-			fi
-	(cd ${GLUON_BUILD_DIR}; git checkout -B patching)
-	if [ -d "${GLUON_BUILD_DIR}/site/patches" -a "${GLUON_BUILD_DIR}/site/patches/*.patch" ]; then \
-		(cd ${GLUON_BUILD_DIR}; git apply --ignore-space-change --ignore-whitespace --whitespace=nowarn --verbose site/patches/*.patch) || ( \
-			cd ${GLUON_BUILD_DIR}; \
-			git clean -fd; \
-			git checkout -B patched; \
-			git branch -D patching; \
-			exit 1 \
-		) \
-	fi
-	(cd ${GLUON_BUILD_DIR}; git branch -M patched)
+	scripts/apply_patches.sh ${GLUON_BUILD_DIR} ${PATCH_DIR}
 
 gluon-clean:
 	rm -rf ${GLUON_BUILD_DIR}
