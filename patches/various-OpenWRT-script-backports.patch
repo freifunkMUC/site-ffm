@@ -1,0 +1,578 @@
+From 986cb86303e5c0bfc734800d551230978abfe559 Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Thu, 15 Sep 2022 14:49:45 +0200
+Subject: [PATCH] Various OpenWRT script backports
+
+Fixes failing xxd download.
+based on https://github.com/openwrt/openwrt/pull/10709
+---
+ .../openwrt/0011-scripts-add-xxdi.pl.patch    | 79 +++++++++++++++
+ ...xxdi.pl-remove-File-Slurp-dependency.patch | 51 ++++++++++
+ ...cripts-xxdi.pl-add-xxd-i-compat-mode.patch | 96 +++++++++++++++++++
+ ...d-provide-xxd-i-with-scripts-xxdi.pl.patch | 43 +++++++++
+ .../0015-tools-remove-xxd-package.patch       | 61 ++++++++++++
+ ...16-scripts-always-check-certificates.patch | 80 ++++++++++++++++
+ ...d.pl-silence-can-t-exec-curl-warning.patch | 37 +++++++
+ ...-download.pl-fix-downloads-with-wget.patch | 54 +++++++++++
+ 8 files changed, 501 insertions(+)
+ create mode 100644 patches/openwrt/0011-scripts-add-xxdi.pl.patch
+ create mode 100644 patches/openwrt/0012-scripts-xxdi.pl-remove-File-Slurp-dependency.patch
+ create mode 100644 patches/openwrt/0013-scripts-xxdi.pl-add-xxd-i-compat-mode.patch
+ create mode 100644 patches/openwrt/0014-build-provide-xxd-i-with-scripts-xxdi.pl.patch
+ create mode 100644 patches/openwrt/0015-tools-remove-xxd-package.patch
+ create mode 100644 patches/openwrt/0016-scripts-always-check-certificates.patch
+ create mode 100644 patches/openwrt/0017-scripts-download.pl-silence-can-t-exec-curl-warning.patch
+ create mode 100644 patches/openwrt/0018-scripts-download.pl-fix-downloads-with-wget.patch
+
+diff --git a/patches/openwrt/0011-scripts-add-xxdi.pl.patch b/patches/openwrt/0011-scripts-add-xxdi.pl.patch
+new file mode 100644
+index 00000000..fb98be69
+--- /dev/null
++++ b/patches/openwrt/0011-scripts-add-xxdi.pl.patch
+@@ -0,0 +1,79 @@
++From c0bc53f308033af1a6457b71994dd8f7712a8a20 Mon Sep 17 00:00:00 2001
++From: =?UTF-8?q?Petr=20=C5=A0tetiar?= <ynezz@true.cz>
++Date: Tue, 30 Aug 2022 08:31:42 +0200
++Subject: [PATCH 1/8] scripts: add xxdi.pl
++MIME-Version: 1.0
++Content-Type: text/plain; charset=UTF-8
++Content-Transfer-Encoding: 8bit
++
++xxdi.pl is a Perl script that implements vim's 'xxd -i' mode so that
++packages do not have to use all of vim just to get this functionality.
++
++References: #10555
++Source: https://github.com/gregkh/xxdi/blob/97a6bd5cee05d1b15851981ec38ef5a460ddfcb1/xxdi.pl
++Signed-off-by: Petr Štetiar <ynezz@true.cz>
++(cherry picked from commit 2117d04a3aaad3394c0afec799d9c43f8a09c2cf)
++---
++ scripts/xxdi.pl | 50 +++++++++++++++++++++++++++++++++++++++++++++++++
++ 1 file changed, 50 insertions(+)
++ create mode 100755 scripts/xxdi.pl
++
++diff --git a/scripts/xxdi.pl b/scripts/xxdi.pl
++new file mode 100755
++index 0000000000..acc974c4b3
++--- /dev/null
+++++ b/scripts/xxdi.pl
++@@ -0,0 +1,50 @@
+++#!/usr/bin/env perl
+++#
+++# xxdi.pl - perl implementation of 'xxd -i' mode
+++#
+++# Copyright 2013 Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+++# Copyright 2013 Linux Foundation
+++#
+++# Released under the GPLv2.
+++#
+++# Implements the "basic" functionality of 'xxd -i' in perl to keep build
+++# systems from having to build/install/rely on vim-core, which not all
+++# distros want to do.  But everyone has perl, so use it instead.
+++#
+++
+++use strict;
+++use warnings;
+++use File::Slurp qw(slurp);
+++
+++my $indata = slurp(@ARGV ? $ARGV[0] : \*STDIN);
+++my $len_data = length($indata);
+++my $num_digits_per_line = 12;
+++my $var_name;
+++my $outdata;
+++
+++# Use the variable name of the file we read from, converting '/' and '.
+++# to '_', or, if this is stdin, just use "stdin" as the name.
+++if (@ARGV) {
+++	$var_name = $ARGV[0];
+++	$var_name =~ s/\//_/g;
+++	$var_name =~ s/\./_/g;
+++} else {
+++	$var_name = "stdin";
+++}
+++
+++$outdata .= "unsigned char $var_name\[] = {";
+++
+++# trailing ',' is acceptable, so instead of duplicating the logic for
+++# just the last character, live with the extra ','.
+++for (my $key= 0; $key < $len_data; $key++) {
+++	if ($key % $num_digits_per_line == 0) {
+++		$outdata .= "\n\t";
+++	}
+++	$outdata .= sprintf("0x%.2x, ", ord(substr($indata, $key, 1)));
+++}
+++
+++$outdata .= "\n};\nunsigned int $var_name\_len = $len_data;\n";
+++
+++binmode STDOUT;
+++print {*STDOUT} $outdata;
+++
++-- 
++2.25.1
++
+diff --git a/patches/openwrt/0012-scripts-xxdi.pl-remove-File-Slurp-dependency.patch b/patches/openwrt/0012-scripts-xxdi.pl-remove-File-Slurp-dependency.patch
+new file mode 100644
+index 00000000..5d211abd
+--- /dev/null
++++ b/patches/openwrt/0012-scripts-xxdi.pl-remove-File-Slurp-dependency.patch
+@@ -0,0 +1,51 @@
++From cce168c0894c7dde1e2207f5050dd25b77bc14db Mon Sep 17 00:00:00 2001
++From: Jo-Philipp Wich <jo@mein.io>
++Date: Tue, 30 Aug 2022 18:20:04 +0200
++Subject: [PATCH 2/8] scripts: xxdi.pl: remove File::Slurp dependency
++MIME-Version: 1.0
++Content-Type: text/plain; charset=UTF-8
++Content-Transfer-Encoding: 8bit
++
++In order to make it more portable.
++
++Signed-off-by: Jo-Philipp Wich <jo@mein.io>
++Signed-off-by: Petr Štetiar <ynezz@true.cz>
++(cherry picked from commit 8b278a76d90e3724815a5fde32be59f7796be1d8)
++---
++ scripts/xxdi.pl | 19 +++++++++++++++++--
++ 1 file changed, 17 insertions(+), 2 deletions(-)
++
++diff --git a/scripts/xxdi.pl b/scripts/xxdi.pl
++index acc974c4b3..1f960902be 100755
++--- a/scripts/xxdi.pl
+++++ b/scripts/xxdi.pl
++@@ -14,9 +14,24 @@
++ 
++ use strict;
++ use warnings;
++-use File::Slurp qw(slurp);
++ 
++-my $indata = slurp(@ARGV ? $ARGV[0] : \*STDIN);
+++my $indata;
+++
+++{
+++	local $/;
+++	my $fh;
+++
+++	if (@ARGV) {
+++		open($fh, '<:raw', $ARGV[0]) || die("Unable to open $ARGV[0]: $!\n");
+++	} else {
+++		$fh = \*STDIN;
+++	}
+++
+++	$indata = readline $fh;
+++
+++	close $fh;
+++}
+++
++ my $len_data = length($indata);
++ my $num_digits_per_line = 12;
++ my $var_name;
++-- 
++2.25.1
++
+diff --git a/patches/openwrt/0013-scripts-xxdi.pl-add-xxd-i-compat-mode.patch b/patches/openwrt/0013-scripts-xxdi.pl-add-xxd-i-compat-mode.patch
+new file mode 100644
+index 00000000..ff5dadcf
+--- /dev/null
++++ b/patches/openwrt/0013-scripts-xxdi.pl-add-xxd-i-compat-mode.patch
+@@ -0,0 +1,96 @@
++From f277874adb48fd811a2a82e54869a911a7263b48 Mon Sep 17 00:00:00 2001
++From: =?UTF-8?q?Petr=20=C5=A0tetiar?= <ynezz@true.cz>
++Date: Tue, 30 Aug 2022 08:34:26 +0200
++Subject: [PATCH 3/8] scripts: xxdi.pl: add xxd -i compat mode
++MIME-Version: 1.0
++Content-Type: text/plain; charset=UTF-8
++Content-Transfer-Encoding: 8bit
++
++So it can serve as a standalone drop in replacement for xxd utility used
++currently mostly in U-Boot packages with `xxd -i` mode which outputs C
++include file style, with aim for byte to byte identical output, so the
++eventual difference in the generated output is easily spottable.
++
++Fixes: #10555
++Signed-off-by: Petr Štetiar <ynezz@true.cz>
++Signed-off-by: Jo-Philipp Wich <jo@mein.io> [perl-fu]
++(cherry picked from commit 06e01e817ec6643a35beb9e6946689e9cc7d020a)
++---
++ scripts/xxdi.pl | 37 +++++++++++++++++++------------------
++ 1 file changed, 19 insertions(+), 18 deletions(-)
++
++diff --git a/scripts/xxdi.pl b/scripts/xxdi.pl
++index 1f960902be..f7bb3c2f9c 100755
++--- a/scripts/xxdi.pl
+++++ b/scripts/xxdi.pl
++@@ -16,15 +16,21 @@ use strict;
++ use warnings;
++ 
++ my $indata;
+++my $var_name = "stdin";
+++my $full_output = (@ARGV > 0 && $ARGV[0] eq '-i') ? shift @ARGV : undef;
++ 
++ {
++ 	local $/;
++ 	my $fh;
++ 
++ 	if (@ARGV) {
++-		open($fh, '<:raw', $ARGV[0]) || die("Unable to open $ARGV[0]: $!\n");
++-	} else {
+++		$var_name = $ARGV[0];
+++		open($fh, '<:raw', $var_name) || die("xxdi.pl: Unable to open $var_name: $!\n");
+++	} elsif (! -t STDIN) {
++ 		$fh = \*STDIN;
+++		undef $full_output;
+++	} else {
+++		die "usage: xxdi.pl [-i] [infile]\n";
++ 	}
++ 
++ 	$indata = readline $fh;
++@@ -34,32 +40,27 @@ my $indata;
++ 
++ my $len_data = length($indata);
++ my $num_digits_per_line = 12;
++-my $var_name;
++-my $outdata;
+++my $outdata = "";
++ 
++ # Use the variable name of the file we read from, converting '/' and '.
++ # to '_', or, if this is stdin, just use "stdin" as the name.
++-if (@ARGV) {
++-	$var_name = $ARGV[0];
++-	$var_name =~ s/\//_/g;
++-	$var_name =~ s/\./_/g;
++-} else {
++-	$var_name = "stdin";
++-}
+++$var_name =~ s/\//_/g;
+++$var_name =~ s/\./_/g;
+++$var_name = "__$var_name" if $var_name =~ /^\d/;
++ 
++-$outdata .= "unsigned char $var_name\[] = {";
+++$outdata = "unsigned char $var_name\[] = { " if $full_output;
++ 
++-# trailing ',' is acceptable, so instead of duplicating the logic for
++-# just the last character, live with the extra ','.
++ for (my $key= 0; $key < $len_data; $key++) {
++ 	if ($key % $num_digits_per_line == 0) {
++-		$outdata .= "\n\t";
+++		$outdata = substr($outdata, 0, -1)."\n  ";
++ 	}
++ 	$outdata .= sprintf("0x%.2x, ", ord(substr($indata, $key, 1)));
++ }
++ 
++-$outdata .= "\n};\nunsigned int $var_name\_len = $len_data;\n";
+++$outdata = substr($outdata, 0, -2);
+++$outdata .= "\n";
++ 
++-binmode STDOUT;
++-print {*STDOUT} $outdata;
+++$outdata .= "};\nunsigned int $var_name\_len = $len_data;\n" if $full_output;
++ 
+++binmode STDOUT;
+++print $outdata;
++-- 
++2.25.1
++
+diff --git a/patches/openwrt/0014-build-provide-xxd-i-with-scripts-xxdi.pl.patch b/patches/openwrt/0014-build-provide-xxd-i-with-scripts-xxdi.pl.patch
+new file mode 100644
+index 00000000..5c9d8ccc
+--- /dev/null
++++ b/patches/openwrt/0014-build-provide-xxd-i-with-scripts-xxdi.pl.patch
+@@ -0,0 +1,43 @@
++From 40a07def11175b4979fe6c1b785a6f35e61220f3 Mon Sep 17 00:00:00 2001
++From: =?UTF-8?q?Petr=20=C5=A0tetiar?= <ynezz@true.cz>
++Date: Tue, 30 Aug 2022 08:45:39 +0200
++Subject: [PATCH 4/8] build: provide xxd -i with scripts/xxdi.pl
++MIME-Version: 1.0
++Content-Type: text/plain; charset=UTF-8
++Content-Transfer-Encoding: 8bit
++
++Dependency on xxd was added in commit c4dd2441e787 ("tools: add xxd
++(from vim)") as U-Boot requires xxd to create the default environment
++from an external file.
++
++Later in commit 2b94aac7a128 ("tools: xxd: use more convenient source
++tarball"), xxd from another source was used instead, but that source is
++currently unavailable, so let's fix it by using simple xxdi.pl Perl
++script instead.
++
++Fixes: #10555
++Signed-off-by: Petr Štetiar <ynezz@true.cz>
++(cherry picked from commit eae2fb8027cb892e42181e471ba344aa5d26bf7e)
++---
++ include/prereq-build.mk | 5 ++++-
++ 1 file changed, 4 insertions(+), 1 deletion(-)
++
++diff --git a/include/prereq-build.mk b/include/prereq-build.mk
++index 70e1061680..8998e76fd0 100644
++--- a/include/prereq-build.mk
+++++ b/include/prereq-build.mk
++@@ -202,7 +202,10 @@ $(STAGING_DIR_HOST)/bin/mkhash: $(SCRIPT_DIR)/mkhash.c
++ 	mkdir -p $(dir $@)
++ 	$(CC) -O2 -I$(TOPDIR)/tools/include -o $@ $<
++ 
++-prereq: $(STAGING_DIR_HOST)/bin/mkhash
+++$(STAGING_DIR_HOST)/bin/xxd: $(SCRIPT_DIR)/xxdi.pl
+++	$(LN) $< $@
+++
+++prereq: $(STAGING_DIR_HOST)/bin/mkhash $(STAGING_DIR_HOST)/bin/xxd
++ 
++ # Install ldconfig stub
++ $(eval $(call TestHostCommand,ldconfig-stub,Failed to install stub, \
++-- 
++2.25.1
++
+diff --git a/patches/openwrt/0015-tools-remove-xxd-package.patch b/patches/openwrt/0015-tools-remove-xxd-package.patch
+new file mode 100644
+index 00000000..0316e057
+--- /dev/null
++++ b/patches/openwrt/0015-tools-remove-xxd-package.patch
+@@ -0,0 +1,61 @@
++From 003fd948c5a19b45094aadad369c9b47f914e632 Mon Sep 17 00:00:00 2001
++From: =?UTF-8?q?Petr=20=C5=A0tetiar?= <ynezz@true.cz>
++Date: Tue, 30 Aug 2022 08:41:07 +0200
++Subject: [PATCH 5/8] tools: remove xxd package
++MIME-Version: 1.0
++Content-Type: text/plain; charset=UTF-8
++Content-Transfer-Encoding: 8bit
++
++It shouldn't be needed anymore as we've now `scripts/xxdi.pl`, which
++should be self contained and fully compatible `xxd -i` replacement.
++
++Fixes: #10555
++Signed-off-by: Petr Štetiar <ynezz@true.cz>
++(cherry picked from commit 88c9056a70901577489ecdc7a25207a9b7576d6e)
++---
++ tools/Makefile     |  2 +-
++ tools/xxd/Makefile | 19 -------------------
++ 2 files changed, 1 insertion(+), 20 deletions(-)
++ delete mode 100644 tools/xxd/Makefile
++
++diff --git a/tools/Makefile b/tools/Makefile
++index ec382b4122..c18c2b4242 100644
++--- a/tools/Makefile
+++++ b/tools/Makefile
++@@ -25,7 +25,7 @@ tools-y += autoconf autoconf-archive automake bc bison cmake cpio dosfstools
++ tools-y += e2fsprogs fakeroot findutils firmware-utils flex gengetopt
++ tools-y += libressl libtool lzma m4 make-ext4fs meson missing-macros mkimage
++ tools-y += mklibs mtd-utils mtools ninja padjffs2 patch-image
++-tools-y += patchelf pkgconf quilt squashfskit4 sstrip xxd zip zlib zstd
+++tools-y += patchelf pkgconf quilt squashfskit4 sstrip zip zlib zstd
++ tools-$(BUILD_B43_TOOLS) += b43-tools
++ tools-$(BUILD_ISL) += isl
++ tools-$(BUILD_TOOLCHAIN) += expat gmp mpc mpfr
++diff --git a/tools/xxd/Makefile b/tools/xxd/Makefile
++deleted file mode 100644
++index c3cc6863cc..0000000000
++--- a/tools/xxd/Makefile
+++++ /dev/null
++@@ -1,19 +0,0 @@
++-# SPDX-License-Identifier: GPL-2.0-or-later
++-
++-include $(TOPDIR)/rules.mk
++-
++-PKG_NAME:=xxd
++-PKG_VERSION:=1.10
++-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
++-PKG_SOURCE_URL:=http://grail.cba.csuohio.edu/~somos/
++-PKG_HASH:=9bf05c19b9084973e3cc877696a7f9881a5c87fa5a9fa438d9962519726559f9
++-PKG_CPE_ID:=cpe:/a:vim:vim
++-
++-include $(INCLUDE_DIR)/host-build.mk
++-
++-define Host/Install
++-	$(INSTALL_DIR) $(STAGING_DIR_HOST)/bin
++-	$(INSTALL_BIN) $(HOST_BUILD_DIR)/xxd $(STAGING_DIR_HOST)/bin/
++-endef
++-
++-$(eval $(call HostBuild))
++-- 
++2.25.1
++
+diff --git a/patches/openwrt/0016-scripts-always-check-certificates.patch b/patches/openwrt/0016-scripts-always-check-certificates.patch
+new file mode 100644
+index 00000000..4997a837
+--- /dev/null
++++ b/patches/openwrt/0016-scripts-always-check-certificates.patch
+@@ -0,0 +1,80 @@
++From 71ebe238ec7273cf0e11eb3ce5b60820061aca55 Mon Sep 17 00:00:00 2001
++From: Josh Roys <roysjosh@gmail.com>
++Date: Sat, 23 Jul 2022 11:23:16 -0400
++Subject: [PATCH 6/8] scripts: always check certificates
++
++Remove flags from wget and curl instructing them to ignore bad server
++certificates. Although other mechanisms can protect against malicious
++modifications of downloads, other vectors of attack may be available
++to an adversary.
++
++TLS certificate verification can be disabled by turning oof the
++"Enable TLS certificate verification during package download" option
++enabled by default in the "Global build settings" in "make menuconfig"
++
++Signed-off-by: Josh Roys <roysjosh@gmail.com>
++[ add additional info on how to disable this option ]
++Signed-off-by: Christian Marangi <ansuelsmth@gmail.com>
++(cherry picked from commit 90c6e3aedf167b0ae1baf376e7800a631681e69a)
++---
++ config/Config-build.in | 4 ++++
++ rules.mk               | 3 +++
++ scripts/download.pl    | 6 ++++--
++ 3 files changed, 11 insertions(+), 2 deletions(-)
++
++diff --git a/config/Config-build.in b/config/Config-build.in
++index ef1a10c28d..e682277964 100644
++--- a/config/Config-build.in
+++++ b/config/Config-build.in
++@@ -58,6 +58,10 @@ menu "Global build settings"
++ 		bool "Enable signature checking in opkg"
++ 		default SIGNED_PACKAGES
++ 
+++	config DOWNLOAD_CHECK_CERTIFICATE
+++		bool "Enable TLS certificate verification during package download"
+++		default y
+++
++ 	comment "General build options"
++ 
++ 	config TESTING_KERNEL
++diff --git a/rules.mk b/rules.mk
++index 8a4254e638..1d63d61ee1 100644
++--- a/rules.mk
+++++ b/rules.mk
++@@ -265,6 +265,9 @@ ESED:=$(STAGING_DIR_HOST)/bin/sed -E -i -e
++ MKHASH:=$(STAGING_DIR_HOST)/bin/mkhash
++ # MKHASH is used in /scripts, so we export it here.
++ export MKHASH
+++# DOWNLOAD_CHECK_CERTIFICATE is used in /scripts, so we export it here.
+++DOWNLOAD_CHECK_CERTIFICATE:=$(CONFIG_DOWNLOAD_CHECK_CERTIFICATE)
+++export DOWNLOAD_CHECK_CERTIFICATE
++ CP:=cp -fpR
++ LN:=ln -sf
++ XARGS:=xargs -r
++diff --git a/scripts/download.pl b/scripts/download.pl
++index af13c0ae00..ab1801aad5 100755
++--- a/scripts/download.pl
+++++ b/scripts/download.pl
++@@ -24,6 +24,8 @@ my $scriptdir = dirname($0);
++ my @mirrors;
++ my $ok;
++ 
+++my $check_certificate = $ENV{DOWNLOAD_CHECK_CERTIFICATE} eq "y";
+++
++ $url_filename or $url_filename = $filename;
++ 
++ sub localmirrors {
++@@ -80,8 +82,8 @@ sub download_cmd($) {
++ 	}
++ 
++ 	return $have_curl
++-		? (qw(curl -f --connect-timeout 20 --retry 5 --location --insecure), shellwords($ENV{CURL_OPTIONS} || ''), $url)
++-		: (qw(wget --tries=5 --timeout=20 --no-check-certificate --output-document=-), shellwords($ENV{WGET_OPTIONS} || ''), $url)
+++		? (qw(curl -f --connect-timeout 20 --retry 5 --location), $check_certificate ? '' : '--insecure', shellwords($ENV{CURL_OPTIONS} || ''), $url)
+++		: (qw(wget --tries=5 --timeout=20 --output-document=-), $check_certificate ? '' : '--no-check-certificate', shellwords($ENV{WGET_OPTIONS} || ''), $url)
++ 	;
++ }
++ 
++-- 
++2.25.1
++
+diff --git a/patches/openwrt/0017-scripts-download.pl-silence-can-t-exec-curl-warning.patch b/patches/openwrt/0017-scripts-download.pl-silence-can-t-exec-curl-warning.patch
+new file mode 100644
+index 00000000..0e9293bf
+--- /dev/null
++++ b/patches/openwrt/0017-scripts-download.pl-silence-can-t-exec-curl-warning.patch
+@@ -0,0 +1,37 @@
++From b5c2868d01e9a6c3b5f035025d09bef3399d20b2 Mon Sep 17 00:00:00 2001
++From: =?UTF-8?q?Petr=20=C5=A0tetiar?= <ynezz@true.cz>
++Date: Tue, 13 Sep 2022 07:38:10 +0200
++Subject: [PATCH 7/8] scripts/download.pl: silence can't exec curl warning
++MIME-Version: 1.0
++Content-Type: text/plain; charset=UTF-8
++Content-Transfer-Encoding: 8bit
++
++When running build in verbose mode `make V=s` we can see a lot of
++following warnings when curl is not available in the system:
++
++ Can't exec "curl": No such file or directory at scripts/download.pl line 77.
++
++So lets fix it by redirecting of the stderr to null hole.
++
++Signed-off-by: Petr Štetiar <ynezz@true.cz>
++(cherry picked from commit c836ca84e8f641e10a8349a8f9b7432b33d6cec1)
++---
++ scripts/download.pl | 2 +-
++ 1 file changed, 1 insertion(+), 1 deletion(-)
++
++diff --git a/scripts/download.pl b/scripts/download.pl
++index ab1801aad5..90a1be4e26 100755
++--- a/scripts/download.pl
+++++ b/scripts/download.pl
++@@ -74,7 +74,7 @@ sub download_cmd($) {
++ 	my $url = shift;
++ 	my $have_curl = 0;
++ 
++-	if (open CURL, '-|', 'curl', '--version') {
+++	if (open CURL, "curl --version 2>/dev/null |") {
++ 		if (defined(my $line = readline CURL)) {
++ 			$have_curl = 1 if $line =~ /^curl /;
++ 		}
++-- 
++2.25.1
++
+diff --git a/patches/openwrt/0018-scripts-download.pl-fix-downloads-with-wget.patch b/patches/openwrt/0018-scripts-download.pl-fix-downloads-with-wget.patch
+new file mode 100644
+index 00000000..8a7e9a13
+--- /dev/null
++++ b/patches/openwrt/0018-scripts-download.pl-fix-downloads-with-wget.patch
+@@ -0,0 +1,54 @@
++From c573da6741250d672d6db74a3cd140fdf996bce4 Mon Sep 17 00:00:00 2001
++From: =?UTF-8?q?Petr=20=C5=A0tetiar?= <ynezz@true.cz>
++Date: Tue, 13 Sep 2022 07:40:37 +0200
++Subject: [PATCH 8/8] scripts/download.pl: fix downloads with wget
++MIME-Version: 1.0
++Content-Type: text/plain; charset=UTF-8
++Content-Transfer-Encoding: 8bit
++
++Several users of wget for downloads (curl is not available in the
++system) have reported broken download functionality:
++
++ wget --tries=5 --timeout=20 --output-document=-  https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.10.142.tar.xz
++ http://: Invalid host name.
++
++Thats all happening due to '' was passed as an argument, which got later
++expanded to http://.
++
++In the context of a list constructor '' is not nothing, it is an empty
++string element.  So fix it by using () as it will yield "nothing" and
++thus not introduce an empty string element.
++
++Fixes: #10692
++Fixes: 90c6e3aedf16 ("scripts: always check certificates")
++Signed-off-by: Jo-Philipp Wich <jo@mein.io> [shellwords() -> ()]
++Signed-off-by: Petr Štetiar <ynezz@true.cz>
++(cherry picked from commit 50a48faa1b8424e6b4b436b7118fffa2cba14b18)
++---
++ scripts/download.pl | 10 ++++++++--
++ 1 file changed, 8 insertions(+), 2 deletions(-)
++
++diff --git a/scripts/download.pl b/scripts/download.pl
++index 90a1be4e26..33e1e12c1e 100755
++--- a/scripts/download.pl
+++++ b/scripts/download.pl
++@@ -82,8 +82,14 @@ sub download_cmd($) {
++ 	}
++ 
++ 	return $have_curl
++-		? (qw(curl -f --connect-timeout 20 --retry 5 --location), $check_certificate ? '' : '--insecure', shellwords($ENV{CURL_OPTIONS} || ''), $url)
++-		: (qw(wget --tries=5 --timeout=20 --output-document=-), $check_certificate ? '' : '--no-check-certificate', shellwords($ENV{WGET_OPTIONS} || ''), $url)
+++		? (qw(curl -f --connect-timeout 20 --retry 5 --location),
+++			$check_certificate ? () : '--insecure',
+++			shellwords($ENV{CURL_OPTIONS} || ''),
+++			$url)
+++		: (qw(wget --tries=5 --timeout=20 --output-document=-),
+++			$check_certificate ? () : '--no-check-certificate',
+++			shellwords($ENV{WGET_OPTIONS} || ''),
+++			$url)
++ 	;
++ }
++ 
++-- 
++2.25.1
++
+-- 
+2.25.1
+
