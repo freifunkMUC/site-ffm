@@ -59,7 +59,7 @@ info:
 	@echo '# Building release ${GLUON_RELEASE} for branch ${GLUON_AUTOUPDATER_BRANCH}'
 	@echo
 
-build: gluon-prepare
+build: gluon-prepare output-clean
 	for target in ${GLUON_TARGETS}; do \
 		echo ""Building target $$target""; \
 		${GLUON_MAKE} download all GLUON_TARGET="$$target"; \
@@ -75,14 +75,20 @@ sign: manifest
 	${GLUON_BUILD_DIR}/contrib/sign.sh ${SECRET_KEY_FILE} output/images/sysupgrade/${GLUON_AUTOUPDATER_BRANCH}.manifest
 
 ${GLUON_BUILD_DIR}:
-	git clone ${GLUON_GIT_URL} ${GLUON_BUILD_DIR}
+	mkdir -p ${GLUON_BUILD_DIR}
 
-gluon-prepare: output-clean ${GLUON_BUILD_DIR}
-	cd ${GLUON_BUILD_DIR} \
-		&& git remote set-url origin ${GLUON_GIT_URL} \
-		&& git fetch origin \
-		&& git checkout -q --force ${GLUON_GIT_REF} \
-		&& git clean -fd;
+# Note: "|" means "order only", e.g. "do not care about folder timestamps"
+# https://www.gnu.org/savannah-checkouts/gnu/make/manual/html_node/Prerequisite-Types.html
+${GLUON_BUILD_DIR}/.git: | ${GLUON_BUILD_DIR}
+	git init ${GLUON_BUILD_DIR}
+	cd ${GLUON_BUILD_DIR} && git remote add origin ${GLUON_GIT_URL}
+
+gluon-update: | ${GLUON_BUILD_DIR}/.git
+	cd ${GLUON_BUILD_DIR} && git fetch origin ${GLUON_GIT_REF}
+	cd ${GLUON_BUILD_DIR} && git reset --hard FETCH_HEAD
+	cd ${GLUON_BUILD_DIR} && git clean -fd
+
+gluon-prepare: gluon-update
 	make gluon-patch
 	ln -sfT .. ${GLUON_BUILD_DIR}/site
 	${GLUON_MAKE} update
