@@ -13,12 +13,12 @@ jobs:
     outputs:
       target_json: ${{ steps.set_target.outputs.target }}
     steps:
-    - name: Set target matrix
-      id: set_target
-      shell: bash
-      run: |
-        target_list="[\"ath79-generic\", \"ath79-nand\", \"bcm27xx-bcm2708\", \"bcm27xx-bcm2709\", \"bcm27xx-bcm2710\", \"bcm27xx-bcm2711\", \"ipq40xx-generic\", \"ipq806x-generic\", \"lantiq-xway\", \"lantiq-xrx200\", \"mediatek-mt7622\", \"mpc85xx-p1010\", \"mpc85xx-p1020\", \"mvebu-cortexa9\", \"ramips-mt7620\", \"ramips-mt7621\", \"ramips-mt76x8\", \"rockchip-armv8\", \"sunxi-cortexa7\", \"x86-generic\", \"x86-geode\", \"x86-legacy\"]"
-        echo ::set-output name=target::{\"target\": $(echo $target_list)}\"
+      - name: Set target matrix
+        id: set_target
+        shell: bash
+        run: |
+          target_list="[\"ath79-generic\", \"ath79-nand\", \"bcm27xx-bcm2708\", \"bcm27xx-bcm2709\", \"bcm27xx-bcm2710\", \"bcm27xx-bcm2711\", \"ipq40xx-generic\", \"ipq806x-generic\", \"lantiq-xway\", \"lantiq-xrx200\", \"mediatek-mt7622\", \"mpc85xx-p1010\", \"mpc85xx-p1020\", \"mvebu-cortexa9\", \"ramips-mt7620\", \"ramips-mt7621\", \"ramips-mt76x8\", \"rockchip-armv8\", \"sunxi-cortexa7\", \"x86-generic\", \"x86-geode\", \"x86-legacy\"]"
+          echo ::set-output name=target::{\"target\": $(echo $target_list)}\"
 
   build_firmware:
     needs: generate_target_matrix
@@ -32,9 +32,9 @@ jobs:
         with:
           root-reserve-mb: 4096
           swap-size-mb: 1024
-          remove-dotnet: 'true'
-          remove-android: 'true'
-          remove-haskell: 'true'
+          remove-dotnet: "true"
+          remove-android: "true"
+          remove-haskell: "true"
       - name: Checkout
         uses: actions/checkout@master
         with:
@@ -90,7 +90,7 @@ jobs:
       - build_firmware_on_arm64
     if: github.event_name != 'pull_request'
     outputs:
-          output1: ${{ steps.create_release.outputs.upload_url }}
+      output1: ${{ steps.create_release.outputs.upload_url }}
     steps:
       - name: Create Release
         id: create_release
@@ -108,7 +108,9 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.generate_target_matrix.outputs.target_json) }}
     runs-on: ubuntu-latest
-    needs: [ create_release, generate_target_matrix ]
+    needs:
+      - create_release
+      - generate_target_matrix
     if: github.event_name != 'pull_request'
     steps:
       - name: Download Artifact ${{ matrix.target }}
