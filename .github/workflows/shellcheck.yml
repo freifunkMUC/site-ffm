@@ -6,7 +6,11 @@ on:
     branches:
       - stable
       - next
+    paths:
+      - '**.sh'
   pull_request:
+    paths:
+      - '**.sh'
 
 jobs:
   shellcheck:
