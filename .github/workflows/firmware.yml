@@ -6,6 +6,11 @@ on:
     tags:
       - v*
   pull_request:
+    paths-ignore:
+      - '**.md'
+      - '**/CODEOWNERS'
+      - '.github/ISSUE_TEMPLATE'
+      - '.github/*.yml'
 
 jobs:
   generate_target_matrix:
