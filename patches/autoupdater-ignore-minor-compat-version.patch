@@ -1,0 +1,68 @@
+From e98c29664b3e8f95cdb655c5329a7cb557c562a5 Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Tue, 20 Sep 2022 15:58:20 +0200
+Subject: [PATCH] autoupdater: ignore minor compat-version
+
+---
+ ...oupdater-ignore-minor-compat-version.patch | 49 +++++++++++++++++++
+ 1 file changed, 49 insertions(+)
+ create mode 100644 patches/packages/gluon/0001-autoupdater-ignore-minor-compat-version.patch
+
+diff --git a/patches/packages/gluon/0001-autoupdater-ignore-minor-compat-version.patch b/patches/packages/gluon/0001-autoupdater-ignore-minor-compat-version.patch
+new file mode 100644
+index 00000000..442bcbff
+--- /dev/null
++++ b/patches/packages/gluon/0001-autoupdater-ignore-minor-compat-version.patch
+@@ -0,0 +1,49 @@
++From b80428166454d184f356e5a14a144911d9ee11aa Mon Sep 17 00:00:00 2001
++From: David Bauer <mail@david-bauer.net>
++Date: Sun, 5 Jun 2022 23:36:23 +0200
++Subject: [PATCH] autoupdater: ignore minor compat-version
++
++Ignore a mismatching minor compat-version. A minor version hints an
++incompatibility with configuration, which Gluon re-generates based on
++the intent on upgrade. Thus, only mismatching major versions present
++a reason to block installation.
++
++This is required to provide a migration path from swconfig to DSA based
++ethernet architectures.
++
++Signed-off-by: David Bauer <mail@david-bauer.net>
++---
++ admin/autoupdater/src/autoupdater.c | 6 ++++--
++ 1 file changed, 4 insertions(+), 2 deletions(-)
++
++diff --git a/admin/autoupdater/src/autoupdater.c b/admin/autoupdater/src/autoupdater.c
++index 8d8bc74..cafdfbc 100644
++--- a/admin/autoupdater/src/autoupdater.c
+++++ b/admin/autoupdater/src/autoupdater.c
++@@ -382,11 +382,13 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
++ 	{
++ 		static const char *const exec_builtin = "exec ";
++ 		static const char *const test_option = " --test ";
+++		static const char *const compat_option = " --ignore-minor-compat-version ";
++ 
++-		char buf[strlen(exec_builtin) + strlen(sysupgrade_path) + strlen(test_option) + strlen(firmware_path) + 1];
+++		char buf[strlen(exec_builtin) + strlen(sysupgrade_path) + strlen(test_option) + strlen(compat_option) + strlen(firmware_path) + 1];
++ 		strcpy(buf, exec_builtin);
++ 		strcat(buf, sysupgrade_path);
++ 		strcat(buf, test_option);
+++		strcat(buf, compat_option);
++ 		strcat(buf, firmware_path);
++ 
++ 		const int sysupgrade_ret = system(buf);
++@@ -416,7 +418,7 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
++ 	/* Unset FD_CLOEXEC so the lockfile stays locked during sysupgrade */
++ 	fcntl(lock_fd, F_SETFD, 0);
++ 
++-	execl(sysupgrade_path, sysupgrade_path, firmware_path, NULL);
+++	execl(sysupgrade_path, sysupgrade_path, "--ignore-minor-compat-version", firmware_path, NULL);
++ 
++ 	/* execl() shouldn't return */
++ 	fputs("autoupdater: error: failed to call sysupgrade\n", stderr);
++-- 
++2.25.1
++
+-- 
+2.25.1
+
