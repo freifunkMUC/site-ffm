@@ -1,0 +1,82 @@
+From e61d1bbf327e82e841085e675ac15284241900b9 Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Mon, 3 Oct 2022 18:44:51 +0200
+Subject: [PATCH] base-files: allow ignoring minor compat-version check
+
+---
+ ...-ignoring-minor-compat-version-check.patch | 63 +++++++++++++++++++
+ 1 file changed, 63 insertions(+)
+ create mode 100644 patches/openwrt/0019-base-files-allow-ignoring-minor-compat-version-check.patch
+
+diff --git a/patches/openwrt/0019-base-files-allow-ignoring-minor-compat-version-check.patch b/patches/openwrt/0019-base-files-allow-ignoring-minor-compat-version-check.patch
+new file mode 100644
+index 00000000..548e54b7
+--- /dev/null
++++ b/patches/openwrt/0019-base-files-allow-ignoring-minor-compat-version-check.patch
+@@ -0,0 +1,63 @@
++From 34437af88867c4435add8a144417290b7fd4362a Mon Sep 17 00:00:00 2001
++From: David Bauer <mail@david-bauer.net>
++Date: Sat, 14 May 2022 01:26:02 +0200
++Subject: [PATCH] base-files: allow ignoring minor compat-version check
++
++Downstream projects might re-generate device-specific configuration
++based on OpenWrt's defaults on each upgrade, thus being unaffected by
++forward- as well as backwards-breaking configuration.
++
++Add a new sysupgrade parameter, which allows sysupgrades between minor
++compat-versions. Upgrades will still fail upon mismatching major compat
++versions.
++
++Signed-off-by: David Bauer <mail@david-bauer.net>
++---
++ package/base-files/files/lib/upgrade/fwtool.sh | 1 +
++ package/base-files/files/sbin/sysupgrade       | 4 ++++
++ 2 files changed, 5 insertions(+)
++
++diff --git a/package/base-files/files/lib/upgrade/fwtool.sh b/package/base-files/files/lib/upgrade/fwtool.sh
++index a45f3bbc73..8bd00a3332 100644
++--- a/package/base-files/files/lib/upgrade/fwtool.sh
+++++ b/package/base-files/files/lib/upgrade/fwtool.sh
++@@ -71,6 +71,7 @@ fwtool_check_image() {
++ 
++ 			# minor compat version -> sysupgrade with -n required
++ 			if [ "${devicecompat#.*}" != "${imagecompat#.*}" ] && [ "$SAVE_CONFIG" = "1" ]; then
+++				[ "$IGNORE_MINOR_COMPAT" = 1 ] && return 0
++ 				v "The device is supported, but the config is incompatible to the new image ($devicecompat->$imagecompat). Please upgrade without keeping config (sysupgrade -n)."
++ 				[ -n "$compatmessage" ] && v "$compatmessage"
++ 				return 1
++diff --git a/package/base-files/files/sbin/sysupgrade b/package/base-files/files/sbin/sysupgrade
++index 7e0a00e13b..9315091302 100755
++--- a/package/base-files/files/sbin/sysupgrade
+++++ b/package/base-files/files/sbin/sysupgrade
++@@ -19,6 +19,7 @@ export CONF_IMAGE=
++ export CONF_BACKUP_LIST=0
++ export CONF_BACKUP=
++ export CONF_RESTORE=
+++export IGNORE_MINOR_COMPAT=0
++ export NEED_IMAGE=
++ export HELP=0
++ export FORCE=0
++@@ -44,6 +45,7 @@ while [ -n "$1" ]; do
++ 		-F|--force) export FORCE=1;;
++ 		-T|--test) export TEST=1;;
++ 		-h|--help) export HELP=1; break;;
+++		--ignore-minor-compat-version) export IGNORE_MINOR_COMPAT=1;;
++ 		-*)
++ 			echo "Invalid option: $1" >&2
++ 			exit 1
++@@ -80,6 +82,8 @@ upgrade-option:
++ 	             Verify image and config .tar.gz but do not actually flash.
++ 	-F | --force
++ 	             Flash image even if image checks fail, this is dangerous!
+++	--ignore-minor-compat-version
+++		     Flash image even if the minor compat version is incompatible.
++ 	-q           less verbose
++ 	-v           more verbose
++ 	-h | --help  display this help
++-- 
++2.25.1
++
+-- 
+2.25.1
+
