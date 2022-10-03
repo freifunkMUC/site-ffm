@@ -59,7 +59,7 @@ info:
 	@echo '# Building release ${GLUON_RELEASE} for branch ${GLUON_AUTOUPDATER_BRANCH}'
 	@echo
 
-build: gluon-prepare output-clean
+build: gluon-prepare
 	for target in ${GLUON_TARGETS}; do \
 		echo ""Building target $$target""; \
 		${GLUON_MAKE} download all GLUON_TARGET="$$target"; \
@@ -69,7 +69,7 @@ manifest: build
 	for branch in next experimental testing stable; do \
 		${GLUON_MAKE} manifest GLUON_AUTOUPDATER_BRANCH=$$branch;\
 	done
-	mv -f ${GLUON_BUILD_DIR}/output/* ./output/
+	rsync -a --remove-source-files ${GLUON_BUILD_DIR}/output/ ./output/
 
 sign: manifest
 	${GLUON_BUILD_DIR}/contrib/sign.sh ${SECRET_KEY_FILE} output/images/sysupgrade/${GLUON_AUTOUPDATER_BRANCH}.manifest
