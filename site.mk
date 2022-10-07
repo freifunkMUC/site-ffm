@@ -20,13 +20,13 @@ GLUON_SITE_PACKAGES := \
 	ffho-ap-timer \
 	ffho-autoupdater-wifi-fallback \
 	ffho-web-ap-timer \
-	ffmuc-autoupdater-next \
+	ffmuc-autoupdater-next2stable \
 	ffmuc-mesh-vpn-wireguard-vxlan \
 	ffmuc-simple-radv-filter \
 	iwinfo \
 	respondd-module-airtime
 
-DEFAULT_GLUON_RELEASE := v2021.6.0~exp$(shell date '+%Y%m%d%H')
+DEFAULT_GLUON_RELEASE := v2022.10.1~exp$(shell date '+%Y%m%d%H')
 
 # Allow overriding the release number from the command line
 GLUON_RELEASE ?= $(DEFAULT_GLUON_RELEASE)
