@@ -1,5 +1,13 @@
 # Freifunk München Firmware Changelog
 
+## v2022.10.1
+ - Bump Gluon to v2022.1 https://gluon.readthedocs.io/en/v2022.1.x/releases/v2022.1.html
+ - Merge changes from next branch to support Gluon v2022.1/OpenWrt 22.03 into stable
+ - Include package to migrate autoupdater branch next to stable
+
+## v2022.5.2
+ - Bump Gluon to v2021.1.2 https://gluon.readthedocs.io/en/v2021.1.x/releases/v2021.1.2.html
+
 ## v2022.2.1
  - Fix bug in wireguard package which was causing high CPU load if no WAN was available
 

@@ -1,0 +1,27 @@
+---
+name: Shell Linting
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - stable
+      - next
+    paths:
+      - '**.sh'
+  pull_request:
+    paths:
+      - '**.sh'
+
+jobs:
+  shellcheck:
+    name: runner / shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: shellcheck
+        # Make sure the action is pinned to a commit, as all reviewdog repos
+        # have hundreds of contributors with write access (breaks easy/often)
+        uses: reviewdog/action-shellcheck@66c9a47bf02255b250284a82251cb4cadf5043f5  # v1.15.0
+        with:
+          filter_mode: "file"
+          fail_on_error: true

@@ -1,0 +1,10 @@
+t a/targets/sunxi-cortexa7 b/targets/sunxi-cortexa7
+index f6f56248..706e2828 100644
+--- a/targets/sunxi-cortexa7
++++ b/targets/sunxi-cortexa7
+@@ -15,3 +15,5 @@ device('lemaker-banana-pro', 'lemaker_bananapro', {
+ device('lamobo-r1', 'lamobo_lamobo-r1', {
+        broken = true, -- AP+11s not working
+ })
++
++device('friendlyarm-nanopi-r1', 'friendlyarm_nanopi-r1')

@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-set -eEux
+set -eux
 
 # Verify that the script is running in Ubuntu
 . /etc/lsb-release
@@ -21,6 +21,7 @@ apt-get -y --no-install-recommends install ca-certificates
 apt-get -y --no-install-recommends install \
     bash \
     bzip2 \
+    curl \
     diffutils \
     file \
     g++ \
@@ -31,7 +32,9 @@ apt-get -y --no-install-recommends install \
     make \
     patch \
     perl \
-    python2 \
+    python3 \
+    qemu-utils \
+    rsync \
     tar \
     unzip \
     wget
