@@ -20,11 +20,11 @@ GLUON_SITE_PACKAGES := \
 	ffho-ap-timer \
 	ffho-autoupdater-wifi-fallback \
 	ffho-web-ap-timer \
-	ffmuc-autoupdater-next2stable \
 	ffmuc-mesh-vpn-wireguard-vxlan \
 	ffmuc-simple-radv-filter \
 	iwinfo \
 	respondd-module-airtime
+#	ffmuc-autoupdater-next2stable \
 
 DEFAULT_GLUON_RELEASE := v2022.10.1~exp$(shell date '+%Y%m%d%H')
 
