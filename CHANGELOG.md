@@ -1,5 +1,14 @@
 # Freifunk München Firmware Changelog
 
+## v2022.10.3
+ - Bump Gluon to latest commit to include critical security fixes for wifi stack
+ - Enable TLS on all devices
+ - Fixed autoupdater for Loco M XW
+ - Temporarily disabled autoupdater next2stable migration
+
+## v2022.10.2
+ - Bump Gluon to latest commit to include USB ethernet fix
+
 ## v2022.10.1
  - Bump Gluon to v2022.1 https://gluon.readthedocs.io/en/v2022.1.x/releases/v2022.1.html
  - Merge changes from next branch to support Gluon v2022.1/OpenWrt 22.03 into stable
