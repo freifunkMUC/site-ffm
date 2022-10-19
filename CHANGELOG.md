@@ -1,5 +1,8 @@
 # Freifunk München Firmware Changelog
 
+## v2022.10.4
+ - Bump Gluon to v2022.1.1 https://gluon.readthedocs.io/en/v2022.1.x/releases/v2022.1.1.html
+
 ## v2022.10.3
  - Bump Gluon to latest commit to include critical security fixes for wifi stack
  - Enable TLS on all devices
