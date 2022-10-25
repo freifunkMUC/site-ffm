@@ -84,7 +84,7 @@ ${GLUON_BUILD_DIR}/.git: | ${GLUON_BUILD_DIR}
 	cd ${GLUON_BUILD_DIR} && git remote add origin ${GLUON_GIT_URL}
 
 gluon-update: | ${GLUON_BUILD_DIR}/.git
-	cd ${GLUON_BUILD_DIR} && git fetch origin ${GLUON_GIT_REF}
+	cd ${GLUON_BUILD_DIR} && git fetch --tags origin ${GLUON_GIT_REF}
 	cd ${GLUON_BUILD_DIR} && git reset --hard FETCH_HEAD
 	cd ${GLUON_BUILD_DIR} && git clean -fd
 
