@@ -24,8 +24,8 @@ jobs:
         shell: bash
         run: |
           target_list="[\"ath79-generic\", \"ath79-nand\", \"bcm27xx-bcm2708\", \"bcm27xx-bcm2709\", \"bcm27xx-bcm2710\", \"bcm27xx-bcm2711\", \"ipq40xx-generic\", \"ipq806x-generic\", \"lantiq-xway\", \"lantiq-xrx200\", \"mediatek-mt7622\", \"mpc85xx-p1010\", \"mpc85xx-p1020\", \"mvebu-cortexa9\", \"ramips-mt7620\", \"ramips-mt7621\", \"ramips-mt76x8\", \"rockchip-armv8\", \"sunxi-cortexa7\", \"x86-64\", \"x86-generic\", \"x86-geode\", \"x86-legacy\"]"
-          echo ::set-output name=target::{\"target\": $(echo $target_list)}\"
-          echo ::set-output name=build_target::{\"target\": $(echo $target_list)}\"
+          echo "target={\"target\": $(echo $target_list)}" >> $GITHUB_OUTPUT
+          echo "build_target={\"target\": $(echo $target_list)}" >> $GITHUB_OUTPUT
 
   build_firmware:
     needs: generate_target_matrix
@@ -60,7 +60,7 @@ jobs:
         run: |
           git checkout -b patched ${GITHUB_SHA}
           make BROKEN=1 GLUON_TARGETS=${{ matrix.target }} V=s
-          echo "::set-output name=status::success"
+          echo "status=success" >> $GITHUB_OUTPUT
       - name: Upload firmware ${{ matrix.target }}
         uses: actions/upload-artifact@master
         if: steps.compile.outputs.status == 'success'
