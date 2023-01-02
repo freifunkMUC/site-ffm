@@ -211,7 +211,7 @@ targets.get('ath79-generic'). \
         'tp-link-re450-v1'
     ], pkglists=[PKGS_TLS])
 
-for target in ['ath79-nand', 'ipq40xx-generic', 'ipq806x-generic', 'lantiq-xway', 'mpc85xx-p1010', 'mpc85xx-p1020', 'mvebu-cortexa9', 'ramips-mt7620', 'rockchip-armv8', 'sunxi-cortexa7']:
+for target in ['ath79-nand', 'ipq40xx-generic', 'ipq806x-generic', 'lantiq-xway', 'mpc85xx-p1010', 'mpc85xx-p1020', 'mvebu-cortexa9', 'rockchip-armv8', 'sunxi-cortexa7']:
     targets.get(target). \
         add_pkglist(PKGS_USB). \
         add_pkglist(PKGS_USB_NET). \
@@ -261,6 +261,15 @@ targets.get('ramips-mt7621'). \
         'netgear-ex6150',
         'ubiquiti-edgerouter-x',
         'ubiquiti-edgerouter-x-sfp'], pkglists=[PKGS_USB, PKGS_USB_NET, PKGS_USB_SERIAL, PKGS_USB_STORAGE])
+
+targets.get('ramips-mt7620'). \
+	add_pkglist(PKGS_USB). \
+	add_pkglist(PKGS_USB_NET). \
+	add_pkglist(PKGS_USB_SERIAL). \
+	add_pkglist(PKGS_USB_STORAGE). \
+	add_pkglist(PKGS_TLS). \
+	exclude([  # devices without usb ports
+		'netgear-ex3700'], pkglists=[PKGS_USB, PKGS_USB_NET, PKGS_USB_SERIAL, PKGS_USB_STORAGE])
 
 targets.get('ramips-mt76x8'). \
     add_pkglist(PKGS_TLS). \
