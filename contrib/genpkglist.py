@@ -207,6 +207,7 @@ targets.get('ath79-generic'). \
         'tp-link-tl-wr1043n-v5'
     ], pkglists=[PKGS_USB, PKGS_USB_NET, PKGS_USB_SERIAL, PKGS_USB_STORAGE]). \
     exclude([
+        'd-link-dir825b1',
         'tp-link-re355-v1',
         'tp-link-re450-v1'
     ], pkglists=[PKGS_TLS])
