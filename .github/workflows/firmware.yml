@@ -96,11 +96,10 @@ jobs:
       - generate_target_matrix
     if: github.event_name != 'pull_request'
     steps:
-      - name: Download Artifact ${{ matrix.target }}
-        uses: actions/download-artifact@v2
-        with:
-          name: ${{ matrix.target }}_output
-          path: ${{ matrix.target }}_output
+      - name: Download Artifacts for ${{ matrix.target }}
+        uses: actions/download-artifact@v3
+      - name: Display structure of artifacts
+        run: ls -R
       - name: Create ${{ matrix.target }}_output.tar.gz
         run: tar zcvf ${{ matrix.target }}_output.tar.gz ${{ matrix.target }}_output
       - name: Upload Release Asset ${{ matrix.target }}
