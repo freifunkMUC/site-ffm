@@ -11,6 +11,7 @@ on:
       - '**/CODEOWNERS'
       - '.github/ISSUE_TEMPLATE'
       - '.github/*.yml'
+      - 'contrib/sign.sh'
 
 jobs:
   generate_target_matrix:
