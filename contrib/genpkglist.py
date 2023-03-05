@@ -203,8 +203,7 @@ targets.get('ath79-generic'). \
         'tp-link-archer-c7-v5',
         'tp-link-archer-c59-v1',
         'tp-link-tl-wr842n-v3',
-        'tp-link-tl-wr1043nd-v4',
-        'tp-link-tl-wr1043n-v5'
+        'tp-link-tl-wr1043nd-v4'
     ], pkglists=[PKGS_USB, PKGS_USB_NET, PKGS_USB_SERIAL, PKGS_USB_STORAGE]). \
     exclude([
         'tp-link-re355-v1',
