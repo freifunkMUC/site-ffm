@@ -53,7 +53,7 @@ jobs:
         if: matrix.target == 'x86-64'
         run: |
           sed -i '/ffmuc-mesh-vpn-wireguard-vxlan/d' site.mk
-          make BROKEN=1 GLUON_TARGETS=${{ matrix.target }} V=s
+          make GLUON_TARGETS=${{ matrix.target }} V=s # disable building BROKEN in next
           git checkout site.mk
       - name: build target ${{ matrix.target }}
         id: compile
