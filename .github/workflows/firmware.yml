@@ -75,7 +75,7 @@ jobs:
       - build_firmware
     if: github.event_name != 'pull_request'
     steps:
-      - name: Download Artifacts for ${{ matrix.target }}
+      - name: Download all artifacts
         uses: actions/download-artifact@v3
       - name: Display structure of artifacts
         run: ls -R
