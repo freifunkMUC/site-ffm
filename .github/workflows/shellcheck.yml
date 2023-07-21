@@ -1,6 +1,7 @@
 ---
 name: Shell Linting
-on:
+
+on:  # yamllint disable-line rule:truthy
   workflow_dispatch:
   push:
     branches:
@@ -21,7 +22,7 @@ jobs:
       - name: shellcheck
         # Make sure the action is pinned to a commit, as all reviewdog repos
         # have hundreds of contributors with write access (breaks easy/often)
-        uses: reviewdog/action-shellcheck@66c9a47bf02255b250284a82251cb4cadf5043f5  # v1.15.0
+        uses: reviewdog/action-shellcheck@50e5e1e2284575f23a1e409d9c0804cdfc4f6e31  # v1.18.1
         with:
           filter_mode: "file"
           fail_on_error: true
