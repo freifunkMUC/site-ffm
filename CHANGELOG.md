@@ -1,5 +1,9 @@
 # Freifunk München Firmware Changelog
 
+## Newer versions
+ Detailed changelog for versions v2022.5.1 and above can be found here:
+ https://github.com/freifunkMUC/site-ffm/releases
+
 ## v2022.2.1
  - Fix bug in wireguard package which was causing high CPU load if no WAN was available
 
