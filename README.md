@@ -25,20 +25,21 @@ make
 
 As the CI is using Ubuntu, only the Ubuntu dependencies are being tracked. To simplify building on other distros, containerised building is also possible:
 ```sh
-docker build -t site-ffm -f Dockerfile_build .
+docker build -t site-ffm-stable -f Dockerfile_build .
 ```
 This will build the build Docker image. With the following export, the Makefile will then use the repo for building but will run inside an Ubuntu container.\
 **Note**: If the working directory is a git worktree, add a volume mount for the main git folder.
 ```sh
-docker run --rm -v $(pwd):/site-ffm:ro -v $(pwd)/gluon-build:/site-ffm/gluon-build:rw -v $(pwd)/output:/site-ffm/output:rw -w /site-ffm -u $UID site-ffm-next make
+mkdir -p gluon-build output
+docker run --rm -v $(pwd):/site-ffm:ro -v $(pwd)/gluon-build:/site-ffm/gluon-build:rw -v $(pwd)/output:/site-ffm/output:rw -w /site-ffm -u $UID site-ffm-stable make
 ```
 
 #### Example
 Full command for a [lantiq-xrx200](https://github.com/freifunk-gluon/gluon/blob/v2022.1/targets/lantiq-xrx200) build:
 
 ```sh
-mkdir -p logs
-docker run --rm -v $(pwd):/site-ffm:ro -v $(pwd)/gluon-build:/site-ffm/gluon-build:rw -v $(pwd)/output:/site-ffm/output:rw -w /site-ffm -u $UID site-ffm-next make V=s BROKEN=1 GLUON_TARGETS=lantiq-xrx200 |& tee logs/buildtest_lantiq-xrx200_$(date --iso=s).log
+mkdir -p logs gluon-build output
+docker run --rm -v $(pwd):/site-ffm:ro -v $(pwd)/gluon-build:/site-ffm/gluon-build:rw -v $(pwd)/output:/site-ffm/output:rw -w /site-ffm -u $UID site-ffm-stable make V=s GLUON_TARGETS=lantiq-xrx200 |& tee logs/build_lantiq-xrx200_$(date --iso=s).log
 ```
 
 ## Further Resources
