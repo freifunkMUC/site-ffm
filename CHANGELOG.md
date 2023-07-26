@@ -1,5 +1,9 @@
 # Freifunk München Firmware Changelog
 
+## Newer versions
+ Detailed changelog for versions v2022.5.1 and above can be found here:
+ https://github.com/freifunkMUC/site-ffm/releases
+
 ## v2022.10.4
  - Bump Gluon to v2022.1.1 https://gluon.readthedocs.io/en/v2022.1.x/releases/v2022.1.1.html
 
