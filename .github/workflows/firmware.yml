@@ -11,6 +11,7 @@ on:
       - '**/CODEOWNERS'
       - '.github/ISSUE_TEMPLATE'
       - '.github/*.yml'
+      - '.github/workflows/backport.yml'
       - 'contrib/sign.sh'
 
 jobs:
