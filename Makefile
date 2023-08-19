@@ -36,10 +36,15 @@ info:
 	@echo
 
 build: gluon-prepare output-clean
+ifeq ($(origin GLUON_DEVICES), undefined)
 	for target in ${GLUON_TARGETS}; do \
 		echo ""Building target $$target""; \
 		${GLUON_MAKE} download all GLUON_TARGET="$$target"; \
 	done
+else # only run for specific gluon devices (works only for a single GLUON_TARGET)
+	echo ""Building target ${GLUON_TARGETS} for devices ${GLUON_DEVICES}""; \
+	${GLUON_MAKE} download all GLUON_DEVICES="${GLUON_DEVICES}" GLUON_TARGET="${GLUON_TARGETS}"
+endif
 
 manifest: build
 	for branch in experimental testing stable; do \
