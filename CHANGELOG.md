@@ -1,6 +1,29 @@
 # Freifunk München Firmware Changelog
 
-## V2021.7.3
+## Newer versions
+ Detailed changelog for versions v2022.5.1 and above can be found here:
+ https://github.com/freifunkMUC/site-ffm/releases
+
+## v2022.5.2
+ - Bump Gluon to v2021.1.2 https://gluon.readthedocs.io/en/v2021.1.x/releases/v2021.1.2.html
+
+## v2022.2.1
+ - Fix bug in wireguard package which was causing high CPU load if no WAN was available
+
+## v2021.12.1
+ - Change SSID on deprecated 4/32 devices to "bitte-router-erneuern.ffmuc.net"
+
+## v2021.10.3
+ - Add domain ffmuc_augsburg
+ - Move gluon-mesh-vpn-wireguard-vxlan to main branch and make broker URL configurable
+ - Fix firmware naming on custom builds, so autoupdater will no longer revert installation
+
+## v2021.8.1
+ - Bump Gluon to v2021.1.1 https://gluon.readthedocs.io/en/v2021.1.x/releases/v2021.1.1.html
+ - Set a defined outdoor_chanlist for wifi5
+ - Improve GitHub build process, enable automatic builds for pull requests
+
+## v2021.7.3
  - Migrate autoupdater branch "wireguard" to "experimental"
  - Remove "wireguard" autoupdater configuration, so it does no longer show up in config UI
  - Generate manifests for all current autoupdater branches in the build
