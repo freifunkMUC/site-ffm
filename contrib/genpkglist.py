@@ -207,8 +207,6 @@ targets.get('ath79-generic'). \
     ], pkglists=[PKGS_USB, PKGS_USB_NET, PKGS_USB_SERIAL, PKGS_USB_STORAGE]). \
     exclude([
         'd-link-dir825b1',
-        'tp-link-re355-v1',
-        'tp-link-re450-v1'
     ], pkglists=[PKGS_TLS])
 
 for target in ['ath79-nand', 'ipq40xx-generic', 'ipq806x-generic', 'lantiq-xway', 'mpc85xx-p1010', 'mpc85xx-p1020', 'mvebu-cortexa9', 'rockchip-armv8', 'sunxi-cortexa7']:
