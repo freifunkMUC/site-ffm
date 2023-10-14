@@ -22,12 +22,12 @@ PACKAGES_FFMUC_BRANCH=main
 
 ##	PACKAGES_WIREGUARD_REPO
 #		the  git repository from where to clone the package feed
-PACKAGES_WIREGUARD_REPO=https://github.com/freifunkMUC/community-packages.git
+PACKAGES_WIREGUARD_REPO=https://github.com/freifunk-gluon/community-packages.git
 
 ##	PACKAGES_WIREGUARD_COMMIT
 #		the version/commit of the git repository to clone
-PACKAGES_WIREGUARD_COMMIT=c6d3e69eb8f1c1c7ac348b7237be4577de1a997a
+PACKAGES_WIREGUARD_COMMIT=ca08c5446221cee0fc3d65b7dff2f12101a3ca59
 
 ##  PACKAGES_WIREGUARD_BRANCH
 #   the branch to check out
-PACKAGES_WIREGUARD_BRANCH=main
+PACKAGES_WIREGUARD_BRANCH=master
