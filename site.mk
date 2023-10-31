@@ -17,6 +17,7 @@ GLUON_FEATURES := \
 	web-wizard
 
 GLUON_SITE_PACKAGES := \
+	ffac-ssid-changer \
 	ffho-ap-timer \
 	ffho-autoupdater-wifi-fallback \
 	ffho-web-ap-timer \
