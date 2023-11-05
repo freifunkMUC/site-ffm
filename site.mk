@@ -32,6 +32,7 @@ GLUON_MULTIDOMAIN=1
 #		chosen feature flags
 
 GLUON_SITE_PACKAGES := \
+	ffac-eol-ssid \
 	ffho-ap-timer \
 	ffho-autoupdater-wifi-fallback \
 	ffho-web-ap-timer \
