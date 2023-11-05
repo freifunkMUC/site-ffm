@@ -37,6 +37,7 @@ GLUON_SITE_PACKAGES := \
 	ffho-web-ap-timer \
 	ffmuc-mesh-vpn-wireguard-vxlan \
 	ffmuc-simple-radv-filter \
+	gluon-ssid-changer \
 	iptables \
 	iwinfo \
 	respondd-module-airtime
