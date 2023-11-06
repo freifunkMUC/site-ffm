@@ -18,10 +18,10 @@ GLUON_FEATURES := \
 
 GLUON_SITE_PACKAGES := \
 	ffac-autoupdater-wifi-fallback \
+	ffac-change-autoupdater \
 	ffac-ssid-changer \
 	ffho-ap-timer \
 	ffho-web-ap-timer \
-	ffmuc-autoupdater-next2stable \
 	ffmuc-mesh-vpn-wireguard-vxlan \
 	ffmuc-simple-radv-filter \
 	iwinfo \
