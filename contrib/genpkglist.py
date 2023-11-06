@@ -171,7 +171,7 @@ PKGS_TLS = PackageList('TLS', [
 pkglists.append(PKGS_TLS)
 
 PKGS_EOL = PackageList('EOL', [
-    'ffmuc-eol-ssid'
+    'ffac-eol-ssid'
 ])
 pkglists.append(PKGS_EOL)
 

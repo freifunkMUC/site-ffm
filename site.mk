@@ -194,10 +194,10 @@ EXCLUDE_TLS := \
 	-libustream-openssl
 
 INCLUDE_EOL := \
-    ffmuc-eol-ssid
+	ffac-eol-ssid
 
 EXCLUDE_EOL := \
-    -ffmuc-eol-ssid
+	-ffac-eol-ssid
 
 ifeq ($(GLUON_TARGET),ar71xx-generic)
 	GLUON_SITE_PACKAGES += $(INCLUDE_TLS) $(INCLUDE_USB) $(INCLUDE_USB_NET) $(INCLUDE_USB_SERIAL) $(INCLUDE_USB_STORAGE)
@@ -264,7 +264,7 @@ ifeq ($(GLUON_TARGET),ar71xx-nand)
 endif
 
 ifeq ($(GLUON_TARGET),ar71xx-tiny)
-    GLUON_SITE_PACKAGES += $(INCLUDE_EOL)
+	GLUON_SITE_PACKAGES += $(INCLUDE_EOL)
 
 endif
 
@@ -356,7 +356,7 @@ ifeq ($(GLUON_TARGET),ramips-mt76x8)
 endif
 
 ifeq ($(GLUON_TARGET),ramips-rt305x)
-    GLUON_SITE_PACKAGES += $(INCLUDE_EOL)
+	GLUON_SITE_PACKAGES += $(INCLUDE_EOL)
 
 endif
 
