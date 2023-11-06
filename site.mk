@@ -22,8 +22,8 @@ GLUON_SITE_PACKAGES := \
 	ffac-ssid-changer \
 	ffho-ap-timer \
 	ffho-web-ap-timer \
+	ffmuc-ipv6-ra-filter \
 	ffmuc-mesh-vpn-wireguard-vxlan \
-	ffmuc-simple-radv-filter \
 	iwinfo \
 	respondd-module-airtime
 
