@@ -23,14 +23,8 @@ PACKAGES_FFMUC_BRANCH=main
 ##	PACKAGES_WIREGUARD_REPO
 #		the  git repository from where to clone the package feed
 PACKAGES_WIREGUARD_REPO=https://github.com/freifunkMUC/community-packages.git
-
-##	PACKAGES_WIREGUARD_COMMIT
-#		the version/commit of the git repository to clone
+PACKAGES_WIREGUARD_BRANCH=legacy
 PACKAGES_WIREGUARD_COMMIT=876a8d8f9805281e95815b7d2d5a4d997a393dc6
-
-##  PACKAGES_WIREGUARD_BRANCH
-#   the branch to check out
-PACKAGES_WIREGUARD_BRANCH=main
 
 PACKAGES_SSIDCHANGER_REPO=https://github.com/Freifunk-Nord/gluon-ssid-changer.git
 PACKAGES_SSIDCHANGER_COMMIT=f266b9e6328f97354f3b8777d1111ad044be9be5
