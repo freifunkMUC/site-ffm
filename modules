@@ -6,7 +6,7 @@
 ##	GLUON_SITE_FEEDS
 #		for each feed name given, add the corresponding PACKAGES_* lines
 #		documented below
-GLUON_SITE_FEEDS='ffmuc wireguard'
+GLUON_SITE_FEEDS='ffmuc community'
 
 ##	PACKAGES_FFMUC_REPO
 #		the  git repository from where to clone the package feed
@@ -20,14 +20,6 @@ PACKAGES_FFMUC_COMMIT=8a1d7be89035d720d7242b92d65a65d4212f184c
 #   the branch to check out
 PACKAGES_FFMUC_BRANCH=main
 
-##	PACKAGES_WIREGUARD_REPO
-#		the  git repository from where to clone the package feed
-PACKAGES_WIREGUARD_REPO=https://github.com/freifunk-gluon/community-packages.git
-
-##	PACKAGES_WIREGUARD_COMMIT
-#		the version/commit of the git repository to clone
-PACKAGES_WIREGUARD_COMMIT=6eeaa2e3d5e034e57ff4c4839130cbc63687479e
-
-##  PACKAGES_WIREGUARD_BRANCH
-#   the branch to check out
-PACKAGES_WIREGUARD_BRANCH=master
+PACKAGES_COMMUNITY_REPO=https://github.com/freifunk-gluon/community-packages.git
+PACKAGES_COMMUNITY_COMMIT=6eeaa2e3d5e034e57ff4c4839130cbc63687479e
+PACKAGES_COMMUNITY_BRANCH=master
