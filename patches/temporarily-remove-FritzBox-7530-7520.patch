@@ -1,19 +1,19 @@
-From f5cdf007b2873beaa2f5c6ce80f732c793f07f33 Mon Sep 17 00:00:00 2001
+From 0e914e29a9fe6c01f01a6fdb31c38677c404bf29 Mon Sep 17 00:00:00 2001
 From: Grische <github@grische.xyz>
-Date: Sun, 5 Nov 2023 17:08:30 +0100
-Subject: [PATCH] targets: temporarily remove FritzBox 7530/7520
+Date: Fri, 24 Nov 2023 02:22:10 +0100
+Subject: [PATCH] targets: temporarily remove AVM 7530/7520 and 1200
 
 Updating to Gluon 2023.1.1 bricks these devices
 https://github.com/freifunk-gluon/gluon/issues/3023
 ---
- targets/ipq40xx-generic | 5 -----
- 1 file changed, 5 deletions(-)
+ targets/ipq40xx-generic | 9 ---------
+ 1 file changed, 9 deletions(-)
 
 diff --git a/targets/ipq40xx-generic b/targets/ipq40xx-generic
-index df81a1b0..30c37ab5 100644
+index df81a1b0..d50cac0c 100644
 --- a/targets/ipq40xx-generic
 +++ b/targets/ipq40xx-generic
-@@ -56,11 +56,6 @@ device('avm-fritz-box-4040', 'avm_fritzbox-4040', {
+@@ -56,15 +56,6 @@ device('avm-fritz-box-4040', 'avm_fritzbox-4040', {
  	},
  })
  
@@ -22,9 +22,13 @@ index df81a1b0..30c37ab5 100644
 -	aliases = {'avm-fritz-box-7520'},
 -})
 -
- device('avm-fritz-repeater-1200', 'avm_fritzrepeater-1200', {
- 	factory = false,
- })
+-device('avm-fritz-repeater-1200', 'avm_fritzrepeater-1200', {
+-	factory = false,
+-})
+-
+ 
+ -- EnGenius
+ 
 -- 
 2.34.1
 
