@@ -33,6 +33,7 @@ GLUON_MULTIDOMAIN=1
 
 GLUON_SITE_PACKAGES := \
 	ffac-eol-ssid \
+	ffdon-domain-merge \
 	ffho-ap-timer \
 	ffho-autoupdater-wifi-fallback \
 	ffho-web-ap-timer \
