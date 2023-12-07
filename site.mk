@@ -232,6 +232,9 @@ ifeq ($(GLUON_TARGET),lantiq-xway)
 
 endif
 
+# no pkglists for target mediatek-filogic
+
+
 ifeq ($(GLUON_TARGET),mediatek-mt7622)
     GLUON_SITE_PACKAGES += $(INCLUDE_TLS) $(INCLUDE_USB) $(INCLUDE_USB_NET) $(INCLUDE_USB_SERIAL) $(INCLUDE_USB_STORAGE)
 
