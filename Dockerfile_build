@@ -1,4 +1,6 @@
 FROM ubuntu:22.04
 
 ADD ./scripts/install_build_dependencies.sh /
-RUN /install_build_dependencies.sh
+RUN /install_build_dependencies.sh \
+    && apt-get clean \
+    && rm -r /var/lib/apt/lists/*
