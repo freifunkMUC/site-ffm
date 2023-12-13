@@ -277,7 +277,6 @@ targets.get('ramips-mt76x8'). \
         'netgear-r6120',
         'ravpower-rp-wd009'], pkglists=[PKGS_USB, PKGS_USB_NET, PKGS_USB_SERIAL, PKGS_USB_STORAGE]). \
     exclude([
-        'tp-link-re305'
     ], pkglists=[PKGS_TLS])
 
 for target in ['x86-64', 'x86-generic', 'x86-geode']:
