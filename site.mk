@@ -153,11 +153,11 @@ EXCLUDE_PCI_NET := \
 
 INCLUDE_TLS := \
     ca-bundle \
-    libustream-openssl
+    libustream-mbedtls
 
 EXCLUDE_TLS := \
     -ca-bundle \
-    -libustream-openssl
+    -libustream-mbedtls
 
 ifeq ($(GLUON_TARGET),ath79-generic)
     GLUON_SITE_PACKAGES += $(INCLUDE_TLS)
@@ -232,6 +232,9 @@ ifeq ($(GLUON_TARGET),lantiq-xway)
 
 endif
 
+# no pkglists for target mediatek-filogic
+
+
 ifeq ($(GLUON_TARGET),mediatek-mt7622)
     GLUON_SITE_PACKAGES += $(INCLUDE_TLS) $(INCLUDE_USB) $(INCLUDE_USB_NET) $(INCLUDE_USB_SERIAL) $(INCLUDE_USB_STORAGE)
 
@@ -274,7 +277,6 @@ ifeq ($(GLUON_TARGET),ramips-mt76x8)
     GLUON_gl.inet-microuter-n300_SITE_PACKAGES += $(INCLUDE_USB) $(INCLUDE_USB_NET) $(INCLUDE_USB_SERIAL) $(INCLUDE_USB_STORAGE)
     GLUON_netgear-r6120_SITE_PACKAGES += $(INCLUDE_USB) $(INCLUDE_USB_NET) $(INCLUDE_USB_SERIAL) $(INCLUDE_USB_STORAGE)
     GLUON_ravpower-rp-wd009_SITE_PACKAGES += $(INCLUDE_USB) $(INCLUDE_USB_NET) $(INCLUDE_USB_SERIAL) $(INCLUDE_USB_STORAGE)
-    GLUON_tp-link-re305_SITE_PACKAGES += $(EXCLUDE_TLS)
 endif
 
 # no pkglists for target realtek-rtl838x
