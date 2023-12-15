@@ -63,7 +63,7 @@ jobs:
           make BROKEN=1 GLUON_TARGETS=${{ matrix.target }} V=s
           echo "status=success" >> $GITHUB_OUTPUT
       - name: Upload firmware ${{ matrix.target }}
-        uses: actions/upload-artifact@master
+        uses: actions/upload-artifact@v3
         if: steps.compile.outputs.status == 'success'
         with:
           name: ${{ matrix.target }}_output
