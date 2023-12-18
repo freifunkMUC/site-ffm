@@ -1,27 +1,13 @@
 diff --git a/targets/bcm27xx-bcm2711 b/targets/bcm27xx-bcm2711
-new file mode 100644
-index 00000000..ba631911
---- /dev/null
+index 84fb1087..e2ec0841 100644
+--- a/targets/bcm27xx-bcm2711
 +++ b/targets/bcm27xx-bcm2711
-@@ -0,0 +1,10 @@
-+include 'bcm27xx.inc'
-+
-+device('raspberrypi-4-model-b', 'rpi-4', {
-+	manifest_aliases = {
+@@ -2,6 +2,8 @@ include 'bcm27xx.inc'
+ 
+ device('raspberrypi-4-model-b', 'rpi-4', {
+ 	manifest_aliases = {
++		-- from Gluon v2023.1 and older for ffmuc only
 +		'raspberry-pi-4-model-b',
-+		'raspberry-pi-4-model-b-rev-1.1',
-+		'raspberry-pi-4-model-b-rev-1.2',
-+		'raspberry-pi-4-model-b-rev-1.4',
-+	},
-+})
-diff --git a/targets/targets.mk b/targets/targets.mk
-index 92b58ab8..05a74935 100644
---- a/targets/targets.mk
-+++ b/targets/targets.mk
-@@ -26,5 +26,6 @@ $(eval $(call GluonTarget,x86,64))
-
- ifeq ($(BROKEN),1)
- $(eval $(call GluonTarget,bcm27xx,bcm2710)) # BROKEN: Untested
-+$(eval $(call GluonTarget,bcm27xx,bcm2711)) # BROKEN: Untested
- $(eval $(call GluonTarget,mvebu,cortexa9)) # BROKEN: No 11s support
- endif
+ 		-- from Gluon 2023.1 and older
+ 		'raspberry-pi-4-model-b-rev-1.1',
+ 		'raspberry-pi-4-model-b-rev-1.2', -- untested

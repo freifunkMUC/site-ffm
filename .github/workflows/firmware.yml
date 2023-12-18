@@ -53,9 +53,9 @@ jobs:
       - name: pre-build without ffmuc-mesh-vpn-wireguard-vxlan (workaround for x86-64)
         if: matrix.target == 'x86-64'
         run: |
-          sed -i '/ffmuc-mesh-vpn-wireguard-vxlan/d' site.mk
+          sed -i '/ffmuc-mesh-vpn-wireguard-vxlan/d' image-customization.lua
           make BROKEN=1 GLUON_TARGETS=${{ matrix.target }} V=s
-          git checkout site.mk
+          git checkout image-customization.lua
       - name: build target ${{ matrix.target }}
         id: compile
         run: |
