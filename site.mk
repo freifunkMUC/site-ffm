@@ -153,11 +153,11 @@ EXCLUDE_PCI_NET := \
 
 INCLUDE_TLS := \
     ca-bundle \
-    libustream-mbedtls
+    gluon-libustream-tls
 
 EXCLUDE_TLS := \
     -ca-bundle \
-    -libustream-mbedtls
+    -gluon-libustream-tls
 
 ifeq ($(GLUON_TARGET),ath79-generic)
     GLUON_SITE_PACKAGES += $(INCLUDE_TLS)

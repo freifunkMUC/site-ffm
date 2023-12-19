@@ -180,7 +180,7 @@ pkglists.append(PKGS_PCI_NET)
 
 PKGS_TLS = PackageList('TLS', [
     'ca-bundle',
-    'libustream-mbedtls'
+    'gluon-libustream-tls'
 ])
 pkglists.append(PKGS_TLS)
 
