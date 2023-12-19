@@ -184,6 +184,11 @@ PKGS_TLS = PackageList('TLS', [
 ])
 pkglists.append(PKGS_TLS)
 
+PKGS_NSM = PackageList('NSM', [
+    'ffda-network-setup-mode',
+])
+pkglists.append(PKGS_NSM)
+
 #
 # package assignment
 #
@@ -255,10 +260,13 @@ targets.get('ramips-mt7621'). \
     add_pkglist(PKGS_USB_SERIAL). \
     add_pkglist(PKGS_USB_STORAGE). \
     add_pkglist(PKGS_TLS). \
+    include(['zyxel-nwa55axe'], pkglists=[PKGS_NSM]). \
     exclude([  # devices without usb ports
         'netgear-ex6150',
         'ubiquiti-edgerouter-x',
-        'ubiquiti-edgerouter-x-sfp'], pkglists=[PKGS_USB, PKGS_USB_NET, PKGS_USB_SERIAL, PKGS_USB_STORAGE])
+        'ubiquiti-edgerouter-x-sfp',
+        'zyxel-nwa55axe',
+    ], pkglists=[PKGS_USB, PKGS_USB_NET, PKGS_USB_SERIAL, PKGS_USB_STORAGE])
 
 targets.get('ramips-mt7620'). \
 	add_pkglist(PKGS_USB). \
