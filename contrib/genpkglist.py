@@ -209,7 +209,19 @@ targets['ath79-generic']. \
         'd-link-dir825b1',
     ], pkglists=[PKGS_TLS])
 
-for target in ['ath79-nand', 'ipq40xx-generic', 'ipq806x-generic', 'lantiq-xway', 'mpc85xx-p1010', 'mpc85xx-p1020', 'mvebu-cortexa9', 'rockchip-armv8', 'sunxi-cortexa7']:
+for target in [
+    "ath79-mikrotik",
+    "ath79-nand",
+    "ipq40xx-generic",
+    "ipq40xx-mikrotik",
+    "ipq806x-generic",
+    "lantiq-xway",
+    "mpc85xx-p1010",
+    "mpc85xx-p1020",
+    "mvebu-cortexa9",
+    "rockchip-armv8",
+    "sunxi-cortexa7",
+]:
     targets[target]. \
         add_pkglist(PKGS_USB). \
         add_pkglist(PKGS_USB_NET). \
