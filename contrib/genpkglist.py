@@ -178,6 +178,9 @@ PKGS_PCI_NET = PackageList('PCI_NET', [
 ])
 pkglists.append(PKGS_PCI_NET)
 
+PKGS_VIRT = PackageList('VIRT', ['qemu-ga'])
+pkglists.append(PKGS_VIRT)
+
 PKGS_TLS = PackageList('TLS', [
     'ca-bundle',
     'libustream-mbedtls'
