@@ -1,0 +1,21 @@
+From ce33817e5dc71a1b9a1b5fb5ad65eee8dbb8b9b5 Mon Sep 17 00:00:00 2001
+From: Felix <8057646+GoliathLabs@users.noreply.github.com>
+Date: Mon, 25 Dec 2023 00:34:49 +0100
+Subject: [PATCH] ramips-mt76x8: add xiaomi-mi-ra75
+
+---
+ targets/ramips-mt76x8 | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/targets/ramips-mt76x8 b/targets/ramips-mt76x8
+index 1e27ac35f8..3fb4d7ff0e 100644
+--- a/targets/ramips-mt76x8
++++ b/targets/ramips-mt76x8
+@@ -125,3 +125,7 @@ device('xiaomi-mi-router-4a-100m-international-edition', 'xiaomi_mi-router-4a-10
+ device('xiaomi-mi-router-4c', 'xiaomi_mi-router-4c', {
+ 	factory = false,
+ })
++
++device('xiaomi-mi-ra75', 'xiaomi_mi-ra75', {
++	factory = false,
++})
