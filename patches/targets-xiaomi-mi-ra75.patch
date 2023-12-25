@@ -1,7 +1,7 @@
 From ce33817e5dc71a1b9a1b5fb5ad65eee8dbb8b9b5 Mon Sep 17 00:00:00 2001
 From: Felix <8057646+GoliathLabs@users.noreply.github.com>
 Date: Mon, 25 Dec 2023 00:34:49 +0100
-Subject: [PATCH] ramips-mt76x8: add xiaomi-mi-ra75
+Subject: [PATCH 1/2] ramips-mt76x8: add xiaomi-mi-ra75
 
 ---
  targets/ramips-mt76x8 | 4 ++++
@@ -19,3 +19,38 @@ index 1e27ac35f8..3fb4d7ff0e 100644
 +device('xiaomi-mi-ra75', 'xiaomi_mi-ra75', {
 +	factory = false,
 +})
+
+From 6b1490bee089e336753d70b8b086c082dbfc22ac Mon Sep 17 00:00:00 2001
+From: GoliathLabs <git@xdfr.de>
+Date: Mon, 25 Dec 2023 17:51:23 +0100
+Subject: [PATCH 2/2] fix: primary mac
+
+---
+ docs/user/supported_devices.rst                             | 1 +
+ package/gluon-core/luasrc/lib/gluon/upgrade/010-primary-mac | 1 +
+ 2 files changed, 2 insertions(+)
+
+diff --git a/docs/user/supported_devices.rst b/docs/user/supported_devices.rst
+index 7d606a67ba..4fcb8213b3 100644
+--- a/docs/user/supported_devices.rst
++++ b/docs/user/supported_devices.rst
+@@ -505,6 +505,7 @@ ramips-mt76x8
+ 
+ * Xiaomi
+ 
++  - Xiaomi Mi AC1200 WLAN Range Extender RA75
+   - Xiaomi Mi Router 4A (100M Edition)
+   - Xiaomi Mi Router 4A (100M International Edition)
+   - Xiaomi Mi Router 4C
+diff --git a/package/gluon-core/luasrc/lib/gluon/upgrade/010-primary-mac b/package/gluon-core/luasrc/lib/gluon/upgrade/010-primary-mac
+index fce501a6b2..62c6408204 100755
+--- a/package/gluon-core/luasrc/lib/gluon/upgrade/010-primary-mac
++++ b/package/gluon-core/luasrc/lib/gluon/upgrade/010-primary-mac
+@@ -106,6 +106,7 @@ local primary_addrs = {
+ 		}},
+ 		{'ramips', 'mt76x8', {
+ 			'xiaomi,mi-router-4a-100m',
++			'xiaomi,mi-ra75',
+ 		}},
+ 		{'rockchip', 'armv8', {
+ 			'friendlyarm,nanopi-r2s',
