@@ -1,29 +1,45 @@
-From 034d9f7a1bb62338284935e0df3c794fa07143cf Mon Sep 17 00:00:00 2001
-From: David Bauer <mail@david-bauer.net>
-Date: Tue, 26 Dec 2023 01:17:18 +0100
-Subject: [PATCH] ramips: fix label-mac for Xiaomi RA75
+From f1f02aa4ee726a2fd9f41def8097374dee9e3fcf Mon Sep 17 00:00:00 2001
+From: GoliathLabs <git@xdfr.de>
+Date: Tue, 26 Dec 2023 16:55:36 +0100
+Subject: [PATCH] fix: primary mac
 
-The label-mac of the repeater is the address used on the 2.4 GHz radio,
-not the ethernet MAC.
-
-Signed-off-by: David Bauer <mail@david-bauer.net>
 ---
- target/linux/ramips/dts/mt7628an_xiaomi_mi-ra75.dts | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ patches/openwrt/0008-patch-primary-mac.patch | 29 ++++++++++++++++++++
+ 1 file changed, 29 insertions(+)
+ create mode 100644 patches/openwrt/0008-patch-primary-mac.patch
 
-diff --git a/target/linux/ramips/dts/mt7628an_xiaomi_mi-ra75.dts b/target/linux/ramips/dts/mt7628an_xiaomi_mi-ra75.dts
-index 8859038c30..ddbb8b20bf 100644
---- a/target/linux/ramips/dts/mt7628an_xiaomi_mi-ra75.dts
-+++ b/target/linux/ramips/dts/mt7628an_xiaomi_mi-ra75.dts
-@@ -10,7 +10,7 @@
- 		led-failsafe = &led_system_amber;
- 		led-running = &led_system_blue;
- 		led-upgrade = &led_system_amber;
--		label-mac-device = &ethernet;
-+		label-mac-device = &wmac;
- 	};
- 
- 	leds {
--- 
-2.43.0
-
+diff --git a/patches/openwrt/0008-patch-primary-mac.patch b/patches/openwrt/0008-patch-primary-mac.patch
+new file mode 100644
+index 0000000000..2d0679bb24
+--- /dev/null
++++ b/patches/openwrt/0008-patch-primary-mac.patch
+@@ -0,0 +1,29 @@
++From 034d9f7a1bb62338284935e0df3c794fa07143cf Mon Sep 17 00:00:00 2001
++From: David Bauer <mail@david-bauer.net>
++Date: Tue, 26 Dec 2023 01:17:18 +0100
++Subject: [PATCH] ramips: fix label-mac for Xiaomi RA75
++
++The label-mac of the repeater is the address used on the 2.4 GHz radio,
++not the ethernet MAC.
++
++Signed-off-by: David Bauer <mail@david-bauer.net>
++---
++ target/linux/ramips/dts/mt7628an_xiaomi_mi-ra75.dts | 2 +-
++ 1 file changed, 1 insertion(+), 1 deletion(-)
++
++diff --git a/target/linux/ramips/dts/mt7628an_xiaomi_mi-ra75.dts b/target/linux/ramips/dts/mt7628an_xiaomi_mi-ra75.dts
++index 8859038c30..ddbb8b20bf 100644
++--- a/target/linux/ramips/dts/mt7628an_xiaomi_mi-ra75.dts
+++++ b/target/linux/ramips/dts/mt7628an_xiaomi_mi-ra75.dts
++@@ -10,7 +10,7 @@
++ 		led-failsafe = &led_system_amber;
++ 		led-running = &led_system_blue;
++ 		led-upgrade = &led_system_amber;
++-		label-mac-device = &ethernet;
+++		label-mac-device = &wmac;
++ 	};
++ 
++ 	leds {
++-- 
++2.43.0
++
