@@ -1,0 +1,321 @@
+From bbb1b8f30d0587c77105865e015eee52e8f4822c Mon Sep 17 00:00:00 2001
+From: Grische <2787581+grische@users.noreply.github.com>
+Date: Mon, 6 Nov 2023 22:07:14 +0100
+Subject: [PATCH] ramips: Add support for TP-Link Archer C50 v6 (CA/EU/RU)
+
+---
+ ...rt-for-TP-Link-Archer-C50-v6-CA-EU-R.patch | 303 ++++++++++++++++++
+ 1 file changed, 303 insertions(+)
+ create mode 100644 patches/openwrt/0100-ramips-Add-support-for-TP-Link-Archer-C50-v6-CA-EU-R.patch
+
+diff --git a/patches/openwrt/0100-ramips-Add-support-for-TP-Link-Archer-C50-v6-CA-EU-R.patch b/patches/openwrt/0100-ramips-Add-support-for-TP-Link-Archer-C50-v6-CA-EU-R.patch
+new file mode 100644
+index 00000000..4fb8fa94
+--- /dev/null
++++ b/patches/openwrt/0100-ramips-Add-support-for-TP-Link-Archer-C50-v6-CA-EU-R.patch
+@@ -0,0 +1,303 @@
++From 59086d1647b0399e93c2e7ab3cfc134f79576990 Mon Sep 17 00:00:00 2001
++From: Renaud Gaspard <gaspardrenaud@hotmail.com>
++Date: Sun, 22 Jan 2023 20:41:48 +0100
++Subject: [PATCH] ramips: Add support for TP-Link Archer C50 v6 (CA/EU/RU)
++MIME-Version: 1.0
++Content-Type: text/plain; charset=UTF-8
++Content-Transfer-Encoding: 8bit
++
++This adds support for the TP-Link Archer C50 v6 (CA/EU/RU).
++(The ES variant is a rebranded Archer C54 and NOT supported.)
++
++CPU:   MediaTek MT7628 (580MHz)
++RAM:   64M DDR2
++FLASH: 8M SPI
++WiFi:  2.4GHz 2x2 MT7628 b/g/n integrated
++WiFi:  5GHz 2x2 MT7613 a/n/ac
++ETH:   1x WAN 4x LAN
++LED:   Power, WiFi2, WiFi5, LAN, WAN, WPS
++BTN:   WPS/WiFi, RESET
++UART:  Near ETH ports, 115200 8n1, TP-Link pinout
++
++Create Factory image
++--------------------
++As all installation methods require a U-Boot to be integrated into the
++image (and we do not ship one with the image). We are not able to create
++an image in the OpenWRT build-process.
++
++Download a TP-Link image for your device variant (CA/EU or RU) from their
++website and a OpenWRT sysupgrade image for the device
++and build yourself a factory image like following:
++
++TP-Link image:             tpl.bin
++OpenWRT sysupgrade image:  owrt.bin
++
++ > dd if=tpl.bin of=boot.bin bs=131584 count=1
++ > cat owrt.bin >> boot.bin
++
++Installing via Web-UI
++---------------------
++Upload the boot.bin via TP-Links firmware upgrade tool in the
++web-interface.
++
++Installing via Recovery
++-----------------------
++Activate Web-Recovery by beginning the upgrade Process with a
++Firmware-Image from TP-Link. After starting the Firmware Upgrade,
++wait ~3 seconds (When update status is switching to 0%), then
++disconnect the power supply from the device. Upgrade flag (which
++activates Web-Recovery) is written before the OS-image is touched and
++removed after write is succesfull, so this procedure should be safe.
++
++Plug the power back in. It will come up in Recovery-Mode on 192.168.0.1.
++When active, all LEDs but the WPS LED are off.
++Remeber to assign yourself a static IP-address as DHCP is not active in
++this mode.
++
++The boot.bin can now be uploaded and flashed using the web-recovery.
++
++Installing via TFTP
++-------------------
++Prepare an image like following (Filenames from factory image steps
++apply here)
++
++ > dd if=/dev/zero of=tp_recovery.bin bs=196608 count=1
++ > dd if=tpl.bin of=tmp.bin bs=131584 count=1
++ > dd if=tmp.bin of=boot.bin bs=512 skip=1
++ > cat boot.bin >> tp_recovery.bin
++ > cat owrt.bin >> tp_recovery.bin
++
++Place tp_recovery.bin in root directory of TFTP server and listen on
++192.168.0.66/24.
++
++Connect router LAN ports with your computer and power up the router
++while pressing the reset button. The router will download the image via
++tftp and after ~1 Minute reboot into OpenWRT.
++
++U-Boot CLI
++----------
++U-Boot CLI can be activated by holding down '4' on bootup.
++
++Dual U-Boot
++-----------
++This is the first TP-Link MediaTek device to feature a split-uboot
++design. The first (factory-uboot) provides recovery via TFTP and HTTP,
++jumping straight into the second (firmware-uboot) if no recovery needs
++to be performed. The firmware-uboot unpacks and executed the kernel.
++
++Web-Recovery
++------------
++TP-Link integrated a new Web-Recovery like the one on the Archer C7v4 /
++TL-WR1043v5. Stock-firmware sets a flag in the "romfile" partition
++before beginning to write and removes it afterwards. If the router boots
++with this flag set, bootloader will automatically start Web-recovery and
++listens on 192.168.0.1. This way, the vendor-firmware or an OpenWRT
++factory image can be written.
++
++By doing the same while performing sysupgrade, we can take advantage of
++the Web-recovery in OpenWRT.
++
++It is important to note that Web-Recovery is only based on this flag. It
++can't detect e.g. a crashing kernel or other means. Once activated it
++won't boot the OS before a recovery action (either via TFTP or HTTP) is
++performed. This recovery-mode is indicated by an illuminated WPS-LED on
++boot.
++
++Co-authored-by: Julius Schwartzenberg <julius.schwartzenberg@gmail.com>
++Signed-off-by: Renaud Gaspard <gaspardrenaud@hotmail.com>
++Signed-off-by: Julius Schwartzenberg <julius.schwartzenberg@gmail.com>
++Tested-by: Julius Schwartzenberg <julius.schwartzenberg@gmail.com>
++Tested-by: Jaroslav Mikulík <byczech@gmail.com>
++Tested-by: Ashipa Eko <ashipa.eko@gmail.com>
++---
++ .../dts/mt7628an_tplink_archer-c50-v6.dts     | 99 +++++++++++++++++++
++ target/linux/ramips/image/mt76x8.mk           | 14 +++
++ .../mt76x8/base-files/etc/board.d/01_leds     |  3 +-
++ .../mt76x8/base-files/etc/board.d/02_network  |  4 +-
++ .../mt76x8/base-files/lib/upgrade/platform.sh |  3 +-
++ 5 files changed, 120 insertions(+), 3 deletions(-)
++ create mode 100644 target/linux/ramips/dts/mt7628an_tplink_archer-c50-v6.dts
++
++diff --git a/target/linux/ramips/dts/mt7628an_tplink_archer-c50-v6.dts b/target/linux/ramips/dts/mt7628an_tplink_archer-c50-v6.dts
++new file mode 100644
++index 0000000000..0f9d9fc0ab
++--- /dev/null
+++++ b/target/linux/ramips/dts/mt7628an_tplink_archer-c50-v6.dts
++@@ -0,0 +1,99 @@
+++// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
+++
+++#include "mt7628an_tplink_8m-split-uboot.dtsi"
+++
+++/ {
+++	compatible = "tplink,archer-c50-v6", "mediatek,mt7628an-soc";
+++	model = "TP-Link Archer C50 v6 (CA/EU/RU)";
+++
+++	aliases {
+++		led-boot = &led_power;
+++		led-failsafe = &led_power;
+++		led-running = &led_power;
+++		led-upgrade = &led_power;
+++	};
+++
+++	keys {
+++		compatible = "gpio-keys";
+++
+++		reset {
+++			label = "reset";
+++			gpios = <&gpio 38 GPIO_ACTIVE_LOW>;
+++			linux,code = <KEY_RESTART>;
+++		};
+++
+++		rfkill {
+++			label = "rfkill";
+++			gpios = <&gpio 5 GPIO_ACTIVE_LOW>;
+++			linux,code = <KEY_RFKILL>;
+++		};
+++	};
+++
+++	leds {
+++		compatible = "gpio-leds";
+++
+++		led_power: power {
+++			label = "green:power";
+++			gpios = <&gpio 11 GPIO_ACTIVE_LOW>;
+++		};
+++
+++		wlan2 {
+++			label = "green:wlan2g";
+++			gpios = <&gpio 44 GPIO_ACTIVE_LOW>;
+++		};
+++
+++		wlan5 {
+++			label = "green:wlan5g";
+++			gpios = <&gpio 42 GPIO_ACTIVE_LOW>;
+++		};
+++
+++		lan {
+++			label = "green:lan";
+++			gpios = <&gpio 41 GPIO_ACTIVE_LOW>;
+++		};
+++
+++		wan {
+++			label = "green:wan";
+++			gpios = <&gpio 39 GPIO_ACTIVE_LOW>;
+++		};
+++
+++		wan_orange {
+++			label = "orange:wan";
+++			gpios = <&gpio 40 GPIO_ACTIVE_LOW>;
+++		};
+++	};
+++};
+++
+++&ehci {
+++	status = "disabled";
+++};
+++
+++&ohci {
+++	status = "disabled";
+++};
+++
+++&state_default {
+++	gpio {
+++		groups = "i2c", "p0led_an", "p1led_an", "p2led_an",
+++				   "p3led_an", "p4led_an", "wdt", "wled_an";
+++		function = "gpio";
+++	};
+++};
+++
+++&pcie {
+++	status = "okay";
+++};
+++
+++&pcie0 {
+++	wifi@0,0 {
+++		reg = <0x0000 0 0 0 0>;
+++		ieee80211-freq-limit = <5000000 6000000>;
+++		nvmem-cells = <&eeprom_radio_8000>, <&macaddr_rom_f100>;
+++		nvmem-cell-names = "eeprom", "mac-address";
+++		mac-address-increment = <(-1)>;
+++	};
+++};
+++
+++&eeprom_radio_8000 {
+++	reg = <0x8000 0x4da8>;
+++};
++diff --git a/target/linux/ramips/image/mt76x8.mk b/target/linux/ramips/image/mt76x8.mk
++index 816009ac18..11a12eca69 100644
++--- a/target/linux/ramips/image/mt76x8.mk
+++++ b/target/linux/ramips/image/mt76x8.mk
++@@ -593,6 +593,20 @@ define Device/tplink_archer-c50-v4
++ endef
++ TARGET_DEVICES += tplink_archer-c50-v4
++ 
+++define Device/tplink_archer-c50-v6
+++  $(Device/tplink-v2)
+++  IMAGE_SIZE := 7616k
+++  DEVICE_MODEL := Archer C50
+++  DEVICE_VARIANT := v6 (CA/EU/RU)
+++  TPLINK_FLASHLAYOUT := 8MSUmtk
+++  TPLINK_HWID := 0x0C500006
+++  TPLINK_HWREVADD := 0x6
+++  DEVICE_PACKAGES := kmod-mt7615e kmod-mt7663-firmware-ap
+++  IMAGES := sysupgrade.bin
+++  SUPPORTED_DEVICES += tplink,c50-v6
+++endef
+++TARGET_DEVICES += tplink_archer-c50-v6
+++
++ define Device/tplink_re200-v2
++   $(Device/tplink-safeloader)
++   IMAGE_SIZE := 7808k
++diff --git a/target/linux/ramips/mt76x8/base-files/etc/board.d/01_leds b/target/linux/ramips/mt76x8/base-files/etc/board.d/01_leds
++index 792bd13ebc..0b109feb6c 100644
++--- a/target/linux/ramips/mt76x8/base-files/etc/board.d/01_leds
+++++ b/target/linux/ramips/mt76x8/base-files/etc/board.d/01_leds
++@@ -76,7 +76,8 @@ tplink,tl-wr850n-v2)
++ 	ucidef_set_led_switch "wan" "wan" "green:wan" "switch0" "0x01"
++ 	;;
++ tplink,archer-c50-v3|\
++-tplink,archer-c50-v4)
+++tplink,archer-c50-v4|\
+++tplink,archer-c50-v6)
++ 	ucidef_set_led_switch "lan" "lan" "green:lan" "switch0" "0x1e"
++ 	ucidef_set_led_switch "wan" "wan" "green:wan" "switch0" "0x01"
++ 	ucidef_set_led_wlan "wlan2g" "wlan2g" "green:wlan2g" "phy0tpt"
++diff --git a/target/linux/ramips/mt76x8/base-files/etc/board.d/02_network b/target/linux/ramips/mt76x8/base-files/etc/board.d/02_network
++index 6bcdea971b..2ec41fe254 100644
++--- a/target/linux/ramips/mt76x8/base-files/etc/board.d/02_network
+++++ b/target/linux/ramips/mt76x8/base-files/etc/board.d/02_network
++@@ -46,6 +46,7 @@ ramips_setup_interfaces()
++ 	tplink,archer-c20-v5|\
++ 	tplink,archer-c50-v3|\
++ 	tplink,archer-c50-v4|\
+++	tplink,archer-c50-v6|\
++ 	tplink,tl-mr3420-v5|\
++ 	tplink,tl-wr840n-v4|\
++ 	tplink,tl-wr840n-v5|\
++@@ -294,7 +295,8 @@ ramips_setup_macs()
++ 		wan_mac=$(macaddr_add "$(mtd_get_mac_binary factory 0xf100)" 1)
++ 		;;
++ 	tplink,archer-c20-v5|\
++-	tplink,archer-c50-v4)
+++	tplink,archer-c50-v4|\
+++	tplink,archer-c50-v6)
++ 		wan_mac=$(macaddr_add "$(mtd_get_mac_binary rom 0xf100)" 1)
++ 		;;
++ 	wavlink,wl-wn570ha1|\
++diff --git a/target/linux/ramips/mt76x8/base-files/lib/upgrade/platform.sh b/target/linux/ramips/mt76x8/base-files/lib/upgrade/platform.sh
++index 20adfafc3d..427de8406f 100755
++--- a/target/linux/ramips/mt76x8/base-files/lib/upgrade/platform.sh
+++++ b/target/linux/ramips/mt76x8/base-files/lib/upgrade/platform.sh
++@@ -29,7 +29,8 @@ platform_do_upgrade() {
++ 		default_do_upgrade "$1"
++ 		;;
++ 	tplink,archer-c20-v5|\
++-	tplink,archer-c50-v4)
+++	tplink,archer-c50-v4|\
+++	tplink,archer-c50-v6)
++ 		MTD_ARGS="-t romfile"
++ 		default_do_upgrade "$1"
++ 		;;
++-- 
++2.34.1
++
+-- 
+2.34.1
