@@ -191,8 +191,10 @@ ifeq ($(GLUON_TARGET),ath79-generic)
     GLUON_d-link-dir825b1_SITE_PACKAGES += $(EXCLUDE_TLS)
 endif
 
-# no pkglists for target ath79-mikrotik
+ifeq ($(GLUON_TARGET),ath79-mikrotik)
+    GLUON_SITE_PACKAGES += $(INCLUDE_TLS) $(INCLUDE_USB) $(INCLUDE_USB_NET) $(INCLUDE_USB_SERIAL) $(INCLUDE_USB_STORAGE)
 
+endif
 
 ifeq ($(GLUON_TARGET),ath79-nand)
     GLUON_SITE_PACKAGES += $(INCLUDE_TLS) $(INCLUDE_USB) $(INCLUDE_USB_NET) $(INCLUDE_USB_SERIAL) $(INCLUDE_USB_STORAGE)
@@ -224,8 +226,10 @@ ifeq ($(GLUON_TARGET),ipq40xx-generic)
 
 endif
 
-# no pkglists for target ipq40xx-mikrotik
+ifeq ($(GLUON_TARGET),ipq40xx-mikrotik)
+    GLUON_SITE_PACKAGES += $(INCLUDE_TLS) $(INCLUDE_USB) $(INCLUDE_USB_NET) $(INCLUDE_USB_SERIAL) $(INCLUDE_USB_STORAGE)
 
+endif
 
 ifeq ($(GLUON_TARGET),ipq806x-generic)
     GLUON_SITE_PACKAGES += $(INCLUDE_TLS) $(INCLUDE_USB) $(INCLUDE_USB_NET) $(INCLUDE_USB_SERIAL) $(INCLUDE_USB_STORAGE)
