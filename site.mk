@@ -151,6 +151,12 @@ INCLUDE_PCI_NET := \
 EXCLUDE_PCI_NET := \
     -kmod-bnx2
 
+INCLUDE_VIRT := \
+    qemu-ga
+
+EXCLUDE_VIRT := \
+    -qemu-ga
+
 INCLUDE_TLS := \
     ca-bundle \
     libustream-mbedtls
