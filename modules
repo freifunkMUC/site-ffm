@@ -6,7 +6,7 @@
 ##	GLUON_SITE_FEEDS
 #		for each feed name given, add the corresponding PACKAGES_* lines
 #		documented below
-GLUON_SITE_FEEDS='eolssid ssidchanger ffmuc wireguard'
+GLUON_SITE_FEEDS='community ssidchanger ffmuc wireguard'
 
 ##	PACKAGES_FFMUC_REPO
 #		the  git repository from where to clone the package feed
@@ -29,5 +29,9 @@ PACKAGES_WIREGUARD_COMMIT=876a8d8f9805281e95815b7d2d5a4d997a393dc6
 PACKAGES_SSIDCHANGER_REPO=https://github.com/Freifunk-Nord/gluon-ssid-changer.git
 PACKAGES_SSIDCHANGER_COMMIT=f266b9e6328f97354f3b8777d1111ad044be9be5
 
-PACKAGES_EOLSSID_REPO=https://github.com/freifunk-gluon/community-packages/
-PACKAGES_EOLSSID_COMMIT=43c4e6b6766cce8dce56282692a6a5e4a26123df
+# Packages currently used from the community repo:
+# ff-ap-timer
+# ff-web-ap-timer
+# ffac-eol-ssid
+PACKAGES_COMMUNITY_REPO=https://github.com/freifunk-gluon/community-packages/
+PACKAGES_COMMUNITY_COMMIT=0f9f758e0927dcd344800dbc9084465e91670b6f
