@@ -6,19 +6,7 @@
 ##	GLUON_SITE_FEEDS
 #		for each feed name given, add the corresponding PACKAGES_* lines
 #		documented below
-GLUON_SITE_FEEDS='ffmuc community'
-
-##	PACKAGES_FFMUC_REPO
-#		the  git repository from where to clone the package feed
-PACKAGES_FFMUC_REPO=https://github.com/freifunkMUC/gluon-packages.git
-
-##	PACKAGES_FFMUC_COMMIT
-#		the version/commit of the git repository to clone
-PACKAGES_FFMUC_COMMIT=8a1d7be89035d720d7242b92d65a65d4212f184c
-
-##  PACKAGES_FFMUC_BRANCH
-#   the branch to check out
-PACKAGES_FFMUC_BRANCH=main
+GLUON_SITE_FEEDS='community'
 
 PACKAGES_COMMUNITY_REPO=https://github.com/freifunk-gluon/community-packages.git
 PACKAGES_COMMUNITY_COMMIT=0f9f758e0927dcd344800dbc9084465e91670b6f
