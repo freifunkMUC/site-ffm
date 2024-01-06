@@ -17,11 +17,11 @@ GLUON_FEATURES := \
 	web-wizard
 
 GLUON_SITE_PACKAGES := \
+	ff-ap-timer \
+	ff-web-ap-timer \
 	ffac-autoupdater-wifi-fallback \
 	ffac-change-autoupdater \
 	ffac-ssid-changer \
-	ffho-ap-timer \
-	ffho-web-ap-timer \
 	ffmuc-ipv6-ra-filter \
 	ffmuc-mesh-vpn-wireguard-vxlan \
 	iwinfo \
