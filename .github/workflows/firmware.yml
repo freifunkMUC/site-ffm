@@ -50,12 +50,6 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo -E ./scripts/install_build_dependencies.sh
-      - name: pre-build without ffmuc-mesh-vpn-wireguard-vxlan (workaround for x86-64)
-        if: matrix.target == 'x86-64'
-        run: |
-          sed -i '/ffmuc-mesh-vpn-wireguard-vxlan/d' site.mk
-          make BROKEN=1 GLUON_TARGETS=${{ matrix.target }} V=s
-          git checkout site.mk
       - name: build target ${{ matrix.target }}
         id: compile
         run: |
