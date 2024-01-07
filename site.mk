@@ -32,11 +32,11 @@ GLUON_MULTIDOMAIN=1
 #		chosen feature flags
 
 GLUON_SITE_PACKAGES := \
+	ff-ap-timer \
+	ff-web-ap-timer \
 	ffac-eol-ssid \
 	ffdon-domain-merge \
-	ffho-ap-timer \
 	ffho-autoupdater-wifi-fallback \
-	ffho-web-ap-timer \
 	ffmuc-mesh-vpn-wireguard-vxlan \
 	ffmuc-simple-radv-filter \
 	gluon-ssid-changer \
