@@ -14,12 +14,12 @@ index 00000000..ba631911
 +	},
 +})
 diff --git a/targets/targets.mk b/targets/targets.mk
-index 92b58ab8..05a74935 100644
+index d5f605aa..d27865b0 100644
 --- a/targets/targets.mk
 +++ b/targets/targets.mk
-@@ -22,5 +22,6 @@ $(eval $(call GluonTarget,x86,64))
+@@ -25,5 +25,6 @@ $(eval $(call GluonTarget,x86,64))
  
- ifneq ($(BROKEN),)
+ ifeq ($(BROKEN),1)
  $(eval $(call GluonTarget,bcm27xx,bcm2710)) # BROKEN: Untested
 +$(eval $(call GluonTarget,bcm27xx,bcm2711)) # BROKEN: Untested
  $(eval $(call GluonTarget,mvebu,cortexa9)) # BROKEN: No 11s support
