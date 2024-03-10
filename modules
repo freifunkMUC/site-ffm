@@ -11,13 +11,7 @@ GLUON_SITE_FEEDS='community ssidchanger ffmuc'
 ##	PACKAGES_FFMUC_REPO
 #		the  git repository from where to clone the package feed
 PACKAGES_FFMUC_REPO=https://github.com/freifunkMUC/gluon-packages.git
-
-##	PACKAGES_FFMUC_COMMIT
-#		the version/commit of the git repository to clone
-PACKAGES_FFMUC_COMMIT=c1c668905b5dc9cc69acb663569a1905f003ffb7
-
-##  PACKAGES_FFMUC_BRANCH
-#   the branch to check out
+PACKAGES_FFMUC_COMMIT=19f70a156bd921a352e9fd786f6d179618b18c07
 PACKAGES_FFMUC_BRANCH=main
 
 PACKAGES_SSIDCHANGER_REPO=https://github.com/Freifunk-Nord/gluon-ssid-changer.git
