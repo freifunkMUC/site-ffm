@@ -1,0 +1,135 @@
+diff --git a/package/gluon-setup-mode/files/lib/gluon/setup-mode/rc.d/S14-migrate b/package/gluon-setup-mode/files/lib/gluon/setup-mode/rc.d/S14-migrate
+new file mode 100755
+index 00000000..dcf0483c
+--- /dev/null
++++ b/package/gluon-setup-mode/files/lib/gluon/setup-mode/rc.d/S14-migrate
+@@ -0,0 +1,129 @@
++#!/usr/bin/lua
++
++-- Install at /lib/setup-mode/rc.d/S14-migrate (chmod +x)
++
++local site = require 'gluon.site'
++local uci = require('simple-uci').cursor()
++local util = require 'gluon.util'
++local pretty_hostname = require 'pretty_hostname'
++
++
++local freifunk_settings = uci:get_first('freifunk', 'settings')
++if freifunk_settings ~= nil then
++    -- Try to migrate the hostname
++    local hostname = uci:get('freifunk', freifunk_settings, 'name')
++    local default_hostname = util.default_hostname()
++    pretty_hostname.set(uci, hostname or default_hostname)
++    uci:save('system')
++
++
++    -- Try to migrate the contact
++    local contact = uci:get('freifunk', freifunk_settings, 'contact')
++    local owner = uci:get_first("gluon-node-info", "owner")
++    local default_contact = uci:get("gluon-node-info", owner, "contact")
++    uci:set("gluon-node-info", owner, "contact", contact or default_contact)
++    uci:save("gluon-node-info")
++
++
++    -- Try to migrate the location
++    local latitude = uci:get('freifunk', freifunk_settings, 'latitude')
++    local longitude = uci:get('freifunk', freifunk_settings, 'longitude')
++    local location = uci:get_first("gluon-node-info", "location")
++    uci:set("gluon-node-info", location, "latitude", latitude)
++    uci:set("gluon-node-info", location, "longitude", longitude)
++    uci:save("gluon-node-info")
++
++
++    -- Try to migrate mesh-on-wan
++    local mesh_on_wan = uci:get_bool('freifunk', freifunk_settings, 'mesh_on_wan')
++    -- TODO write
++
++    if not mesh_on_wan then
++        -- TODO also check mesh_on_lan, if both disabled mesh_vpn must be true
++        -- TODO check if enabled in orig config
++        uci:set("gluon", "mesh_vpn", "enabled", true)
++    end
++
++
++    -- Set domain
++    uci:set('gluon', 'core', 'domain', "ffmuc_welt") -- TODO change to ulm
++    uci:save('gluon')
++
++
++    if uci:get('network', 'wan') ~= nil then
++        -- Try to migrate interface config
++        local wan_ifnames = uci:get('network', 'wan', 'ifname') -- translates to uplink
++        local lan_ifnames = uci:get('network', 'lan', 'ifname') -- sets up a local private network without internet access for node configuration (?)
++                                                                -- -> no equivalent in gluon, migrate to client
++        local mesh_ifnames = uci:get('network', 'mesh', 'ifname') -- translates to mesh
++        local freifunk_ifnames = uci:get('network', 'freifunk', 'ifname') -- translates to client
++
++        local function has_value (tab, val)
++            for index, value in ipairs(tab) do
++                if value == val then
++                    return true
++                end
++            end
++
++            return false
++        end
++
++
++        function getInterfaceMode(ifname)
++            if has_value(freifunk_ifnames, ifname) then
++                return 'client'
++            end
++            if has_value(lan_ifnames, ifname) then
++                return 'client'
++            end
++            if has_value(wan_ifnames, ifname) then
++                return 'uplink'
++            end
++
++            -- TODO
++    --[[
++    Figure out how mesh interfaces are added (maybe as network.<ifname>_mesh?)
++    Search through the list or something and check for .proto == batadv_hardif
++
++    # uci show network.fastd_mesh
++    network.fastd_mesh=interface
++    network.fastd_mesh.ifname='fastd_mesh'
++    network.fastd_mesh.mtu='1406'
++    network.fastd_mesh.proto='batadv_hardif'
++    network.fastd_mesh.master='bat0
++
++            if has_value(mesh_ifnames, ifname) then
++                return 'mesh'
++            end
++            if config_find(n, {ifname = ifname, proto = 'batadv_hardif'}) then
++                return 'mesh'
++            end
++    --]]
++
++            return 'none' -- TODO
++        end
++
++
++        uci:foreach('gluon', 'interface', function(config)
++            local section_name = config['.name']
++            uci:set_list("gluon", section_name, "role", getInterfaceMode(section_name))
++        end)
++        uci:save("gluon")
++    end
++
++
++
++    -- pcall(os.remove('/etc/config/freifunk'))
++    -- pcall(os.remove('/etc/config/fastd'))
++    -- pcall(os.remove('/etc/config/network'))
++    -- pcall(os.remove('/etc/config/alfred'))
++    -- pcall(os.remove('/etc/config/firewall'))
++    -- pcall(os.remove('/etc/config/dhcp'))
++    -- pcall(os.remove('/etc/config/simple-radvd'))
++    -- pcall(os.remove('/etc/config/wireless'))
++
++    local name = uci:get_first("gluon-setup-mode", "setup_mode")
++    uci:set("gluon-setup-mode", name, "configured", true)
++    uci:save('gluon-setup-mode')
++    -- os.execute("/etc/init.d/done boot; reboot")
++end
