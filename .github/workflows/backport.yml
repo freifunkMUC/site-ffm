@@ -6,8 +6,7 @@ on:  # yamllint disable-line rule:truthy
     types: [closed, labeled]
 permissions:
   contents: write # so it can comment
-  pull-requests: write # so it can create pull requests
-  actions: write # so it can backport dependabot  
+  pull-requests: write # so it can create pull requests 
 jobs:
   backport:
     name: Backport pull request
