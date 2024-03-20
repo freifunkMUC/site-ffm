@@ -1,7 +1,7 @@
 From 116253d08eec5dcc344de9f68fdc816cd7464a9b Mon Sep 17 00:00:00 2001
 From: Felix <8057646+GoliathLabs@users.noreply.github.com>
 Date: Wed, 20 Mar 2024 14:29:31 +0100
-Subject: [PATCH] re-add: ath79 netgear-wndrmacv2
+Subject: [PATCH 1/2] re-add: ath79 netgear-wndrmacv2
 
 ---
  targets/ath79-generic | 3 +++
@@ -20,4 +20,27 @@ index ca2f8cda1e..bc70df32ab 100644
 +})
  
  -- OCEDO
+ 
+
+From ee3ed1bd59b420c113eb3e4ec5595176f5e97231 Mon Sep 17 00:00:00 2001
+From: Felix <8057646+GoliathLabs@users.noreply.github.com>
+Date: Wed, 20 Mar 2024 17:13:53 +0100
+Subject: [PATCH 2/2] fix: wndrmac-v2 device
+
+---
+ targets/ath79-generic | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/targets/ath79-generic b/targets/ath79-generic
+index bc70df32ab..c41bf0db23 100644
+--- a/targets/ath79-generic
++++ b/targets/ath79-generic
+@@ -228,7 +228,7 @@ device('netgear-wnr2200-16m', 'netgear_wnr2200-16m', {
+ 	factory_ext = '.img',
+ })
+ 
+-device('netgear-wndrmacv2', 'wndrmacv2', {
++device('netgear-wndrmac-v2', 'netgear_wndrmac-v2', {
+ 	factory_ext = '.img',
+ })
  
