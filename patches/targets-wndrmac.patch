@@ -1,0 +1,61 @@
+From c5034040d17418f73bc7ce15e95247d89b1a5717 Mon Sep 17 00:00:00 2001
+From: Felix <8057646+GoliathLabs@users.noreply.github.com>
+Date: Fri, 22 Mar 2024 15:12:11 +0100
+Subject: [PATCH 1/2] ath79-generic: add support for NETGEAR WNDRMAC v2
+
+This device was supported before the target-migration to ath79.
+---
+ docs/user/supported_devices.rst | 1 +
+ targets/ath79-generic           | 3 +++
+ 2 files changed, 4 insertions(+)
+
+diff --git a/docs/user/supported_devices.rst b/docs/user/supported_devices.rst
+index c0ab6f0449d..61f9c54ac03 100644
+--- a/docs/user/supported_devices.rst
++++ b/docs/user/supported_devices.rst
+@@ -66,6 +66,7 @@ ath79-generic
+   - WNDR3700 (v1, v2)
+   - WNDR3800
+   - WNR2200 (8M, 16M)
++  - WNDRMAC (v2)
+ 
+ * OCEDO
+ 
+diff --git a/targets/ath79-generic b/targets/ath79-generic
+index 7a5140c9ed0..7a68c361293 100644
+--- a/targets/ath79-generic
++++ b/targets/ath79-generic
+@@ -216,6 +216,9 @@ device('netgear-wnr2200-16m', 'netgear_wnr2200-16m', {
+ 	factory_ext = '.img',
+ })
+ 
++device('netgear-wndrmac-v2', 'netgear_wndrmac-v2', {
++	factory_ext = '.img',
++})
+ 
+ -- OCEDO
+ 
+
+From e018f0d6273cc4ca6b0fae61282310f941e1c2eb Mon Sep 17 00:00:00 2001
+From: GoliathLabs <git@xdfr.de>
+Date: Sun, 24 Mar 2024 19:14:40 +0100
+Subject: [PATCH 2/2] fix: manifest alias for netgear wndrmacv2
+
+---
+ targets/ath79-generic | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/targets/ath79-generic b/targets/ath79-generic
+index 7a68c361293..900fb3c84b7 100644
+--- a/targets/ath79-generic
++++ b/targets/ath79-generic
+@@ -218,6 +218,9 @@ device('netgear-wnr2200-16m', 'netgear_wnr2200-16m', {
+ 
+ device('netgear-wndrmac-v2', 'netgear_wndrmac-v2', {
+ 	factory_ext = '.img',
++	manifest_aliases = {
++		'netgear-wndrmacv2', -- Upgrade from OpenWrt 19.07
++	},
+ })
+ 
+ -- OCEDO
