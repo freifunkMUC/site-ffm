@@ -1,0 +1,234 @@
+From 3d3043bc87f705fa2dccfdab249656bc682c4626 Mon Sep 17 00:00:00 2001
+From: Felix <8057646+GoliathLabs@users.noreply.github.com>
+Date: Sun, 24 Mar 2024 22:25:34 +0100
+Subject: [PATCH 1/2] Create comfast.patch
+
+---
+ patches/openwrt/comfast.patch | 193 ++++++++++++++++++++++++++++++++++
+ 1 file changed, 193 insertions(+)
+ create mode 100644 patches/openwrt/comfast.patch
+
+diff --git a/patches/openwrt/comfast.patch b/patches/openwrt/comfast.patch
+new file mode 100644
+index 0000000000..09da13d103
+--- /dev/null
++++ b/patches/openwrt/comfast.patch
+@@ -0,0 +1,193 @@
++From 56e065e6ae21e4b937154f83493d3f11f3ed2245 Mon Sep 17 00:00:00 2001
++From: GoliathLabs <git@xdfr.de>
++Date: Sun, 24 Mar 2024 22:24:03 +0100
++Subject: [PATCH] feat: cf71v2
++
++---
++ .../ath79/dts/qca9531_comfast_cf-ew71-v2.dts  | 142 ++++++++++++++++++
++ .../generic/base-files/etc/board.d/01_leds    |   1 +
++ target/linux/ath79/image/generic.mk           |  10 ++
++ 3 files changed, 153 insertions(+)
++ create mode 100644 target/linux/ath79/dts/qca9531_comfast_cf-ew71-v2.dts
++
++diff --git a/target/linux/ath79/dts/qca9531_comfast_cf-ew71-v2.dts b/target/linux/ath79/dts/qca9531_comfast_cf-ew71-v2.dts
++new file mode 100644
++index 0000000000000..e7a47f075a066
++--- /dev/null
+++++ b/target/linux/ath79/dts/qca9531_comfast_cf-ew71-v2.dts
++@@ -0,0 +1,142 @@
+++// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
+++
+++#include "qca953x.dtsi"
+++
+++#include <dt-bindings/gpio/gpio.h>
+++#include <dt-bindings/input/input.h>
+++
+++/ {
+++	compatible = "comfast,cf-ew71", "qca,qca9531";
+++	model = "COMFAST CF-EW71";
+++
+++	aliases {
+++		serial0 = &uart;
+++		led-boot = &led_wan;
+++		led-failsafe = &led_wan;
+++		led-upgrade = &led_wan;
+++	};
+++
+++	leds {
+++		compatible = "gpio-leds";
+++
+++		pinctrl-names = "default";
+++		pinctrl-0 = <&jtag_disable_pins>;
+++
+++		lan {
+++			color = <LED_COLOR_ID_BLUE>;
+++			function = LED_FUNCTION_LAN;
+++			gpios = <&gpio 2 GPIO_ACTIVE_LOW>;
+++		}
+++
+++		led_wan: wan {
+++			color = <LED_COLOR_ID_BLUE>;
+++			function = LED_FUNCTION_WAN;
+++			gpios = <&gpio 11 GPIO_ACTIVE_LOW>;
+++		};
+++
+++		wlan {
+++			color = <LED_COLOR_ID_BLUE>;
+++			function = LED_FUNCTION_WLAN;
+++			gpios = <&gpio 14 GPIO_ACTIVE_LOW>;
+++			linux,default-trigger = "phy0tpt";
+++		};
+++	};
+++
+++	keys {
+++		compatible = "gpio-keys";
+++
+++		reset {
+++			label = "reset";
+++			linux,code = <KEY_RESTART>;
+++			gpios = <&gpio 17 GPIO_ACTIVE_LOW>;
+++			debounce-interval = <60>;
+++		};
+++	};
+++
+++	watchdog {
+++		compatible = "linux,wdt-gpio";
+++
+++		gpios = <&gpio 13 GPIO_ACTIVE_LOW>;
+++		hw_algo = "toggle";
+++		hw_margin_ms = <1200>;
+++		always-running;
+++	};
+++};
+++
+++&pcie0 {
+++	status = "okay";
+++};
+++
+++&spi {
+++	status = "okay";
+++
+++	flash@0 {
+++		compatible = "winbond,w25q128", "jedec,spi-nor";
+++		reg = <0>;
+++		spi-max-frequency = <25000000>;
+++
+++		partitions {
+++			compatible = "fixed-partitions";
+++			#address-cells = <1>;
+++			#size-cells = <1>;
+++
+++			partition@0 {
+++				label = "u-boot";
+++				reg = <0x000000 0x010000>;
+++				read-only;
+++			};
+++
+++			art: partition@10000 {
+++				label = "art";
+++				reg = <0x010000 0x010000>;
+++				read-only;
+++
+++				nvmem-layout {
+++					compatible = "fixed-layout";
+++					#address-cells = <1>;
+++					#size-cells = <1>;
+++
+++					macaddr_art_0: macaddr@0 {
+++						compatible = "mac-base";
+++						reg = <0x0 0x6>;
+++						#nvmem-cell-cells = <1>;
+++					};
+++				};
+++			};
+++
+++			partition@20000 {
+++				compatible = "denx,uimage";
+++				label = "firmware";
+++				reg = <0x020000 0xfd0000>;
+++			};
+++
+++			partition@ff0000 {
+++				label = "nvram";
+++				reg = <0xff0000 0x010000>;
+++				read-only;
+++			};
+++		};
+++	};
+++};
+++
+++&eth0 {
+++	status = "okay";
+++
+++	phy-handle = <&swphy4>;
+++
+++	nvmem-cells = <&macaddr_art_0 1>;
+++	nvmem-cell-names = "mac-address";
+++};
+++
+++&eth1 {
+++	nvmem-cells = <&macaddr_art_0 0>;
+++	nvmem-cell-names = "mac-address";
+++};
+++
+++&wmac {
+++	status = "okay";
+++
+++	mtd-cal-data = <&art 0x1000>;
+++	nvmem-cells = <&macaddr_art_0 3>;
+++	nvmem-cell-names = "mac-address";
+++};
++diff --git a/target/linux/ath79/generic/base-files/etc/board.d/01_leds b/target/linux/ath79/generic/base-files/etc/board.d/01_leds
++index aaa4ed94d50cf..6fac4ea0b11b4 100644
++--- a/target/linux/ath79/generic/base-files/etc/board.d/01_leds
+++++ b/target/linux/ath79/generic/base-files/etc/board.d/01_leds
++@@ -191,6 +191,7 @@ comfast,cf-e560ac)
++ 	ucidef_set_led_switch "lan3" "LAN3" "blue:lan3" "switch0" "0x08"
++ 	ucidef_set_led_switch "lan4" "LAN4" "blue:lan4" "switch0" "0x10"
++ 	;;
+++omfast,cf-ew71-v2|\
++ comfast,cf-ew72|\
++ openmesh,om2p-v2|\
++ openmesh,om2p-hs-v1|\
++diff --git a/target/linux/ath79/image/generic.mk b/target/linux/ath79/image/generic.mk
++index 1a558c30a0543..dff64b6feaf27 100644
++--- a/target/linux/ath79/image/generic.mk
+++++ b/target/linux/ath79/image/generic.mk
++@@ -758,6 +758,16 @@ define Device/comfast_cf-e560ac
++ endef
++ TARGET_DEVICES += comfast_cf-e560ac
++ 
+++define Device/comfast_cf-ew71-v2
+++  SOC := qca9531
+++  DEVICE_VENDOR := COMFAST
+++  DEVICE_MODEL := CF-EW71
+++  DEVICE_VARIANT := v2
+++  DEVICE_PACKAGES := kmod-usb2 -uboot-envtools -swconfig
+++  IMAGE_SIZE := 16192k
+++endef
+++TARGET_DEVICES += comfast_cf-ew71-v2
+++
++ define Device/comfast_cf-ew72
++   SOC := qca9531
++   DEVICE_VENDOR := COMFAST
+
+From 10a3d5d27f07f029aa2fe438da45d5a6d8fb70bc Mon Sep 17 00:00:00 2001
+From: Felix <8057646+GoliathLabs@users.noreply.github.com>
+Date: Sun, 24 Mar 2024 22:32:10 +0100
+Subject: [PATCH 2/2] Update ath79-generic
+
+---
+ targets/ath79-generic | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/targets/ath79-generic b/targets/ath79-generic
+index c41bf0db23..3524d55238 100644
+--- a/targets/ath79-generic
++++ b/targets/ath79-generic
+@@ -83,6 +83,10 @@ device('buffalo-wzr-600dhp', 'buffalo_wzr-600dhp')
+ 
+ device('buffalo-wzr-hp-g300nh-rtl8366s', 'buffalo_wzr-hp-g300nh-s')
+ 
++-- COMFAST
++
++device('comfast-cf-ew71-v2', 'comfast_cf-ew71-v2')
++
+ 
+ -- devolo
+ 
