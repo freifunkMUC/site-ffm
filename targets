@@ -8,6 +8,7 @@ bcm27xx-bcm2711
 ipq40xx-generic
 ipq40xx-mikrotik
 ipq806x-generic
+kirkwood-generic
 lantiq-xrx200
 lantiq-xway
 mediatek-filogic
