@@ -30,5 +30,5 @@ PACKAGES_SSIDCHANGER_COMMIT=f266b9e6328f97354f3b8777d1111ad044be9be5
 # ffmuc-mesh-vpn-wireguard-vxlan
 # ffmuc-ipv6-ra-filter
 PACKAGES_COMMUNITY_REPO=https://github.com/freifunk-gluon/community-packages.git
-PACKAGES_COMMUNITY_COMMIT=1e70e0744846de83f0b42384bd326a1cde5d9a1a
+PACKAGES_COMMUNITY_COMMIT=0c4b507dc9024a52ea320bfc6ba769a0ecbe4a46
 PACKAGES_COMMUNITY_BRANCH=master
