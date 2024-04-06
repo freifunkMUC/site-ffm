@@ -1,0 +1,28 @@
+From 95e711a4a8bba9ef5b9103f8eefda18329fa97a9 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Maciej=20Kr=C3=BCger?= <mkg20001@gmail.com>
+Date: Wed, 12 Jan 2022 01:36:03 +0100
+Subject: [PATCH 2/4] gluon-mesh-vpn-wireguard: fix empty string key
+
+Co-Authored-By: Matthias Schiffer <mschiffer@universe-factory.net>
+---
+ package/gluon-core/luasrc/usr/bin/gluon-info | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/package/gluon-core/luasrc/usr/bin/gluon-info b/package/gluon-core/luasrc/usr/bin/gluon-info
+index 8cee2895..c25018d1 100755
+--- a/package/gluon-core/luasrc/usr/bin/gluon-info
++++ b/package/gluon-core/luasrc/usr/bin/gluon-info
+@@ -22,8 +22,8 @@ local values = {
+ 	{ 'Hostname', pretty_hostname.get(uci) },
+ 	{ 'MAC address', sysconfig.primary_mac },
+ 	{ 'Hardware model', platform.get_model() },
+-	{ 'Gluon version' .. " / " .. 'Site version', util.trim(util.readfile('/lib/gluon/gluon-version'))
+-		.. " / " .. util.trim(util.readfile('/lib/gluon/site-version')) },
++	{ 'Gluon version / Site version', util.trim(util.readfile('/lib/gluon/gluon-version'))
++		.. ' / ' .. util.trim(util.readfile('/lib/gluon/site-version')) },
+ 	{ 'Firmware release', util.trim(util.readfile('/lib/gluon/release')) },
+ 	{ 'Site', site.site_name() },
+ 	{ 'Public VPN key', pubkey or 'n/a' },
+-- 
+2.34.1
+
