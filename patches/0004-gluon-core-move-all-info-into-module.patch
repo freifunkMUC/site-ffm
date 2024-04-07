@@ -1,0 +1,119 @@
+From d3fa7806d6c7499b20ad50d5fbb56dcb07f08b78 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Maciej=20Kr=C3=BCger?= <mkg20001@gmail.com>
+Date: Sat, 10 Jun 2023 15:26:44 +0200
+Subject: [PATCH 4/4] gluon-core: move all info into module
+
+---
+ package/gluon-core/luasrc/usr/bin/gluon-info  | 36 ++-----------
+ .../luasrc/usr/lib/lua/gluon/info.lua         | 50 +++++++++++++++++++
+ 2 files changed, 55 insertions(+), 31 deletions(-)
+ create mode 100644 package/gluon-core/luasrc/usr/lib/lua/gluon/info.lua
+
+diff --git a/package/gluon-core/luasrc/usr/bin/gluon-info b/package/gluon-core/luasrc/usr/bin/gluon-info
+index 74ffe59d..916c0643 100755
+--- a/package/gluon-core/luasrc/usr/bin/gluon-info
++++ b/package/gluon-core/luasrc/usr/bin/gluon-info
+@@ -1,39 +1,13 @@
+ #!/usr/bin/lua
+ 
+-local uci = require('simple-uci').cursor()
+-local pretty_hostname = require 'pretty_hostname'
++local info = require 'gluon.info'
+ 
+-local site = require 'gluon.site'
+-local sysconfig = require 'gluon.sysconfig'
+-local platform = require 'gluon.platform'
+-local util = require 'gluon.util'
+-local has_vpn, vpn = pcall(require, 'gluon.mesh-vpn')
+-
+-local pubkey
+-if has_vpn and vpn.enabled() then
+-	local _, active_vpn = vpn.get_active_provider()
+-
+-	if active_vpn ~= nil then
+-		pubkey = active_vpn.public_key()
+-	end
+-end
+-
+-local values = {
+-	{ 'Hostname', pretty_hostname.get(uci) },
+-	{ 'MAC address', sysconfig.primary_mac },
+-	{ 'Hardware model', platform.get_model() },
+-	{ 'Gluon version / Site version', util.trim(util.readfile('/lib/gluon/gluon-version'))
+-		.. ' / ' .. util.trim(util.readfile('/lib/gluon/site-version')) },
+-	{ 'Firmware release', util.trim(util.readfile('/lib/gluon/release')) },
+-	{ 'Site', site.site_name() },
+-	{ 'Domain', uci:get('gluon', 'core', 'domain') or 'n/a' },
+-	{ 'Public VPN key', pubkey or 'n/a' },
+-}
++local values = info.get_info_pretty(function(str) return str end)
+ 
+ local padTo = 24
+ 
+-for _, info in ipairs(values) do
+-	local labelLen = string.len(info[1]) + 1
++for _, value in ipairs(values) do
++	local labelLen = string.len(value[1]) + 1
+ 
+-	print(info[1] .. ':' .. string.rep(' ', padTo - labelLen), info[2])
++	print(value[1] .. ':' .. string.rep(' ', padTo - labelLen), value[2])
+ end
+diff --git a/package/gluon-core/luasrc/usr/lib/lua/gluon/info.lua b/package/gluon-core/luasrc/usr/lib/lua/gluon/info.lua
+new file mode 100644
+index 00000000..7e6f5f39
+--- /dev/null
++++ b/package/gluon-core/luasrc/usr/lib/lua/gluon/info.lua
+@@ -0,0 +1,50 @@
++local uci = require('simple-uci').cursor()
++local pretty_hostname = require 'pretty_hostname'
++
++local site = require 'gluon.site'
++local sysconfig = require 'gluon.sysconfig'
++local platform = require 'gluon.platform'
++local util = require 'gluon.util'
++local has_vpn, vpn = pcall(require, 'gluon.mesh-vpn')
++
++local pubkey
++if has_vpn and vpn.enabled() then
++	local _, active_vpn = vpn.get_active_provider()
++
++	if active_vpn ~= nil then
++		pubkey = active_vpn.public_key()
++	end
++end
++
++local M = {}
++
++function M.get_info()
++	return {
++		hostname = pretty_hostname.get(uci),
++		mac_address = sysconfig.primary_mac,
++		hardware_model = platform.get_model(),
++		gluon_version = util.trim(util.readfile('/lib/gluon/gluon-version')),
++		site_version = util.trim(util.readfile('/lib/gluon/site-version')),
++		firmware_release = util.trim(util.readfile('/lib/gluon/release')),
++		site = site.site_name(),
++		domain = uci:get('gluon', 'core', 'domain'),
++		public_vpn_key = pubkey,
++	}
++end
++
++function M.get_info_pretty(_)
++	local data = M.get_info()
++
++	return {
++		{ _('Hostname'), data.hostname },
++		{ _('MAC address'), data.mac_address },
++		{ _('Hardware model'), data.hardware_model },
++		{ _('Gluon version') .. " / " .. _('Site version'), data.gluon_version .. " / " .. data.site_version },
++		{ _('Firmware release'), data.firmware_release },
++		{ _('Site'), data.site },
++		{ _('Domain'), data.domain or 'n/a' },
++		{ _('Public VPN key'), data.public_vpn_key or 'n/a' },
++	}
++end
++
++return M
+-- 
+2.34.1
+

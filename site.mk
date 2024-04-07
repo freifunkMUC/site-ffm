@@ -37,8 +37,8 @@ GLUON_SITE_PACKAGES := \
 	ffac-eol-ssid \
 	ffdon-domain-merge \
 	ffho-autoupdater-wifi-fallback \
+	ffmuc-ipv6-ra-filter \
 	ffmuc-mesh-vpn-wireguard-vxlan \
-	ffmuc-simple-radv-filter \
 	gluon-ssid-changer \
 	iptables \
 	iwinfo \

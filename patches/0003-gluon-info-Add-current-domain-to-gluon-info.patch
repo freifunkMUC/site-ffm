@@ -1,0 +1,26 @@
+From a95ce4c9aafc2476fedc1310bb9fd021a6368683 Mon Sep 17 00:00:00 2001
+From: Florian Maurer <f.maurer@outlook.de>
+Date: Wed, 10 May 2023 02:33:08 +0200
+Subject: [PATCH 3/4] gluon-info: Add current domain to gluon-info
+
+- provides easier information of the currently active domain
+- tested by patching a running node
+---
+ package/gluon-core/luasrc/usr/bin/gluon-info | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/package/gluon-core/luasrc/usr/bin/gluon-info b/package/gluon-core/luasrc/usr/bin/gluon-info
+index c25018d1..74ffe59d 100755
+--- a/package/gluon-core/luasrc/usr/bin/gluon-info
++++ b/package/gluon-core/luasrc/usr/bin/gluon-info
+@@ -26,6 +26,7 @@ local values = {
+ 		.. ' / ' .. util.trim(util.readfile('/lib/gluon/site-version')) },
+ 	{ 'Firmware release', util.trim(util.readfile('/lib/gluon/release')) },
+ 	{ 'Site', site.site_name() },
++	{ 'Domain', uci:get('gluon', 'core', 'domain') or 'n/a' },
+ 	{ 'Public VPN key', pubkey or 'n/a' },
+ }
+ 
+-- 
+2.34.1
+
