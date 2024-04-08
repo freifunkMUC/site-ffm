@@ -39,6 +39,7 @@ GLUON_SITE_PACKAGES := \
 	ffho-autoupdater-wifi-fallback \
 	ffmuc-ipv6-ra-filter \
 	ffmuc-mesh-vpn-wireguard-vxlan \
+	ffulm-migration \
 	gluon-ssid-changer \
 	iptables \
 	iwinfo \
@@ -70,7 +71,7 @@ GLUON_PRIORITY ?= 0
 GLUON_REGION ?= eu
 
 # Languages to include
-GLUON_LANGS ?= en de
+GLUON_LANGS ?= en
 
 # Do not build factory images for deprecated devices
 GLUON_DEPRECATED ?= upgrade
