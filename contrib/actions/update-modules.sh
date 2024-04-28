@@ -17,11 +17,14 @@ while IFS= read -r line; do
         # Überprüfen, ob ein neuer Commit gefunden wurde
         if [ -n "$NEW_COMMIT" ]; then
             # Den Wert des Commits in der Datei aktualisieren
+            # shellcheck disable=SC2094
             COMMIT_LINE=$(grep -n "${REPO_NAME/_REPO/_COMMIT}" "$MODULES_FILE" | cut -d ':' -f 1)
+            # shellcheck disable=SC2094
             sed -i "${COMMIT_LINE}s/.*/${REPO_NAME/_REPO/_COMMIT}=$NEW_COMMIT/" "$MODULES_FILE"
             echo "Der Wert von ${REPO_NAME/_REPO/_COMMIT} wurde auf den neuesten Commit ($NEW_COMMIT) aktualisiert."
         else
             echo "Fehler: Der neueste Commit f  r $REPO_NAME konnte nicht abgerufen werden."
         fi
     fi
+# shellcheck disable=SC2094    
 done < "$MODULES_FILE"
