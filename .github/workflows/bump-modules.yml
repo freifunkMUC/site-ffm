@@ -3,7 +3,7 @@ name: "Update Modules base"
 
 on:
   workflow_dispatch:
-        
+
 permissions:
   contents: write # so it can comment
   pull-requests: write # so it can create pull requests
@@ -24,7 +24,7 @@ jobs:
 
       - name: Invoke update-modules
         run: ./contrib/actions/update-modules.sh
-            
+
       - name: Create Pull Request
         id: cpr
         uses: peter-evans/create-pull-request@v6
@@ -37,7 +37,7 @@ jobs:
             [1]: https://github.com/peter-evans/create-pull-request
           commit-message: bump modules version
           branch: ${{ steps.branch-name.outputs.branch-name }}
-          
+
       - name: Check outputs
         if: ${{ steps.cpr.outputs.pull-request-number }}
         run: |
