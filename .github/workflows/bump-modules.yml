@@ -11,9 +11,6 @@ permissions:
 jobs:
   update-Modules:
     runs-on: ubuntu-22.04
-    env:
-      COMMIT_NAME: github-actions[bot]
-      COMMIT_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com    
     steps:
       - name: Clone Firmware
         uses: actions/checkout@v4
