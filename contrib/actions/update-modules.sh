@@ -4,6 +4,7 @@
 MODULES_FILE="modules"
 
 # Durchlaufe die Datei, um alle Repository-URLs und ihre entsprechenden Commit-Variablen zu finden
+# shellcheck disable=SC2094    
 while IFS= read -r line; do
     #  ^|berpr  fe, ob die Zeile eine Repository-URL ist
     if [[ "$line" == "PACKAGES_"*"_REPO="* ]]; then
@@ -26,5 +27,4 @@ while IFS= read -r line; do
             echo "Fehler: Der neueste Commit f  r $REPO_NAME konnte nicht abgerufen werden."
         fi
     fi
-# shellcheck disable=SC2094    
 done < "$MODULES_FILE"
