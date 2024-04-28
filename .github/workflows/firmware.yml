@@ -12,7 +12,9 @@ on:
       - '.github/ISSUE_TEMPLATE'
       - '.github/*.yml'
       - '.github/workflows/backport.yml'
+      - '.github/workflows/bump-modules.yml'
       - 'contrib/sign.sh'
+      - 'contrib/actions/update-modules.sh'
 
 jobs:
   generate_target_matrix:
