@@ -6,8 +6,14 @@
 ##	GLUON_SITE_FEEDS
 #		for each feed name given, add the corresponding PACKAGES_* lines
 #		documented below
-GLUON_SITE_FEEDS='community'
+GLUON_SITE_FEEDS='legacy community'
 
 PACKAGES_COMMUNITY_REPO=https://github.com/freifunk-gluon/community-packages.git
 PACKAGES_COMMUNITY_COMMIT=1e70e0744846de83f0b42384bd326a1cde5d9a1a
 PACKAGES_COMMUNITY_BRANCH=master
+
+##	PACKAGES_LEGACY_REPO
+# Only use ffulm-migration
+PACKAGES_LEGACY_REPO=https://github.com/freifunkMUC/gluon-packages.git
+PACKAGES_LEGACY_COMMIT=bee230a241b5697f1530178a802c3e405b0b18c6
+PACKAGES_LEGACY_BRANCH=main
