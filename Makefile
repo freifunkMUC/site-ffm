@@ -1,6 +1,6 @@
 GLUON_BUILD_DIR := gluon-build
-GLUON_GIT_URL := https://github.com/freifunk-gluon/gluon.git
-GLUON_GIT_REF := v2023.2.3
+GLUON_GIT_URL := https://github.com/blocktrron/gluon.git
+GLUON_GIT_REF := pr-mt7612-stuck-clients-master
 
 PATCH_DIR := ./patches
 SECRET_KEY_FILE ?= ${HOME}/.gluon-secret-key
