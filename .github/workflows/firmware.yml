@@ -33,12 +33,38 @@ jobs:
           echo "target={\"target\": $(echo $target_list)}" >> $GITHUB_OUTPUT
           echo "build_target={\"target\": $(echo $target_list)}" >> $GITHUB_OUTPUT
 
+  get_gluon_tag:
+    runs-on: ubuntu-latest
+    outputs:
+      closest_gluon_tag: ${{ steps.set_gluon_tag.outputs.gluon_git_tag }}
+    steps:
+      - name: Set Gluon ref
+        id: set_gluon_ref
+        shell: bash
+        run: |
+          echo "gluon_git_ref=$(cat gluon-git-ref | tr -d '\n')" >> $GITHUB_OUTPUT
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: 'freifunk-gluon/gluon-build'
+          ref: "${gluon_git_ref}"
+          fetch-tags: true
+      - name: Set Gluon tag
+        id: set_gluon_tag
+        shell: bash
+        run: |
+          echo "gluon_git_tag=$(git describe --tags --abbrev=0)" >> $GITHUB_OUTPUT
+
   build_firmware:
-    needs: generate_target_matrix
+    needs:
+      - generate_target_matrix
+      - get_gluon_tag
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.generate_target_matrix.outputs.build_target_json) }}
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/freifunk-gluon/gluon-build:${{ needs.get_gluon_tag.outputs.closest_gluon_tag }}
     steps:
       - name: Maximize build space
         run: |
