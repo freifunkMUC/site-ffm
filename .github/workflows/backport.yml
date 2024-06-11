@@ -3,10 +3,11 @@ name: Backport merged pull request
 
 on:  # yamllint disable-line rule:truthy
   pull_request_target:
-    types: [closed]
+    types: [closed, labeled]
 permissions:
   contents: write # so it can comment
   pull-requests: write # so it can create pull requests
+  actions: write # so it can create pull requests on actions/workflows
 jobs:
   backport:
     name: Backport pull request
@@ -14,6 +15,11 @@ jobs:
     # Don't run on closed unmerged pull requests
     if: github.event.pull_request.merged
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
       - name: Create backport pull requests
-        uses: korthout/backport-action@v2
+        uses: korthout/backport-action@bd410d37cdcae80be6d969823ff5a225fe5c833f # v3.0.2
+        with:
+          experimental: >
+            {
+              "conflict_resolution": "draft_commit_conflicts"
+            }
