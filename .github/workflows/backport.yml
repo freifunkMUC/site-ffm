@@ -7,7 +7,7 @@ on:  # yamllint disable-line rule:truthy
 permissions:
   contents: write # so it can comment
   pull-requests: write # so it can create pull requests
-  actions: write # so it can create pull requests on actions/workflows
+  actions: write # so it can create pull requests on actions/workflows -test
 jobs:
   backport:
     name: Backport pull request
