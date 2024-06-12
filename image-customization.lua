@@ -32,6 +32,9 @@ if not device_class('tiny') then
     features{
         'wireless-encryption-wpa3',
     }
+    packages{
+        'ffmuc-custom-banner',
+    }
 end
 
 if device({
