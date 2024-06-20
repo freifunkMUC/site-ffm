@@ -1,30 +1,39 @@
 #!/bin/bash
+set -eEu
+set -o pipefail
 
-# Die Datei, die die Repository-Informationen enthaelt
+# file that contains the module information
 MODULES_FILE="modules"
 
-# Durchlaufe die Datei, um alle Repository-URLs und ihre entsprechenden Commit-Variablen zu finden
-# shellcheck disable=SC2094    
-while IFS= read -r line; do
-    # Überprüfe, ob die Zeile eine Repository-URL ist
-    if [[ "$line" == "PACKAGES_"*"_REPO="* ]]; then
-        # Extrahiere den Repository-Namen und die URL
-        REPO_NAME=$(echo "$line" | cut -d '=' -f 1)
-        REPO_URL=$(echo "$line" | cut -d '=' -f 2-)
+if ((BASH_VERSINFO[0] < 4)); then
+    echo "This script requires Bash 4.0 or above."
+    exit 1
+fi
 
-        # Den neuesten Commit für das Repository abrufen
-        NEW_COMMIT=$(git ls-remote "$REPO_URL" | grep -oE '[0-9a-f]{40}' | head -n1)
+function get_value_from_line() {
+    cat | cut -d '=' -f 2
+}
 
-        # Überprüfen, ob ein neuer Commit gefunden wurde
-        if [ -n "$NEW_COMMIT" ]; then
-            # Den Wert des Commits in der Datei aktualisieren
-            # shellcheck disable=SC2094
-            COMMIT_LINE=$(grep -n "${REPO_NAME/_REPO/_COMMIT}" "$MODULES_FILE" | cut -d ':' -f 1)
-            # shellcheck disable=SC2094
-            sed -i "${COMMIT_LINE}s/.*/${REPO_NAME/_REPO/_COMMIT}=$NEW_COMMIT/" "$MODULES_FILE"
-            echo "Der Wert von ${REPO_NAME/_REPO/_COMMIT} wurde auf den neuesten Commit ($NEW_COMMIT) aktualisiert."
-        else
-            echo "Fehler: Der neueste Commit f  r $REPO_NAME konnte nicht abgerufen werden."
-        fi
+function get_all_repo_names() {
+    local file=$1
+    grep "^GLUON_SITE_FEEDS" "${file}" | get_value_from_line | tr -d "'"
+}
+
+for repo in $(get_all_repo_names "${MODULES_FILE}"); do
+    REPO_URL=$(grep "^PACKAGES_${repo^^}_REPO" "${MODULES_FILE}" | get_value_from_line)
+    REPO_COMMIT=$(grep "^PACKAGES_${repo^^}_COMMIT" "${MODULES_FILE}" | get_value_from_line)
+    REPO_BRANCH=$(grep "^PACKAGES_${repo^^}_BRANCH" "${MODULES_FILE}" | get_value_from_line)
+
+    # Get newest commit of the repo
+    NEW_COMMIT=$(git ls-remote --heads "${REPO_URL}" "${REPO_BRANCH}" | grep -oE '[0-9a-f]{40}')
+
+    # Check if the commit has changed
+    if [[ "${REPO_COMMIT}" == "${NEW_COMMIT}" ]]; then
+        echo "No updates for ${repo} repository"
+        continue
     fi
-done < "$MODULES_FILE"
+
+    # Update the value of the commit
+    sed -i "s/${REPO_COMMIT}/${NEW_COMMIT}/" "${MODULES_FILE}"
+    echo "Updated commit of ${repo} (${REPO_COMMIT}) to the newest commit (${NEW_COMMIT})."
+done
