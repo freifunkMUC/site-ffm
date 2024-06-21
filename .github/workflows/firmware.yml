@@ -1,4 +1,4 @@
-name: Build ffmuc firmware
+name: Build ffmuc firmware test
 
 on:
   workflow_dispatch:
