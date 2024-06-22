@@ -1,0 +1,2 @@
+domains/*.conf linguist-language=Lua
+site.conf linguist-language=Lua
