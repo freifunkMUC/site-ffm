@@ -13,8 +13,6 @@ git diff --quiet ./modules || {
 	exit 1
 }
 
-LOCAL_BRANCH=$(git branch --show-current)
-[[ $LOCAL_BRANCH != update-modules-* ]] && LOCAL_BRANCH="update-modules-$LOCAL_BRANCH-$(date +%s)"
 
 for MODULE in "PACKAGES_COMMUNITY"; do
 	_REMOTE_URL=${MODULE}_REPO
@@ -36,10 +34,7 @@ for MODULE in "PACKAGES_COMMUNITY"; do
 	# skip ahead if the commit id did not change
 	[ "$LOCAL_HEAD" == "$REMOTE_HEAD" ] && continue 1
 
-	# switch to local working branch, if we found changes
-	[ "$(git branch --show-current)" != "${LOCAL_BRANCH}" ] && {
-		git switch -c "${LOCAL_BRANCH}" || git switch "${LOCAL_BRANCH}"
-	}
+
 
 	CHECKOUT=$(mktemp -d)
 
