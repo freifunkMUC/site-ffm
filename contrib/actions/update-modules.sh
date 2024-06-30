@@ -3,7 +3,7 @@
 set -eo pipefail
 
 # move to basedir, in case the script is not executed via `make update-modules`
-cd "../../" || exit 1
+cd "$(dirname "$0")/../.." || exit 1
 
 # shellcheck source=./modules
 source ./modules
