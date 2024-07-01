@@ -1,6 +1,6 @@
 GLUON_BUILD_DIR := gluon-build
-GLUON_GIT_URL := https://github.com/blocktrron/gluon.git
-GLUON_GIT_REF := pr-mt7612-stuck-clients-master
+GLUON_GIT_URL := https://github.com/freifunk-gluon/gluon.git
+GLUON_GIT_REF := d5d6d0f7aca547c9a5f66ee72d697c9c11e0626c #merged https://github.com/freifunk-gluon/gluon/pull/3261
 
 PATCH_DIR := ./patches
 SECRET_KEY_FILE ?= ${HOME}/.gluon-secret-key
