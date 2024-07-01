@@ -38,12 +38,13 @@ if not device_class('tiny') then
 end
 
 if device({
-        'zte,mf281',
-        'glinet,gl-xe300',
-        'glinet,gl-ap1300',
-        'zte,mf289f',
-        'wavlink,ws-wn572hp3-4g',
-        'tplink,tl-mr6400-v5',
+        'zte-mf281',
+        'glinet-gl-xe300',
+        'glinet-gl-ap1300',
+        'zte-mf289f',
+        'zte-mf286r',
+        'wavlink-ws-wn572hp3-4g',
+        'tp-link-tl-mr6400-v5',
     }) then
     features {
         'web-cellular',
