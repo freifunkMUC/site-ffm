@@ -43,7 +43,7 @@ for MODULE in ${GLUON_SITE_FEEDS}; do
 
 	# prepare the commit message
 	# shellcheck disable=SC2001
-	MODULE=$(echo ${MODULE,,} | sed 's/packages_//')
+	MODULE=$(echo "${MODULE,,}" | sed 's/packages_//')
 	TITLE="modules: update ${MODULE}"
 	MESSAGE="$(mktemp)"
 	{
