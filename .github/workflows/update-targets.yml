@@ -1,0 +1,50 @@
+---
+name: "Update Targets"
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - stable
+      - legacy
+      - next
+    paths:
+      - 'Makefile'
+
+permissions:
+  contents: write # so it can comment
+  pull-requests: write # so it can create pull requests
+
+jobs:
+  update-Modules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get update branch name
+        id: branch-name
+        run: echo "branch-name=update-targets-${{ github.ref_name }}" >> $GITHUB_OUTPUT
+
+      - name: Run update-targets
+        run: make update-targets
+
+      - name: Get new targets
+        id: new-targets
+        run:
+          echo "names=$(git diff --color=always|perl -wlne 'print $1 if /^\e\[32m\+\e\[m\e\[32m(.*)\e\[m$/' | tr '\n' ' ')" >> $GITHUB_OUTPUT
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c # v6.1.0
+        with:
+          title: '[${{ github.ref_name }}] Add targets ${{ steps.new-targets.outputs.names }}'
+          body: |
+            Updated targets for branch ${{ github.ref_name }}
+
+            New targets: `${{ steps.new-targets.outputs.names }}`
+
+            ⚠️ Please trigger the CI before merging this pull request. ⚠️
+          commit-message: "targets: add ${{ steps.new-targets.outputs.names }}"
+          branch: ${{ steps.branch-name.outputs.branch-name }}
+          labels: ${{ github.ref_name }}
+          draft: true # this step does not trigger a CI run, so always mark them as draft
+          delete-branch: true
