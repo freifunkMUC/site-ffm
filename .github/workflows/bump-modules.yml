@@ -33,6 +33,9 @@ jobs:
 
             [1]: https://github.com/peter-evans/create-pull-request
           branch: ${{ steps.branch-name.outputs.branch-name }}
+          labels: ${{ github.ref_name }}
+          draft: true # this step does not trigger a CI run, so always mark them as draft
+          delete-branch: true
 
       - name: Check outputs
         if: ${{ steps.cpr.outputs.pull-request-number }}
