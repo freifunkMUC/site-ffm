@@ -1,0 +1,165 @@
+From 31eb36d9afbfaf424147d79144ff642530d9e5c9 Mon Sep 17 00:00:00 2001
+From: Matthias Schiffer <mschiffer@universe-factory.net>
+Date: Fri, 5 Jul 2024 13:34:09 +0200
+Subject: [PATCH] autoupdater: add debug logging for manifest validation
+
+---
+ ...ebug-logging-for-manifest-validation.patch | 146 ++++++++++++++++++
+ 1 file changed, 146 insertions(+)
+ create mode 100644 patches/packages/gluon/0001-autoupdater-add-debug-logging-for-manifest-validation.patch
+
+diff --git a/patches/packages/gluon/0001-autoupdater-add-debug-logging-for-manifest-validation.patch b/patches/packages/gluon/0001-autoupdater-add-debug-logging-for-manifest-validation.patch
+new file mode 100644
+index 00000000..bf107f6f
+--- /dev/null
++++ b/patches/packages/gluon/0001-autoupdater-add-debug-logging-for-manifest-validation.patch
+@@ -0,0 +1,146 @@
++From: Matthias Schiffer <mschiffer@universe-factory.net>
++Date: Fri, 5 Jul 2024 13:32:57 +0200
++Subject: autoupdater: add debug logging for manifest validation
++
++diff --git a/admin/autoupdater/src/autoupdater.c b/admin/autoupdater/src/autoupdater.c
++index 6fb5d2a0b0082bc41894d7b84ed232e3ee9a9a6c..68e4f3d930b549df01f258e1d155b7fd15dd7fd7 100644
++--- a/admin/autoupdater/src/autoupdater.c
+++++ b/admin/autoupdater/src/autoupdater.c
++@@ -25,6 +25,7 @@
++ */
++ 
++ 
+++#include "hexutil.h"
++ #include "manifest.h"
++ #include "settings.h"
++ #include "uclient.h"
++@@ -86,6 +87,7 @@ static void usage(void) {
++ 		"  -n, --no-action      Download and validate the manifest as usual, then only\n"
++ 		"                       download but do not flash a new firmware if one is\n"
++ 		"                       available.\n\n"
+++		"  -d, --debug          Enable debug logging for manifest parsing and validation.\n\n"
++ 		"  --fallback           Upgrade if and only if the upgrade timespan of the new\n"
++ 		"                       version has passed for at least 24 hours.\n\n"
++ 		"  --force-version      Skip version check to allow downgrades.\n\n"
++@@ -102,6 +104,7 @@ static void parse_args(int argc, char *argv[], struct settings *settings) {
++ 		OPTION_FORCE = 'f',
++ 		OPTION_HELP = 'h',
++ 		OPTION_NO_ACTION = 'n',
+++		OPTION_DEBUG = 'd',
++ 		OPTION_FALLBACK = 256,
++ 		OPTION_FORCE_VERSION = 257,
++ 	};
++@@ -111,13 +114,14 @@ static void parse_args(int argc, char *argv[], struct settings *settings) {
++ 		{"force",     no_argument,       NULL, OPTION_FORCE},
++ 		{"fallback",  no_argument,       NULL, OPTION_FALLBACK},
++ 		{"no-action", no_argument,       NULL, OPTION_NO_ACTION},
+++		{"debug",     no_argument,       NULL, OPTION_DEBUG},
++ 		{"force-version", no_argument, NULL, OPTION_FORCE_VERSION},
++ 		{"help",      no_argument,       NULL, OPTION_HELP},
++ 		{}
++ 	};
++ 
++ 	while (true) {
++-		int c = getopt_long(argc, argv, "b:fhn", options, NULL);
+++		int c = getopt_long(argc, argv, "b:fhnd", options, NULL);
++ 		if (c < 0)
++ 			break;
++ 
++@@ -134,6 +138,10 @@ static void parse_args(int argc, char *argv[], struct settings *settings) {
++ 			settings->fallback = true;
++ 			break;
++ 
+++		case OPTION_DEBUG:
+++			settings->debug = true;
+++			break;
+++
++ 		case OPTION_HELP:
++ 			usage();
++ 			exit(0);
++@@ -235,6 +243,9 @@ static void recv_manifest_cb(struct uclient *cl) {
++ 				break;
++ 			*newline = '\0';
++ 
+++			if (ctx->s->debug)
+++				fprintf(stderr, "Manifest: %s\n", line);
+++
++ 			parse_line(line, &ctx->m, ctx->s->branch, platforminfo_get_image_name());
++ 			line = newline + 1;
++ 		}
++@@ -305,6 +316,14 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
++ 	{
++ 		ecc_int256_t hash;
++ 		ecdsa_sha256_final(&m->hash_ctx, hash.p);
+++
+++		if (s->debug) {
+++			dumphex("Manifest SHA256", &hash, sizeof(hash));
+++
+++			for (size_t i = 0; i < m->n_signatures; i++)
+++				dumphex("Signature", m->signatures[i], sizeof(*m->signatures[i]));
+++		}
+++
++ 		ecdsa_verify_context_t ctxs[m->n_signatures];
++ 		for (size_t i = 0; i < m->n_signatures; i++)
++ 			ecdsa_verify_prepare_legacy(&ctxs[i], &hash, m->signatures[i]);
++diff --git a/admin/autoupdater/src/hexutil.c b/admin/autoupdater/src/hexutil.c
++index 6927b67edfb046886434f1551ece18d60b845775..d18d5524f01a4e9dcd6c79e57e442043104ce566 100644
++--- a/admin/autoupdater/src/hexutil.c
+++++ b/admin/autoupdater/src/hexutil.c
++@@ -41,3 +41,15 @@ bool parsehex(void *output, const char *input, size_t len) {
++ 
++ 	return true;
++ }
+++
+++void dumphex(const char *label, const void *buffer, size_t len) {
+++	const unsigned char *bytes = buffer;
+++	char output[2*len + 1];
+++
+++	// Writes to stderr flush immediately, so prepare a buffer to output all
+++	// at once
+++	for (size_t i = 0; i < len; i++)
+++		snprintf(&output[2*i], 3, "%02x", bytes[i]);
+++
+++	fprintf(stderr, "%s: %s\n", label, output);
+++}
++diff --git a/admin/autoupdater/src/hexutil.h b/admin/autoupdater/src/hexutil.h
++index 85aa1d3ece0b5d6e76a11c2867ee762820514e9e..10968f26c10584d29142284bb2027324b8f9a755 100644
++--- a/admin/autoupdater/src/hexutil.h
+++++ b/admin/autoupdater/src/hexutil.h
++@@ -33,3 +33,10 @@
++  * must fit exactly into the buffer.
++  */
++ bool parsehex(void *buffer, const char *string, size_t len);
+++
+++/**
+++ * Dumps a buffer to stderr as hexadecimal digits, prepended with a label
+++ *
+++ * A newline is printed after the buffer.
+++ */
+++void dumphex(const char *label, const void *buffer, size_t len);
++diff --git a/admin/autoupdater/src/settings.c b/admin/autoupdater/src/settings.c
++index fde03b8ce336d06d18bb37615ecf3bc0712b8a60..f6fbd062f75368a9e9d67eebc9a7847ac633f43b 100644
++--- a/admin/autoupdater/src/settings.c
+++++ b/admin/autoupdater/src/settings.c
++@@ -168,6 +168,10 @@ void load_settings(struct settings *settings) {
++ 			goto pubkey_fail;
++ 		if (!parsehex(pubkey_packed.p, pubkeys_str[i], 32))
++ 			goto pubkey_fail;
+++
+++		if (settings->debug)
+++			dumphex("Pubkey", &pubkey_packed, sizeof(pubkey_packed));
+++
++ 		if (!ecc_25519_load_packed_legacy(&settings->pubkeys[i-ignored_keys], &pubkey_packed))
++ 			goto pubkey_fail;
++ 		if (!ecdsa_is_valid_pubkey(&settings->pubkeys[i-ignored_keys]))
++diff --git a/admin/autoupdater/src/settings.h b/admin/autoupdater/src/settings.h
++index 7ed68d1afbb020d395bc79c8994719dda62371b4..40e44b13cf4b25e138e7f6e0493e7108f971f168 100644
++--- a/admin/autoupdater/src/settings.h
+++++ b/admin/autoupdater/src/settings.h
++@@ -34,6 +34,7 @@ struct settings {
++ 	bool fallback;
++ 	bool no_action;
++ 	bool force_version;
+++	bool debug;
++ 	const char *branch;
++ 	unsigned long good_signatures;
++ 	char *old_version;
+-- 
+2.34.1
+
