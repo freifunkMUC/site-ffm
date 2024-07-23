@@ -1,39 +1,63 @@
-#!/bin/bash
-set -eEu
-set -o pipefail
+#!/usr/bin/env bash
 
-# file that contains the module information
-MODULES_FILE="modules"
+set -eo pipefail
 
-if ((BASH_VERSINFO[0] < 4)); then
-    echo "This script requires Bash 4.0 or above."
-    exit 1
-fi
+# move to basedir, in case the script is not executed via `make update-modules`
+cd "$(dirname "$0")/../.." || exit 1
 
-function get_value_from_line() {
-    cat | cut -d '=' -f 2
+# shellcheck source=./modules
+source ./modules
+
+git diff --quiet ./modules || {
+	1>&2 echo "Your modules file is dirty, aborting."
+	exit 1
 }
 
-function get_all_repo_names() {
-    local file=$1
-    grep "^GLUON_SITE_FEEDS" "${file}" | get_value_from_line | tr -d "'"
-}
 
-for repo in $(get_all_repo_names "${MODULES_FILE}"); do
-    REPO_URL=$(grep "^PACKAGES_${repo^^}_REPO" "${MODULES_FILE}" | get_value_from_line)
-    REPO_COMMIT=$(grep "^PACKAGES_${repo^^}_COMMIT" "${MODULES_FILE}" | get_value_from_line)
-    REPO_BRANCH=$(grep "^PACKAGES_${repo^^}_BRANCH" "${MODULES_FILE}" | get_value_from_line)
+for MODULE in ${GLUON_SITE_FEEDS}; do
+	_REMOTE_URL=PACKAGES_${MODULE^^}_REPO
+	_REMOTE_BRANCH=PACKAGES_${MODULE^^}_BRANCH
+	_LOCAL_HEAD=PACKAGES_${MODULE^^}_COMMIT
 
-    # Get newest commit of the repo
-    NEW_COMMIT=$(git ls-remote --heads "${REPO_URL}" "${REPO_BRANCH}" | grep -oE '[0-9a-f]{40}')
+	REMOTE_URL="${!_REMOTE_URL}"
+	REMOTE_BRANCH="${!_REMOTE_BRANCH}"
+	LOCAL_HEAD="${!_LOCAL_HEAD}"
 
-    # Check if the commit has changed
-    if [[ "${REPO_COMMIT}" == "${NEW_COMMIT}" ]]; then
-        echo "No updates for ${repo} repository"
-        continue
-    fi
+	# get default branch name if none is set
+	[ -z "${REMOTE_BRANCH}" ] && {
+		REMOTE_BRANCH=$(git ls-remote --symref "${REMOTE_URL}" HEAD | awk '/^ref:/ { sub(/refs\/heads\//, "", $2); print $2 }')
+	}
 
-    # Update the value of the commit
-    sed -i "s/${REPO_COMMIT}/${NEW_COMMIT}/" "${MODULES_FILE}"
-    echo "Updated commit of ${repo} (${REPO_COMMIT}) to the newest commit (${NEW_COMMIT})."
+	# fetch the commit id for the HEAD of the module
+	REMOTE_HEAD=$(git ls-remote "${REMOTE_URL}" "${REMOTE_BRANCH}" | awk '{ print $1 }')
+
+	# skip ahead if the commit id did not change
+	[ "$LOCAL_HEAD" == "$REMOTE_HEAD" ] && continue 1
+
+
+
+	CHECKOUT=$(mktemp -d)
+
+	# clone the target branch
+	git clone --bare "${REMOTE_URL}" --branch="${REMOTE_BRANCH}" "${CHECKOUT}"
+
+	# prepare the commit message
+	# shellcheck disable=SC2001
+	MODULE=$(echo "${MODULE,,}" | sed 's/packages_//')
+	TITLE="modules: update ${MODULE}"
+	MESSAGE="$(mktemp)"
+	{
+		echo "${TITLE}"
+		printf '\n\n'
+		git -C "${CHECKOUT}" log --oneline --no-decorate --no-merges "${LOCAL_HEAD}..${REMOTE_HEAD}" | cat
+	} > "$MESSAGE"
+
+	# modify modules file
+	sed -i "s/${LOCAL_HEAD}/${REMOTE_HEAD}/" ./modules
+	git add ./modules
+
+	git commit -F "${MESSAGE}"
+
+	# remove the checkout
+	rm -fr "${CHECKOUT}"
 done
