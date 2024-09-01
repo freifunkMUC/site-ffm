@@ -1,0 +1,83 @@
+From 8673d59f67301efd635ae5b30e92c88ac7aec169 Mon Sep 17 00:00:00 2001
+From: Matthias Schiffer <mschiffer@universe-factory.net>
+Date: Tue, 27 Aug 2024 21:53:03 +0200
+Subject: [PATCH] autoupdater: add verbose SHA256 debug logging
+
+---
+ .../gluon/0002-autoupdater-SHA256-debug.patch | 64 +++++++++++++++++++
+ 1 file changed, 64 insertions(+)
+ create mode 100644 patches/packages/gluon/0002-autoupdater-SHA256-debug.patch
+
+diff --git a/patches/packages/gluon/0002-autoupdater-SHA256-debug.patch b/patches/packages/gluon/0002-autoupdater-SHA256-debug.patch
+new file mode 100644
+index 00000000..58b8b6c7
+--- /dev/null
++++ b/patches/packages/gluon/0002-autoupdater-SHA256-debug.patch
+@@ -0,0 +1,64 @@
++From: Matthias Schiffer <mschiffer@universe-factory.net>
++Date: Tue, 27 Aug 2024 21:52:21 +0200
++Subject: autoupdater: SHA256 debug
++
++diff --git a/admin/autoupdater/src/autoupdater.c b/admin/autoupdater/src/autoupdater.c
++index 68e4f3d930b549df01f258e1d155b7fd15dd7fd7..54fefce44f7db11875deb895469fac3826c5a366 100644
++--- a/admin/autoupdater/src/autoupdater.c
+++++ b/admin/autoupdater/src/autoupdater.c
++@@ -246,7 +246,7 @@ static void recv_manifest_cb(struct uclient *cl) {
++ 			if (ctx->s->debug)
++ 				fprintf(stderr, "Manifest: %s\n", line);
++ 
++-			parse_line(line, &ctx->m, ctx->s->branch, platforminfo_get_image_name());
+++			parse_line(line, &ctx->m, ctx->s->branch, platforminfo_get_image_name(), ctx->s->debug);
++ 			line = newline + 1;
++ 		}
++ 
++@@ -315,6 +315,8 @@ static bool autoupdate(const char *mirror, struct settings *s, int lock_fd) {
++ 	/* Check manifest signatures */
++ 	{
++ 		ecc_int256_t hash;
+++		if (s->debug)
+++			dumphex("Hash ctx (final)", &m->hash_ctx, sizeof(m->hash_ctx));
++ 		ecdsa_sha256_final(&m->hash_ctx, hash.p);
++ 
++ 		if (s->debug) {
++diff --git a/admin/autoupdater/src/manifest.c b/admin/autoupdater/src/manifest.c
++index fae33435675684cc02aaf5d6cb8ebcb50999ce45..b3bcd058b7e14a5f6f27c215666c8db1e00ac946 100644
++--- a/admin/autoupdater/src/manifest.c
+++++ b/admin/autoupdater/src/manifest.c
++@@ -78,7 +78,7 @@ static bool parse_rfc3339(const char *input, time_t *date) {
++ }
++ 
++ 
++-void parse_line(char *line, struct manifest *m, const char *branch, const char *image_name) {
+++void parse_line(char *line, struct manifest *m, const char *branch, const char *image_name, bool debug) {
++ 	if (m->sep_found) {
++ 		ecdsa_signature_t *sig = safe_malloc(sizeof(ecdsa_signature_t));
++ 
++@@ -93,8 +93,14 @@ void parse_line(char *line, struct manifest *m, const char *branch, const char *
++ 	} else if (strcmp(line, "---") == 0) {
++ 		m->sep_found = true;
++ 	} else {
+++		if (debug)
+++			dumphex("Hash ctx", &m->hash_ctx, sizeof(m->hash_ctx));
++ 		ecdsa_sha256_update(&m->hash_ctx, line, strlen(line));
+++		if (debug)
+++			dumphex("Hash ctx", &m->hash_ctx, sizeof(m->hash_ctx));
++ 		ecdsa_sha256_update(&m->hash_ctx, "\n", 1);
+++		if (debug)
+++			dumphex("Hash ctx", &m->hash_ctx, sizeof(m->hash_ctx));
++ 
++ 		if (!strncmp(line, "BRANCH=", 7) && !strcmp(&line[7], branch)) {
++ 			m->branch_ok = true;
++diff --git a/admin/autoupdater/src/manifest.h b/admin/autoupdater/src/manifest.h
++index f121c6dfb7400e5d631bc08d5bec2e8d6101d2d6..9a8e56568cf27386a1076dcf722235efb9ca5b08 100644
++--- a/admin/autoupdater/src/manifest.h
+++++ b/admin/autoupdater/src/manifest.h
++@@ -54,4 +54,4 @@ struct manifest {
++ 
++ void clear_manifest(struct manifest *m);
++ 
++-void parse_line(char *line, struct manifest *m, const char *branch, const char *image_name);
+++void parse_line(char *line, struct manifest *m, const char *branch, const char *image_name, bool debug);
+-- 
+2.46.0
+
