@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
       - name: Create backport pull requests
-        uses: korthout/backport-action@bd410d37cdcae80be6d969823ff5a225fe5c833f # v3.0.2
+        uses: korthout/backport-action@be567af183754f6a5d831ae90f648954763f17f5 # v3.1.0
         with:
           experimental: >
             {
