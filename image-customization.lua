@@ -22,6 +22,7 @@ packages{
     'ffac-autoupdater-wifi-fallback',
     'ffac-change-autoupdater',
     'ffac-ssid-changer',
+    'ffda-wireless-rate-limiter',
     'ffmuc-ipv6-ra-filter',
     'ffmuc-mesh-vpn-wireguard-vxlan',
     'iwinfo',
