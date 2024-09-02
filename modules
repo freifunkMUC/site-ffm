@@ -6,13 +6,8 @@
 ##	GLUON_SITE_FEEDS
 #		for each feed name given, add the corresponding PACKAGES_* lines
 #		documented below
-GLUON_SITE_FEEDS='community ffac'
+GLUON_SITE_FEEDS='community'
 
 PACKAGES_COMMUNITY_REPO=https://github.com/freifunk-gluon/community-packages.git
-PACKAGES_COMMUNITY_COMMIT=ed68c7060e6122537038ece7de920d199aeed9b0
+PACKAGES_COMMUNITY_COMMIT=61ba5ab54ffd34a77ec4967487f69848d553fcc0
 PACKAGES_COMMUNITY_BRANCH=master
-
-
-PACKAGES_FFAC_REPO=https://github.com/ffac/gluon-packages
-PACKAGES_FFAC_COMMIT=affa1562c84bfcd0b0a2a47ec04b88a4643a79e9
-PACKAGES_FFAC_BRANCH=main
