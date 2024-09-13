@@ -22,6 +22,7 @@ GLUON_SITE_PACKAGES := \
 	ffac-autoupdater-wifi-fallback \
 	ffac-change-autoupdater \
 	ffac-ssid-changer \
+	ffbs-collect-debug-info \
 	ffmuc-custom-banner \
 	ffmuc-ipv6-ra-filter \
 	ffmuc-mesh-vpn-wireguard-vxlan \
