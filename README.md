@@ -44,7 +44,7 @@ docker run --rm -v $(pwd):/site-ffm:ro -v $(pwd)/gluon-build:/site-ffm/gluon-bui
 
 ## Further Resources
 
-This firmware is based on [Gluon](https://gluon.readthedocs.io/en/v2021.1/).
+This firmware is based on [Gluon](https://gluon.readthedocs.io/).
 
-Look at the [site configuration related Gluon documentation](https://gluon.readthedocs.io/en/v2021.1/user/site.html)
+Look at the [site configuration related Gluon documentation](https://gluon.readthedocs.io/en/latest/user/site.html)
 for information on site configuration options and examples from other communities.
