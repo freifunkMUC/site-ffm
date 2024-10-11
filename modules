@@ -6,8 +6,12 @@
 ##	GLUON_SITE_FEEDS
 #		for each feed name given, add the corresponding PACKAGES_* lines
 #		documented below
-GLUON_SITE_FEEDS='community'
+GLUON_SITE_FEEDS='batman_adv_next community'
 
 PACKAGES_COMMUNITY_REPO=https://github.com/freifunk-gluon/community-packages.git
 PACKAGES_COMMUNITY_COMMIT=61ba5ab54ffd34a77ec4967487f69848d553fcc0
 PACKAGES_COMMUNITY_BRANCH=master
+
+PACKAGES_BATMAN_ADV_NEXT_REPO="https://github.com/T-X/gluon-batman-adv-next.git"
+PACKAGES_BATMAN_ADV_NEXT_COMMIT="897b5a4db84085ab8d127635e1f013230724eddb"
+PACKAGES_BATMAN_ADV_NEXT_BRANCH="batman-adv-next_2024-07-15"
