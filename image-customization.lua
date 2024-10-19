@@ -23,9 +23,7 @@ packages{
     'gluon-ffbsnext-nodeconfig',
     'gluon-ffbsnext-nodeconfig-respondd',
     'gluon-ffbsnext-nextnode',
-    'gluon-ffbsnext-wireguard',
     '-gluon-ebtables-limit-arp',
-    'gluon-ebtables-filter-ra-dhcp',
     'iwinfo',
     'respondd-module-airtime',
 }
