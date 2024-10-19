@@ -1,0 +1,29 @@
+From ba6fb82ef8438494a3ea6e82227d7b309ebd2f11 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Steffen=20F=C3=B6rster?= <nemesis@chemnitz.freifunk.net>
+Date: Sat, 13 Apr 2019 19:16:38 +0200
+Subject: [PATCH 01/11] override wired tpo information for batman_v
+
+Co-Authored-By: Krombel <krombel@krombel.de>
+---
+ .../mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+ create mode 100755 package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo
+
+diff --git a/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo b/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo
+new file mode 100755
+index 00000000..7185b4a0
+--- /dev/null
++++ b/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo
+@@ -0,0 +1,9 @@
++#!/bin/sh
++
++if [ -f /sys/devices/virtual/net/vx_mesh_lan/batman_adv/throughput_override ]; then echo 1000000 > /sys/devices/virtual/net/vx_mesh_lan/batman_adv/throughput_override; fi
++
++if [ -f /sys/devices/virtual/net/vx_mesh_wan/batman_adv/throughput_override ]; then echo 1000000 > /sys/devices/virtual/net/vx_mesh_wan/batman_adv/throughput_override; fi
++
++if [ -f /sys/devices/virtual/net/br-wan/batman_adv/throughput_override ]; then echo 1000000 > /sys/devices/virtual/net/br-wan/batman_adv/throughput_override; fi
++
++if [ -f /sys/devices/virtual/net/mesh-vpn/batman_adv/throughput_override ]; then echo 1000000 > /sys/devices/virtual/net/mesh-vpn/batman_adv/throughput_override; fi
+-- 
+2.34.1
+
