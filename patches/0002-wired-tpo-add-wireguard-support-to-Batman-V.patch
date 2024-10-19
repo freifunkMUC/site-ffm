@@ -1,0 +1,25 @@
+From cd7996447b8108c288297f0cb46f5af8c2ea470a Mon Sep 17 00:00:00 2001
+From: Annika Wickert <annika.wickert@exaring.de>
+Date: Mon, 31 Aug 2020 11:54:27 +0200
+Subject: [PATCH 02/11] wired tpo: add wireguard support to Batman V
+
+---
+ .../core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo   | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo b/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo
+index 7185b4a0..2c488f16 100755
+--- a/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo
++++ b/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo
+@@ -4,6 +4,8 @@ if [ -f /sys/devices/virtual/net/vx_mesh_lan/batman_adv/throughput_override ]; t
+ 
+ if [ -f /sys/devices/virtual/net/vx_mesh_wan/batman_adv/throughput_override ]; then echo 1000000 > /sys/devices/virtual/net/vx_mesh_wan/batman_adv/throughput_override; fi
+ 
++if [ -f /sys/devices/virtual/net/vx_mesh_vpn/batman_adv/throughput_override ]; then echo 1000000 > /sys/devices/virtual/net/vx_mesh_vpn/batman_adv/throughput_override; fi
++
+ if [ -f /sys/devices/virtual/net/br-wan/batman_adv/throughput_override ]; then echo 1000000 > /sys/devices/virtual/net/br-wan/batman_adv/throughput_override; fi
+ 
+ if [ -f /sys/devices/virtual/net/mesh-vpn/batman_adv/throughput_override ]; then echo 1000000 > /sys/devices/virtual/net/mesh-vpn/batman_adv/throughput_override; fi
+-- 
+2.34.1
+

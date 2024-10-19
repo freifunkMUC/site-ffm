@@ -1,0 +1,32 @@
+From aa41d31207df52d5b26c89bb10572e27b0abbe95 Mon Sep 17 00:00:00 2001
+From: Malte Wedel <ich@malte.de>
+Date: Thu, 14 Jan 2021 21:38:53 +0100
+Subject: [PATCH 03/11] Fixed patch for BATMAN throughput override
+
+---
+ .../post-setup.d/40-gluon-mesh-batman-adv-wired-tpo | 13 ++++---------
+ 1 file changed, 4 insertions(+), 9 deletions(-)
+
+diff --git a/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo b/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo
+index 2c488f16..d28ac53b 100755
+--- a/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo
++++ b/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo
+@@ -1,11 +1,6 @@
+ #!/bin/sh
+ 
+-if [ -f /sys/devices/virtual/net/vx_mesh_lan/batman_adv/throughput_override ]; then echo 1000000 > /sys/devices/virtual/net/vx_mesh_lan/batman_adv/throughput_override; fi
+-
+-if [ -f /sys/devices/virtual/net/vx_mesh_wan/batman_adv/throughput_override ]; then echo 1000000 > /sys/devices/virtual/net/vx_mesh_wan/batman_adv/throughput_override; fi
+-
+-if [ -f /sys/devices/virtual/net/vx_mesh_vpn/batman_adv/throughput_override ]; then echo 1000000 > /sys/devices/virtual/net/vx_mesh_vpn/batman_adv/throughput_override; fi
+-
+-if [ -f /sys/devices/virtual/net/br-wan/batman_adv/throughput_override ]; then echo 1000000 > /sys/devices/virtual/net/br-wan/batman_adv/throughput_override; fi
+-
+-if [ -f /sys/devices/virtual/net/mesh-vpn/batman_adv/throughput_override ]; then echo 1000000 > /sys/devices/virtual/net/mesh-vpn/batman_adv/throughput_override; fi
++if [ "$IFNAME" = "vx_mesh_lan" ] || [ "$IFNAME" = "vx_mesh_wan" ] || [ "$IFNAME" = "mesh-vpn" ]; then
++        sleep 1;
++        batctl hardif $IFNAME throughput_override 1000mbit;
++fi
+-- 
+2.34.1
+

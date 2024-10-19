@@ -1,0 +1,27 @@
+From 36a82295c9729c94cd7a0fc0289a78bb6591c187 Mon Sep 17 00:00:00 2001
+From: Malte Wedel <ich@malte.de>
+Date: Wed, 6 Apr 2022 18:23:54 +0200
+Subject: [PATCH 05/11] Fix throughput override for new interface vx_mesh_other
+
+The VX mesh interface for Mesh-On-LAN and Mesh-On-WAN has been renamed
+in the latest branch. This change fixes the throughput override, which
+makes BATMAN prefer the wired connections over the wireless connections.
+---
+ .../core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo   | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo b/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo
+index 3f2ac3a5..137ae023 100755
+--- a/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo
++++ b/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo
+@@ -1,6 +1,6 @@
+ #!/bin/sh
+ 
+-if [ "$IFNAME" = "vx_mesh_lan" ] || [ "$IFNAME" = "vx_mesh_wan" ] || [ "$IFNAME" = "mesh-vpn" ]; then
++if [ "$IFNAME" = "vx_mesh_other" ] || [ "$IFNAME" = "mesh-vpn" ]; then
+         sleep 3;
+         batctl hardif $IFNAME throughput_override 1000mbit;
+ fi
+-- 
+2.34.1
+
