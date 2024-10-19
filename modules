@@ -6,8 +6,12 @@
 ##	GLUON_SITE_FEEDS
 #		for each feed name given, add the corresponding PACKAGES_* lines
 #		documented below
-GLUON_SITE_FEEDS='community'
+GLUON_SITE_FEEDS='community packages_ffbs'
 
 PACKAGES_COMMUNITY_REPO=https://github.com/freifunk-gluon/community-packages.git
 PACKAGES_COMMUNITY_COMMIT=61ba5ab54ffd34a77ec4967487f69848d553fcc0
 PACKAGES_COMMUNITY_BRANCH=master
+
+PACKAGES_PACKAGES_FFBS_REPO=https://gitli.stratum0.org/ffbs/ffbs-packages.git
+PACKAGES_PACKAGES_FFBS_COMMIT=e378f415b42e0ea9744397f5b349fbe0ee9c7394
+PACKAGES_PACKAGES_FFBS_BRANCH=v2023.2.x-ffbs-next
