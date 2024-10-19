@@ -1,0 +1,119 @@
+From c1c07422b2340cd39c33c47c3700f64263821ad0 Mon Sep 17 00:00:00 2001
+From: Chris Fiege <cfi@pengutronix.de>
+Date: Sat, 27 Mar 2021 14:31:26 +0100
+Subject: [PATCH 12/38] parker: remove prefix6 and prefix4
+
+This change removes the prefix4 and prefix6 attributes from the
+site.conf. These do not make sense in the context of parker.
+
+Packages that are usually used in parker do not use these anymore. Some
+other packages do - you should not enable those :-)
+
+With this change a ipv6 route to prefix_6 will no longer be set on
+br-client. Systems that already have this route will keep it.
+
+With this change the (not working) redirect in the http status page has
+been removed. We should consider to add this later on.
+---
+ package/gluon-client-bridge/check_site.lua    |  4 ----
+ .../310-gluon-client-bridge-local-node        |  3 +--
+ package/gluon-core/check_site.lua             |  4 ----
+ .../lib/gluon/upgrade/400-respondd-firewall   |  8 --------
+ .../status-page/controller/status-page.lua    | 19 +------------------
+ 5 files changed, 2 insertions(+), 36 deletions(-)
+
+diff --git a/package/gluon-client-bridge/check_site.lua b/package/gluon-client-bridge/check_site.lua
+index b077f87b..e32ff32e 100644
+--- a/package/gluon-client-bridge/check_site.lua
++++ b/package/gluon-client-bridge/check_site.lua
+@@ -1,9 +1,5 @@
+ need_string_match(in_domain({'next_node', 'mac'}), '^%x[02468aAcCeE]:%x%x:%x%x:%x%x:%x%x:%x%x$', false)
+ 
+-if need_string_match(in_domain({'next_node', 'ip4'}), '^%d+.%d+.%d+.%d+$', false) then
+-	need_string_match(in_domain({'prefix4'}), '^%d+.%d+.%d+.%d+/%d+$')
+-end
+-
+ need_string_match(in_domain({'next_node', 'ip6'}), '^[%x:]+$', false)
+ 
+ 
+diff --git a/package/gluon-client-bridge/luasrc/lib/gluon/upgrade/310-gluon-client-bridge-local-node b/package/gluon-client-bridge/luasrc/lib/gluon/upgrade/310-gluon-client-bridge-local-node
+index e67dc7d5..6f3f3110 100755
+--- a/package/gluon-client-bridge/luasrc/lib/gluon/upgrade/310-gluon-client-bridge-local-node
++++ b/package/gluon-client-bridge/luasrc/lib/gluon/upgrade/310-gluon-client-bridge-local-node
+@@ -22,8 +22,7 @@ uci:section('network', 'device', 'local_node_dev', {
+ local ip4, ip6
+ 
+ if next_node.ip4 then
+-	local plen = site.prefix4():match('/%d+$')
+-	ip4 = next_node.ip4 .. plen
++	ip4 = next_node.ip4 .. '/32'
+ end
+ 
+ if next_node.ip6 then
+diff --git a/package/gluon-core/check_site.lua b/package/gluon-core/check_site.lua
+index 83c5a621..4e382009 100644
+--- a/package/gluon-core/check_site.lua
++++ b/package/gluon-core/check_site.lua
+@@ -26,10 +26,6 @@ need_string(in_site({'timezone'}))
+ 
+ need_string_array({'ntp_servers'}, false)
+ 
+-need_string_match(in_domain({'prefix4'}), '^%d+.%d+.%d+.%d+/%d+$', false)
+-need_string_match(in_domain({'prefix6'}), '^[%x:]+/64$')
+-need_string_array_match(in_domain({'extra_prefixes6'}), '^[%x:]+/%d+$', false)
+-
+ local supported_rates = {6000, 9000, 12000, 18000, 24000, 36000, 48000, 54000}
+ for _, config in ipairs({'wifi24', 'wifi5'}) do
+ 	if need_table({config}, nil, false) then
+diff --git a/package/gluon-respondd/luasrc/lib/gluon/upgrade/400-respondd-firewall b/package/gluon-respondd/luasrc/lib/gluon/upgrade/400-respondd-firewall
+index 74a2e11b..6e529043 100755
+--- a/package/gluon-respondd/luasrc/lib/gluon/upgrade/400-respondd-firewall
++++ b/package/gluon-respondd/luasrc/lib/gluon/upgrade/400-respondd-firewall
+@@ -33,14 +33,6 @@ uci:section('firewall', 'rule',  'mesh_respondd_ll', {
+ 	target = 'ACCEPT',
+ })
+ 
+-uci:section('firewall', 'rule',  'mesh_respondd_siteprefix', {
+-	name = 'mesh_respondd_siteprefix',
+-	src = 'mesh',
+-	src_ip = site.prefix6(),
+-	dest_port = '1001',
+-	proto = 'udp',
+-	target = 'ACCEPT',
+-})
+ 
+ uci:delete_all('firewall', 'rule', function(rule)
+ 	return rule['.name']:find('^mesh_respondd_extraprefix')
+diff --git a/package/gluon-status-page/luasrc/lib/gluon/status-page/controller/status-page.lua b/package/gluon-status-page/luasrc/lib/gluon/status-page/controller/status-page.lua
+index 80c5e50a..ac2ac2d0 100644
+--- a/package/gluon-status-page/luasrc/lib/gluon/status-page/controller/status-page.lua
++++ b/package/gluon-status-page/luasrc/lib/gluon/status-page/controller/status-page.lua
+@@ -63,24 +63,7 @@ end
+ entry({}, call(function(http, renderer)
+ 	local nodeinfo = json.parse(util.exec('exec gluon-neighbour-info -d ::1 -p 1001 -t 3 -c 1 -r nodeinfo'))
+ 
+-	local node_ip = parse_ip(http:getenv('SERVER_ADDR'))
+-	if node_ip and (
+-			match(node_ip, parse_ip(site.next_node.ip4()), 8) or
+-			match(node_ip, parse_ip(site.next_node.ip6()), 8)
+-	) then
+-		-- The user has visited the status page via a next-node address
+-		-- Redirect the user to a unique address to avoid switching nodes
+-		local prefix = parse_ip(site.prefix6():match('^[^/]+'))
+-		for _, addr in ipairs(nodeinfo.network.addresses) do
+-			if match(prefix, parse_ip(addr), 4) then
+-				http:header('Cache-Control', 'no-cache, no-store, must-revalidate')
+-				http:redirect('http://[' .. addr .. ']' .. http:getenv('REQUEST_URI'))
+-				http:close()
+-				return
+-			end
+-		end
+-	end
+-
++	-- TODO: Add a redirect to a local v6 addr for parker
+ 
+ 	renderer.render('status-page', { nodeinfo = nodeinfo, site = site }, 'gluon-status-page')
+ end))
+-- 
+2.34.1
+

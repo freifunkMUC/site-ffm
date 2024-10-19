@@ -1,0 +1,28 @@
+From 5a6d1e7566e5715c2395c6a66a6fb3e39b1ca913 Mon Sep 17 00:00:00 2001
+From: Kasalehlia <kasalehlia@clonejo.de>
+Date: Sat, 10 Oct 2020 19:10:42 +0200
+Subject: [PATCH 24/38] config-mode: show mesh-vpn options if parker is used
+
+---
+ .../luasrc/lib/gluon/config-mode/wizard/0300-mesh-vpn.lua  | 7 -------
+ 1 file changed, 7 deletions(-)
+
+diff --git a/package/gluon-config-mode-mesh-vpn/luasrc/lib/gluon/config-mode/wizard/0300-mesh-vpn.lua b/package/gluon-config-mode-mesh-vpn/luasrc/lib/gluon/config-mode/wizard/0300-mesh-vpn.lua
+index da17af3a..261dfbd4 100644
+--- a/package/gluon-config-mode-mesh-vpn/luasrc/lib/gluon/config-mode/wizard/0300-mesh-vpn.lua
++++ b/package/gluon-config-mode-mesh-vpn/luasrc/lib/gluon/config-mode/wizard/0300-mesh-vpn.lua
+@@ -1,11 +1,4 @@
+-local vpn = require 'gluon.mesh-vpn'
+-local _, active_vpn = vpn.get_active_provider()
+-
+ return function(form, uci)
+-	if active_vpn == nil then
+-		return
+-	end
+-
+ 	local pkg_i18n = i18n 'gluon-config-mode-mesh-vpn'
+ 
+ 	local msg = pkg_i18n.translate(
+-- 
+2.34.1
+

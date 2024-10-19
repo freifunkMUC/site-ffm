@@ -1,0 +1,25 @@
+From 8b655710263639b916e3645126226f4f70316f0d Mon Sep 17 00:00:00 2001
+From: Kasalehlia <kasalehlia@clonejo.de>
+Date: Sun, 24 Feb 2019 12:06:41 +0100
+Subject: [PATCH 06/38] uradvd: announce on client bridge
+
+---
+ package/gluon-mesh-batman-adv/luasrc/lib/gluon/radvd/arguments | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/package/gluon-mesh-batman-adv/luasrc/lib/gluon/radvd/arguments b/package/gluon-mesh-batman-adv/luasrc/lib/gluon/radvd/arguments
+index 94e1e1db..fd214c29 100755
+--- a/package/gluon-mesh-batman-adv/luasrc/lib/gluon/radvd/arguments
++++ b/package/gluon-mesh-batman-adv/luasrc/lib/gluon/radvd/arguments
+@@ -6,7 +6,7 @@ local f = io.open("/tmp/range6","r")
+ if f then
+     local range6 = f:read('*a')
+     f:close()
+-    io.write("-i local-node -p " .. range6)
++    io.write("-i br-client -p " .. range6)
+ 
+     if site.dns.servers() and site.next_node.ip6() then
+         io.write(" --rdnss " .. site.next_node.ip6())
+-- 
+2.34.1
+

@@ -1,0 +1,33 @@
+From 0fbff07d12f5ad7e7e50d8b4cc54bbbc5ba5676d Mon Sep 17 00:00:00 2001
+From: Kasalehlia <kasalehlia@clonejo.de>
+Date: Sat, 23 Feb 2019 19:13:14 +0100
+Subject: [PATCH 05/38] radvd: use range from /tmp/range6 instead of site
+
+---
+ .../luasrc/lib/gluon/radvd/arguments                  | 11 ++++++++---
+ 1 file changed, 8 insertions(+), 3 deletions(-)
+
+diff --git a/package/gluon-mesh-batman-adv/luasrc/lib/gluon/radvd/arguments b/package/gluon-mesh-batman-adv/luasrc/lib/gluon/radvd/arguments
+index c7f43e11..94e1e1db 100755
+--- a/package/gluon-mesh-batman-adv/luasrc/lib/gluon/radvd/arguments
++++ b/package/gluon-mesh-batman-adv/luasrc/lib/gluon/radvd/arguments
+@@ -2,8 +2,13 @@
+ 
+ local site = require "gluon.site"
+ 
+-io.write("-i local-node -p " .. site.prefix6())
++local f = io.open("/tmp/range6","r")
++if f then
++    local range6 = f:read('*a')
++    f:close()
++    io.write("-i local-node -p " .. range6)
+ 
+-if site.dns.servers() and site.next_node.ip6() then
+-	io.write(" --rdnss " .. site.next_node.ip6())
++    if site.dns.servers() and site.next_node.ip6() then
++        io.write(" --rdnss " .. site.next_node.ip6())
++    end
+ end
+-- 
+2.34.1
+

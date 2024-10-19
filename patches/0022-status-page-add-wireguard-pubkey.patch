@@ -1,0 +1,36 @@
+From e5d6419ac8f079f4808e66f795d134b9ac862856 Mon Sep 17 00:00:00 2001
+From: Kasalehlia <kasalehlia@clonejo.de>
+Date: Sun, 9 Jan 2022 15:37:15 +0100
+Subject: [PATCH 22/38] status-page: add wireguard pubkey
+
+---
+ .../files/lib/gluon/status-page/view/status-page.html       | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/package/gluon-status-page/files/lib/gluon/status-page/view/status-page.html b/package/gluon-status-page/files/lib/gluon/status-page/view/status-page.html
+index fddb4f1f..a98eded8 100644
+--- a/package/gluon-status-page/files/lib/gluon/status-page/view/status-page.html
++++ b/package/gluon-status-page/files/lib/gluon/status-page/view/status-page.html
+@@ -117,6 +117,8 @@
+ 			statistics(key .. '/bytes', 'bytes')
+ 		)
+ 	end
++	
++	local wg_pubkey = util.readfile('/etc/parker/wg-pubkey')
+ 
+ 	http:prepare_content("text/html")
+ -%>
+@@ -205,6 +207,10 @@
+ 						<dd>batman-adv <%| nodeinfo.software['batman-adv'].version %> (compat<%| nodeinfo.software['batman-adv'].compat %>)</dd>
+ 						<%- end %>
+ 					<%- end %>
++					<% if wg_pubkey then -%>
++					  <dt>Wireguard Key</dt>
++					  <dd><%| wg_pubkey %></dd>
++					<%- end %>
+ 				</dl>
+ 			</div>
+ 			<div class="frame">
+-- 
+2.34.1
+

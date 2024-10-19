@@ -1,0 +1,62 @@
+From 7f22bd7f43afb8d4f079f85df2503afbb3876c99 Mon Sep 17 00:00:00 2001
+From: Jan Luebbe <sho@stratum0.net>
+Date: Sat, 16 Jan 2021 12:19:51 +0100
+Subject: [PATCH 11/38] gluon-radv-filterd: only redirect packets addressed to
+ routers
+
+Packets which have a destination MAC of other local nodes should not be
+redirected, as this possibly results in routing loops in networks with more
+than one uplink.
+
+Signed-off-by: Jan Luebbe <sho@stratum0.net>
+---
+ .../luasrc/lib/gluon/ebtables/400-radv-filterd        |  5 +++--
+ package/gluon-radv-filterd/src/gluon-radv-filterd.c   | 11 +++++++++++
+ 2 files changed, 14 insertions(+), 2 deletions(-)
+
+diff --git a/package/gluon-radv-filterd/luasrc/lib/gluon/ebtables/400-radv-filterd b/package/gluon-radv-filterd/luasrc/lib/gluon/ebtables/400-radv-filterd
+index 4e4f247b..afe06299 100644
+--- a/package/gluon-radv-filterd/luasrc/lib/gluon/ebtables/400-radv-filterd
++++ b/package/gluon-radv-filterd/luasrc/lib/gluon/ebtables/400-radv-filterd
+@@ -2,6 +2,7 @@ chain('RADV_FILTER', 'DROP')
+ rule 'FORWARD -p IPv6 -i bat0 --ip6-protocol ipv6-icmp --ip6-icmp-type router-advertisement -j RADV_FILTER'
+ rule 'RADV_FILTER -j ACCEPT'
+ 
++chain('REDIRECT_FILTER', 'RETURN', 'nat')
+ chain('REDIRECT', 'RETURN', 'nat')
+-rule('PREROUTING -p IPv6 --logical-in br-client --ip6-destination 2000::/3 -j REDIRECT', 'nat')
+-rule('OUTPUT -p IPv6 --logical-out br-client --ip6-destination 2000::/3 -j REDIRECT', 'nat')
++rule('PREROUTING -p IPv6 --logical-in br-client --ip6-destination 2000::/3 -j REDIRECT_FILTER', 'nat')
++rule('OUTPUT -p IPv6 --logical-out br-client --ip6-destination 2000::/3 -j REDIRECT_FILTER', 'nat')
+diff --git a/package/gluon-radv-filterd/src/gluon-radv-filterd.c b/package/gluon-radv-filterd/src/gluon-radv-filterd.c
+index a0b363af..3506b351 100644
+--- a/package/gluon-radv-filterd/src/gluon-radv-filterd.c
++++ b/package/gluon-radv-filterd/src/gluon-radv-filterd.c
+@@ -164,6 +164,10 @@ static void cleanup(void) {
+ 				{ "ebtables-tiny", "-A", G.chain, "-j", "ACCEPT", NULL }))
+ 			DEBUG_MSG("warning: adding new rule to ebtables chain %s failed", G.chain);
+ 
++		if (fork_execvp_timeout(&timeout, "ebtables-tiny", (const char *[])
++				{ "ebtables-tiny", "-t", "nat", "-F", "REDIRECT_FILTER", NULL}))
++			DEBUG_MSG("warning: flushing ebtables nat chain REDIRECT_FILTER failed", G.chain);
++
+ 		if (fork_execvp_timeout(&timeout, "ebtables-tiny", (const char *[])
+ 				{ "ebtables-tiny", "-t", "nat", "-F", "REDIRECT", NULL}))
+ 			DEBUG_MSG("warning: flushing ebtables nat chain REDIRECT failed", G.chain);
+@@ -674,6 +678,13 @@ static void update_redirect(void) {
+ 		}
+ 		snprintf(prefix, sizeof(prefix), "%s/64", addr);
+ 
++		if (fork_execvp_timeout(&timeout, "ebtables-tiny", (const char *[])
++			{ "ebtables-tiny", "-t", "nat", "-A", "REDIRECT_FILTER",
++			"-d", mac,
++			"-j", "REDIRECT",
++			NULL }))
++		error_message(0, 0, "warning: adding new rule to ebtables chain REDIRECT_FILTER failed");
++
+ 		if (fork_execvp_timeout(&timeout, "ebtables-tiny", (const char *[])
+ 			{ "ebtables-tiny", "-t", "nat", "-A", "REDIRECT",
+ 			"-p", "IPv6",
+-- 
+2.34.1
+

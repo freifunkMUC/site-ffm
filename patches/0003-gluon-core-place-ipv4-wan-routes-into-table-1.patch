@@ -1,0 +1,24 @@
+From 993845aec292c3882767e470702cd87810e69f51 Mon Sep 17 00:00:00 2001
+From: Jan Luebbe <jlu@pengutronix.de>
+Date: Sun, 16 Sep 2018 12:08:31 +0200
+Subject: [PATCH 03/38] gluon-core: place ipv4 wan routes into table 1
+
+---
+ package/gluon-core/luasrc/lib/gluon/upgrade/110-network | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/package/gluon-core/luasrc/lib/gluon/upgrade/110-network b/package/gluon-core/luasrc/lib/gluon/upgrade/110-network
+index bc195b3d..f950abdb 100755
+--- a/package/gluon-core/luasrc/lib/gluon/upgrade/110-network
++++ b/package/gluon-core/luasrc/lib/gluon/upgrade/110-network
+@@ -47,6 +47,7 @@ uci:section('network', 'interface', 'wan', {
+ 	multicast_querier = false,
+ 	peerdns = false,
+ 	auto = true,
++	ip4table = 1,
+ })
+ 
+ uci:section('network', 'rule', 'wan_lookup', {
+-- 
+2.34.1
+

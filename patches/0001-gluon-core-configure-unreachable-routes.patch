@@ -1,0 +1,63 @@
+From 712175c8234f8532e04c9849c20f6df4f63d07dd Mon Sep 17 00:00:00 2001
+From: Jan Luebbe <jlu@pengutronix.de>
+Date: Sat, 15 Sep 2018 21:37:11 +0200
+Subject: [PATCH 01/38] gluon-core: configure unreachable routes
+
+---
+ .../luasrc/lib/gluon/upgrade/110-network      | 33 +++++++++++++++++++
+ 1 file changed, 33 insertions(+)
+
+diff --git a/package/gluon-core/luasrc/lib/gluon/upgrade/110-network b/package/gluon-core/luasrc/lib/gluon/upgrade/110-network
+index d1493d26..bc195b3d 100755
+--- a/package/gluon-core/luasrc/lib/gluon/upgrade/110-network
++++ b/package/gluon-core/luasrc/lib/gluon/upgrade/110-network
+@@ -49,6 +49,21 @@ uci:section('network', 'interface', 'wan', {
+ 	auto = true,
+ })
+ 
++uci:section('network', 'rule', 'wan_lookup', {
++	mark = '0x01/0x01',
++	lookup = 1,
++})
++
++uci:section('network', 'route', 'wan_unreachable', {
++	type = 'unreachable',
++	interface = 'loopback',
++	target = '0.0.0.0',
++	netmask = '0',
++	table = 1,
++	metric = 65535,
++})
++
++
+ uci:section('network', 'interface', 'wan6', {
+ 	proto = wan6.proto or 'dhcpv6',
+ 	ip6addr = wan6.ip6addr,
+@@ -74,6 +89,24 @@ uci:section('network', 'route6', 'wan6_unreachable', {
+ 	metric = 65535,
+ })
+ 
++
++uci:section('network', 'route', 'client_unreachable', {
++	type = 'unreachable',
++	interface = 'loopback',
++	target = '0.0.0.0',
++	netmask = '0',
++	metric = 65535,
++})
++
++uci:section('network', 'route6', 'client6_unreachable', {
++	type = 'unreachable',
++	interface = 'loopback',
++	target = '::/0',
++	gateway = '::',
++	metric = 65535,
++})
++
++
+ uci:save('network')
+ 
+ 
+-- 
+2.34.1
+

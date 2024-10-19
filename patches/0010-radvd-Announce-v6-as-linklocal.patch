@@ -1,0 +1,45 @@
+From 1f4341f0cb2051be0053ae33a58f385e1a67ab03 Mon Sep 17 00:00:00 2001
+From: Chrissi^ <chris@tinyhost.de>
+Date: Sun, 24 May 2020 15:53:12 +0200
+Subject: [PATCH 10/38] radvd: Announce v6 as linklocal
+
+This change let's uradvd deliver the v6 link-local of this node as DNS.
+With this change DNS-requests are not affected by the radv-filterd
+-rewrites during roaming.
+
+Signed-off-by: Chrissi^ <chris@tinyhost.de>
+---
+ .../luasrc/lib/gluon/radvd/arguments                | 13 +++++++------
+ 1 file changed, 7 insertions(+), 6 deletions(-)
+
+diff --git a/package/gluon-mesh-batman-adv/luasrc/lib/gluon/radvd/arguments b/package/gluon-mesh-batman-adv/luasrc/lib/gluon/radvd/arguments
+index d450b81e..5fd7c2c7 100755
+--- a/package/gluon-mesh-batman-adv/luasrc/lib/gluon/radvd/arguments
++++ b/package/gluon-mesh-batman-adv/luasrc/lib/gluon/radvd/arguments
+@@ -1,16 +1,17 @@
+ #!/usr/bin/lua
+ 
+-local site = require "gluon.site"
++local json=require("jsonc")
++local f = assert(io.popen("ip -6 -br -j addr show dev br-client scope link", 'r'))
++local s = assert(f:read('*a'))                                                    
++f:close()                                                                         
++local ll = json.parse(s)[1]["addr_info"][2]["local"]
+ 
+ local f = io.open("/tmp/range6","r")
+-local g = io.open("/tmp/addr6", "r")
+ 
+-if f and g then
++if f then
+     local range6 = f:read('*a')
+-    local addr6  = g:read('*a')
+     f:close()
+-    g:close()
+ 
+     io.write("-i br-client -p " .. range6)
+-    io.write(" --rdnss " .. addr6)
++    io.write(" --rdnss " .. ll)
+ end
+-- 
+2.34.1
+

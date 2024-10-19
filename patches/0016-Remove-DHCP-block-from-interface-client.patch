@@ -1,0 +1,27 @@
+From 01b4ab7723b768a71fe16e20f4c77dc1ea7e578e Mon Sep 17 00:00:00 2001
+From: Jan Luebbe <jlu@pengutronix.de>
+Date: Sun, 2 Dec 2018 12:22:08 +0100
+Subject: [PATCH 16/38] Remove DHCP-block from interface "client"
+
+For parker we need DHCP on the client interface. Ths rule
+prevents us from doing so.
+In addition: make sure old rules will be deleted on upgrade.
+---
+ .../luasrc/lib/gluon/upgrade/300-gluon-client-bridge-network    | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/package/gluon-client-bridge/luasrc/lib/gluon/upgrade/300-gluon-client-bridge-network b/package/gluon-client-bridge/luasrc/lib/gluon/upgrade/300-gluon-client-bridge-network
+index 3d4dbac3..7f501e67 100755
+--- a/package/gluon-client-bridge/luasrc/lib/gluon/upgrade/300-gluon-client-bridge-network
++++ b/package/gluon-client-bridge/luasrc/lib/gluon/upgrade/300-gluon-client-bridge-network
+@@ -46,5 +46,7 @@ uci:section('dhcp', 'dhcp', 'local_client', {
+ 	ignore = true,
+ })
+ 
++uci:delete('dhcp', 'local_client')
++
+ uci:save('dhcp')
+ uci:save('firewall')
+-- 
+2.34.1
+

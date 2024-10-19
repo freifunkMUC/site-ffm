@@ -1,0 +1,42 @@
+From cec5d18828cd0978cdd3078d6387dd690b767ca2 Mon Sep 17 00:00:00 2001
+From: Jan Luebbe <sho@stratum0.net>
+Date: Wed, 9 Jun 2021 20:51:33 +0200
+Subject: [PATCH 15/38] gluon-radv-filterd: never return NULL to respondd
+
+respondd drops existing json object if any provider returns NULL, so we need to
+return an empty object instead.
+---
+ package/gluon-radv-filterd/src/respondd.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/package/gluon-radv-filterd/src/respondd.c b/package/gluon-radv-filterd/src/respondd.c
+index 9a2a9fc0..34b70222 100644
+--- a/package/gluon-radv-filterd/src/respondd.c
++++ b/package/gluon-radv-filterd/src/respondd.c
+@@ -39,20 +39,20 @@ static struct json_object * get_radv_filter() {
+ }
+ 
+ static struct json_object * respondd_provider_statistics() {
++	struct json_object *ret = json_object_new_object();
+ 	char buf[6];
+ 	int fd = open("/sys/class/net/bat0/mesh/gw_mode", O_RDONLY);
+ 	if (fd == -1) {
+ 		perror("error opening gateway info file");
+-		return NULL;
++		return ret;
+ 	}
+ 	memset(buf, 0, sizeof(buf));
+ 	read(fd, buf, sizeof(buf));
+ 	close(fd);
+ 	if (strncmp(buf, "server", 6) == 0) {
+ 		// We are a batman gateway, do not write gateway6
+-		return NULL;
++		return ret;
+ 	}
+-	struct json_object *ret = json_object_new_object();
+ 
+ 	json_object_object_add(ret, "gateway6", get_radv_filter());
+ 
+-- 
+2.34.1
+
