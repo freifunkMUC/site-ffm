@@ -8,6 +8,6 @@
 #		documented below
 GLUON_SITE_FEEDS='community'
 
-PACKAGES_COMMUNITY_REPO=https://github.com/freifunk-gluon/community-packages.git
-PACKAGES_COMMUNITY_COMMIT=7ee3afcac1449989979a61647916536a0728c0f9
-PACKAGES_COMMUNITY_BRANCH=main
+PACKAGES_COMMUNITY_REPO=https://github.com/freifunkMUC/community-packages.git
+PACKAGES_COMMUNITY_COMMIT=bc1f90b1330ad69b7652f5231e8beb5f6a017a51
+PACKAGES_COMMUNITY_BRANCH=ebpf-clat
