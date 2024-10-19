@@ -1,0 +1,26 @@
+From cf817cdeb09bcec7ce44f9ccb09055236aae35b5 Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Thu, 31 Oct 2024 15:34:18 +0100
+Subject: [PATCH 11/11] wired-tpo for BatmanV: fix shellcheck error SC2086
+
+Also change indentation to tabs to make editorconfig happy
+---
+ .../core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo b/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo
+index 2f7d3c13..caecb3dc 100755
+--- a/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo
++++ b/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo
+@@ -1,6 +1,6 @@
+ #!/bin/sh
+ 
+ if [ "$IFNAME" = "vx_mesh_uplink" ] || [ "$IFNAME" = "vx_mesh_other" ] || [ "$IFNAME" = "mesh-vpn" ]; then
+-        sleep 3;
+-        batctl hardif $IFNAME throughput_override 1000mbit;
++	sleep 3;
++	batctl hardif "${IFNAME}" throughput_override 1000mbit;
+ fi
+-- 
+2.34.1
+

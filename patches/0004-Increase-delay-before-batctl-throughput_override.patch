@@ -1,0 +1,24 @@
+From 8d330efea39a8acc93296683ff7d55e6cd8fcd91 Mon Sep 17 00:00:00 2001
+From: goligo <ich@malte.de>
+Date: Tue, 8 Jun 2021 17:25:45 +0200
+Subject: [PATCH 04/11] Increase delay before batctl throughput_override
+
+---
+ .../core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo   | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo b/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo
+index d28ac53b..3f2ac3a5 100755
+--- a/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo
++++ b/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo
+@@ -1,6 +1,6 @@
+ #!/bin/sh
+ 
+ if [ "$IFNAME" = "vx_mesh_lan" ] || [ "$IFNAME" = "vx_mesh_wan" ] || [ "$IFNAME" = "mesh-vpn" ]; then
+-        sleep 1;
++        sleep 3;
+         batctl hardif $IFNAME throughput_override 1000mbit;
+ fi
+-- 
+2.34.1
+
