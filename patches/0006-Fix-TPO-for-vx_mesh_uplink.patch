@@ -1,0 +1,26 @@
+From 6cfe993b03713feedc497e8c359e80d59c56e470 Mon Sep 17 00:00:00 2001
+From: goligo <ich@malte.de>
+Date: Tue, 15 Nov 2022 16:27:38 +0100
+Subject: [PATCH 06/11] Fix TPO for vx_mesh_uplink
+
+Gluon v2022.1.1 uses a new interface called vx_mesh_uplink, which was
+not yet handled correctly in our BATMAN V Patch.
+---
+ .../core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo   | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo b/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo
+index 137ae023..2f7d3c13 100755
+--- a/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo
++++ b/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo
+@@ -1,6 +1,6 @@
+ #!/bin/sh
+ 
+-if [ "$IFNAME" = "vx_mesh_other" ] || [ "$IFNAME" = "mesh-vpn" ]; then
++if [ "$IFNAME" = "vx_mesh_uplink" ] || [ "$IFNAME" = "vx_mesh_other" ] || [ "$IFNAME" = "mesh-vpn" ]; then
+         sleep 3;
+         batctl hardif $IFNAME throughput_override 1000mbit;
+ fi
+-- 
+2.34.1
+
