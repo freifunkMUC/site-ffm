@@ -26,6 +26,7 @@ packages{
     'gluon-ffbsnext-nextnode',
     '-gluon-ebtables-limit-arp',
     'iwinfo',
+    'kmod-nat46',
     'respondd-module-airtime',
 }
 
