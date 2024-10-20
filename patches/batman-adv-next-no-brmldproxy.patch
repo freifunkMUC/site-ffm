@@ -1,0 +1,23 @@
+diff --git a/patches/packages/batman_adv_next/0001-batman-adv-next-mldproxy.patch b/patches/packages/batman_adv_next/0001-batman-adv-next-mldproxy.patch
+new file mode 100644
+index 00000000..d332de9e
+--- /dev/null
++++ b/patches/packages/batman_adv_next/0001-batman-adv-next-mldproxy.patch
+@@ -0,0 +1,17 @@
++From: DasSkelett <git@dasskelett.dev>
++Date: Sat, 1 Jan 2022 10:09:13 +0100
++Subject: batman-adv: remove dependency on brmldproxy
++
++diff --git a/batman-adv/Makefile b/batman-adv/Makefile
++index 0182e826aa169f2b35285e1bd429147f3ddbdec1..1ab14651b65caed7c732f9bdd6338c018989059b 100644
++--- a/batman-adv/Makefile
+++++ b/batman-adv/Makefile
++@@ -36,7 +36,7 @@ define KernelPackage/batman-adv
++   TITLE:=B.A.T.M.A.N. Adv
++   URL:=https://www.open-mesh.org/
++   DEPENDS:=+BATMAN_ADV_BLA:kmod-lib-crc16 +kmod-lib-crc32c +kmod-cfg80211 +batctl
++-  DEPENDS+=+(LINUX_5_15&&PACKAGE_gluon-mesh-batman-adv-15):gluon-mesh-batman-adv-brmldproxy
+++  # DEPENDS+=+(LINUX_5_15&&PACKAGE_gluon-mesh-batman-adv-15):gluon-mesh-batman-adv-brmldproxy
++   FILES:=$(PKG_BUILD_DIR)/net/batman-adv/batman-adv.$(LINUX_KMOD_SUFFIX)
++   AUTOLOAD:=$(call AutoProbe,batman-adv)
++ endef
