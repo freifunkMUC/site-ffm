@@ -5,6 +5,7 @@ features{
     'config-mode-domain-select',
     'config-mode-geo-location-osm',
     'config-mode-mesh-vpn',
+    'mesh-batman-adv-15',
     'mesh-vpn-parker',
     'respondd',
     'status-page',
