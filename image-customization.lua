@@ -23,6 +23,7 @@ packages{
     'ffac-change-autoupdater',
     'ffac-ssid-changer',
     'ffbs-collect-debug-info',
+    'ffbs-debugbathosts',
     'ffmuc-ipv6-ra-filter',
     'ffmuc-mesh-vpn-wireguard-vxlan',
     'iwinfo',
