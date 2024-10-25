@@ -9,10 +9,10 @@ GLUON_TARGETS ?= $(shell cat targets | tr '\n' ' ')
 GLUON_AUTOUPDATER_ENABLED := 1
 
 ifneq (,$(shell git describe --exact-match --tags 2>/dev/null))
-	GLUON_AUTOUPDATER_BRANCH := stable
+	GLUON_AUTOUPDATER_BRANCH := parker
 	GLUON_RELEASE := $(shell git describe --tags 2>/dev/null)
 else
-	GLUON_AUTOUPDATER_BRANCH := experimental
+	GLUON_AUTOUPDATER_BRANCH := parker
 	EXP_FALLBACK = $(shell date '+%Y%m%d')
 	BUILD_NUMBER ?= exp$(EXP_FALLBACK)
 	GLUON_RELEASE := $(shell git describe --tags)~$(BUILD_NUMBER)
@@ -50,7 +50,7 @@ else # only run for specific gluon devices (works only for a single GLUON_TARGET
 endif
 
 manifest: build
-	for branch in experimental testing stable; do \
+	for branch in parker experimental testing stable; do \
 		${GLUON_MAKE} manifest GLUON_AUTOUPDATER_BRANCH=$$branch;\
 	done
 	mv -f ${GLUON_BUILD_DIR}/output/* ./output/
