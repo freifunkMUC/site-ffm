@@ -47,7 +47,7 @@ else # only run for specific gluon devices (works only for a single GLUON_TARGET
 endif
 
 manifest: build
-	for branch in next experimental testing stable; do \
+	for branch in parker next experimental testing stable; do \
 		${GLUON_MAKE} manifest GLUON_AUTOUPDATER_BRANCH=$$branch;\
 	done
 	mv -f ${GLUON_BUILD_DIR}/output/* ./output/
