@@ -60,13 +60,13 @@ jobs:
         if: matrix.target == 'x86-64'
         run: |
           sed -i '/ffmuc-mesh-vpn-wireguard-vxlan/d' site.mk
-          make BROKEN=1 GLUON_TARGETS=${{ matrix.target }} BUILD_NUMBER=${{ github.event.pull_request.number || github.run_id }} V=s
+          make BROKEN=1 GLUON_TARGETS=${{ matrix.target }} BUILD_NUMBER=${{ github.event.pull_request.number && format('pr{0}', github.event.pull_request.number) || github.run_id && format('run{0}', github.run_id) }} V=s
           git checkout site.mk
       - name: build target ${{ matrix.target }}
         id: compile
         run: |
           git checkout -b patched ${GITHUB_SHA}
-          make BROKEN=1 GLUON_TARGETS=${{ matrix.target }} BUILD_NUMBER=${{ github.event.pull_request.number || github.run_id }} V=s
+          make BROKEN=1 GLUON_TARGETS=${{ matrix.target }} BUILD_NUMBER=${{ github.event.pull_request.number && format('pr{0}', github.event.pull_request.number) || github.run_id && format('run{0}', github.run_id) }} V=s
           echo "status=success" >> $GITHUB_OUTPUT
       - name: Upload firmware ${{ matrix.target }}
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
