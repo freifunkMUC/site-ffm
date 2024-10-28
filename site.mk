@@ -29,11 +29,6 @@ GLUON_SITE_PACKAGES := \
 	iwinfo \
 	respondd-module-airtime
 
-DEFAULT_GLUON_RELEASE := v2022.10.1~exp$(shell date '+%Y%m%d%H')
-
-# Allow overriding the release number from the command line
-GLUON_RELEASE ?= $(DEFAULT_GLUON_RELEASE)
-
 GLUON_PRIORITY ?= 0
 
 GLUON_REGION ?= eu
