@@ -14,8 +14,8 @@ ifneq (,$(shell git describe --exact-match --tags 2>/dev/null))
 else
 	GLUON_AUTOUPDATER_BRANCH := next
 	EXP_FALLBACK = $(shell date '+%Y%m%d')
-	BUILD_NUMBER ?= $(EXP_FALLBACK)
-	GLUON_RELEASE := $(shell git describe --tags)~exp$(BUILD_NUMBER)
+	BUILD_NUMBER ?= exp$(EXP_FALLBACK)
+	GLUON_RELEASE := $(shell git describe --tags)~$(BUILD_NUMBER)
 endif
 
 JOBS ?= $(shell nproc)
