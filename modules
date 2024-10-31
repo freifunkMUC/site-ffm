@@ -9,7 +9,7 @@
 GLUON_SITE_FEEDS='community packages_ffbs'
 
 PACKAGES_COMMUNITY_REPO=https://github.com/freifunk-gluon/community-packages.git
-PACKAGES_COMMUNITY_COMMIT=a64fb18c5b0d00e8d384c32a0a97b27a3b055448
+PACKAGES_COMMUNITY_COMMIT=4a90cd221e8eba254ffc8dc5addbf3374b830415
 PACKAGES_COMMUNITY_BRANCH=master
 
 PACKAGES_PACKAGES_FFBS_REPO=https://gitli.stratum0.org/ffbs/ffbs-packages.git
