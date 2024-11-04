@@ -53,6 +53,10 @@ jobs:
         uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
         with:
           fetch-depth: 0
+
+      - name: Show system information
+        run: contrib/actions/show-system-info.sh
+        
       - name: Install build dependencies
         run: |
           sudo -E ./scripts/install_build_dependencies.sh
