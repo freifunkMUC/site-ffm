@@ -1,0 +1,48 @@
+From 83ff4b6e366bda5155ad39de8549c8ea46afeecd Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Thu, 28 Nov 2024 12:01:03 +0100
+Subject: [PATCH] add support for NanoPi R3S
+
+---
+ docs/user/supported_devices.rst                             | 1 +
+ package/gluon-core/luasrc/lib/gluon/upgrade/010-primary-mac | 1 +
+ targets/rockchip-armv8                                      | 1 +
+ 3 files changed, 3 insertions(+)
+
+diff --git a/docs/user/supported_devices.rst b/docs/user/supported_devices.rst
+index 7fce36a6..839535e1 100644
+--- a/docs/user/supported_devices.rst
++++ b/docs/user/supported_devices.rst
+@@ -537,6 +537,7 @@ rockchip-armv8
+ * FriendlyElec
+ 
+   - NanoPi R2S
++  - NanoPi R3S
+   - NanoPi R4S (4GB LPDDR4)
+ 
+ sunxi-cortexa7
+diff --git a/package/gluon-core/luasrc/lib/gluon/upgrade/010-primary-mac b/package/gluon-core/luasrc/lib/gluon/upgrade/010-primary-mac
+index aaa613a2..ebbd746e 100755
+--- a/package/gluon-core/luasrc/lib/gluon/upgrade/010-primary-mac
++++ b/package/gluon-core/luasrc/lib/gluon/upgrade/010-primary-mac
+@@ -110,6 +110,7 @@ local primary_addrs = {
+ 		}},
+ 		{'rockchip', 'armv8', {
+ 			'friendlyarm,nanopi-r2s',
++			'friendlyarm,nanopi-r3s',
+ 			'friendlyarm,nanopi-r4s',
+ 		}},
+ 		{'x86'},
+diff --git a/targets/rockchip-armv8 b/targets/rockchip-armv8
+index 17d5bd41..9cc8a220 100644
+--- a/targets/rockchip-armv8
++++ b/targets/rockchip-armv8
+@@ -4,4 +4,5 @@ defaults {
+ }
+ 
+ device('friendlyelec-nanopi-r2s', 'friendlyarm_nanopi-r2s')
++device('friendlyelec-nanopi-r3s', 'friendlyarm_nanopi-r3s')
+ device('friendlyelec-nanopi-r4s', 'friendlyarm_nanopi-r4s') -- 4GB LPDDR4
+-- 
+2.34.1
+
