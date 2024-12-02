@@ -19,7 +19,21 @@ jobs:
   update-Modules:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Clone Firmware
+        uses: actions/checkout@v4 # v4
+
+      - name: Get Github App Token
+        uses: actions/create-github-app-token@5d869da34e18e7287c1daad50e0b8ea0f506ce69 # v1.11.0
+        id: app-token
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.PRIVATE_KEY }}
+
+      - name: Get GitHub App User ID
+        id: get-user-id
+        run: echo "user-id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
       - name: Get update branch name
         id: branch-name
@@ -36,14 +50,14 @@ jobs:
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c # v6.1.0
         with:
+          token: ${{ steps.app-token.outputs.token }}
           title: '[${{ github.ref_name }}] Add targets ${{ steps.new-targets.outputs.names }}'
           body: |
             Updated targets for branch ${{ github.ref_name }}
 
             New targets: `${{ steps.new-targets.outputs.names }}`
-
-            ⚠️ Please trigger the CI before merging this pull request. ⚠️
           commit-message: "targets: add ${{ steps.new-targets.outputs.names }}"
+          committer: ${{ steps.app-token.outputs.app-slug }}[bot] <${{ steps.get-user-id.outputs.user-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com>
           branch: ${{ steps.branch-name.outputs.branch-name }}
           labels: ${{ github.ref_name }}
           draft: true # this step does not trigger a CI run, so always mark them as draft

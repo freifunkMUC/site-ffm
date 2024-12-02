@@ -1,3 +1,4 @@
+---
 name: Build ffmuc firmware
 
 on:
@@ -26,7 +27,7 @@ jobs:
       build_target_json: ${{ steps.set_target.outputs.build_target }}
     steps:
       - name: Checkout
-        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+        uses: actions/checkout@v4 # v4
       - name: Set target matrix
         id: set_target
         shell: bash
@@ -48,7 +49,7 @@ jobs:
           sudo rm -rf /usr/local/lib/android
           sudo rm -rf /opt/ghc
       - name: Checkout
-        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+        uses: actions/checkout@v4 # v4
         with:
           fetch-depth: 0
       - name: Install build dependencies
