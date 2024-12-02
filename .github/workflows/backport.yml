@@ -4,10 +4,7 @@ name: Backport merged pull request
 on:  # yamllint disable-line rule:truthy
   pull_request_target:
     types: [closed, labeled]
-permissions:
-  contents: write # so it can comment
-  pull-requests: write # so it can create pull requests
-  actions: write # so it can create pull requests on actions/workflows
+
 jobs:
   backport:
     name: Backport pull request
@@ -15,10 +12,20 @@ jobs:
     # Don't run on closed unmerged pull requests
     if: github.event.pull_request.merged
     steps:
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+      - name: Clone Firmware
+        uses: actions/checkout@v4 # v4
+      
+      - name: Get Github App Token
+        uses: actions/create-github-app-token@5d869da34e18e7287c1daad50e0b8ea0f506ce69 # v1.11.0
+        id: app-token
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.PRIVATE_KEY }}
+
       - name: Create backport pull requests
         uses: korthout/backport-action@be567af183754f6a5d831ae90f648954763f17f5 # v3.1.0
         with:
+          github_token: ${{ steps.app-token.outputs.token }}
           experimental: >
             {
               "conflict_resolution": "draft_commit_conflicts"
