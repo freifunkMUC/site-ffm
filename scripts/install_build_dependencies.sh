@@ -34,7 +34,6 @@ apt-get -y --no-install-recommends install \
     perl \
     python3 \
     python3-dev \
-    python3-distutils \
     python3-pyelftools \
     python3-setuptools \
     qemu-utils \
