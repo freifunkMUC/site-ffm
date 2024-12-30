@@ -46,7 +46,7 @@ jobs:
           echo "names=$(git diff --color=always|perl -wlne 'print $1 if /^\e\[32m\+\e\[m\e\[32m(.*)\e\[m$/' | tr '\n' ' ')" >> $GITHUB_OUTPUT
 
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@5e914681df9dc83aa4e4905692ca88beb2f9e91f # v7.0.5
+        uses: peter-evans/create-pull-request@67ccf781d68cd99b580ae25a5c18a1cc84ffff1f # v7.0.6
         with:
           token: ${{ steps.app-token.outputs.token }}
           title: '[${{ github.ref_name }}] Add targets ${{ steps.new-targets.outputs.names }}'
