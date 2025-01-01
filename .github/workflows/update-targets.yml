@@ -5,9 +5,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - stable
-      - legacy
-      - next
+      - 'gluon-*'  # gluon-next and gluon-v202a.1.x
     paths:
       - 'Makefile'
 

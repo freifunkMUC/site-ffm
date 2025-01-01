@@ -5,8 +5,8 @@ on:  # yamllint disable-line rule:truthy
   workflow_dispatch:
   push:
     branches:
-      - stable
-      - next
+      - 'gluon-*'  # gluon-next and gluon-v202a.1.x
+      - '!gluon-v2021.1.x'  # shell code is not maintained on this branch
     paths:
       - '**.sh'
   pull_request:
