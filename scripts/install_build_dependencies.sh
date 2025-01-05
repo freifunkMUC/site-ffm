@@ -31,7 +31,17 @@ apt-get -y --no-install-recommends install \
     make \
     patch \
     perl \
+<<<<<<< HEAD
     python2 \
+=======
+    python3 \
+    python3-dev \
+    python3-pyelftools \
+    python3-setuptools \
+    qemu-utils \
+    rsync \
+    swig \
+>>>>>>> 93178a7 (scripts: drop dependency on python3-distutils)
     tar \
     unzip \
     wget
