@@ -1,6 +1,6 @@
 GLUON_BUILD_DIR := gluon-build
 GLUON_GIT_URL := https://github.com/freifunk-gluon/gluon.git
-GLUON_GIT_REF := dc59c71f304fbe6a6a55d662754cee637e4e36d9 # Gluon next (OpenWRT 24.10)
+GLUON_GIT_REF := d3f23425f763baf2e27ddc99d090bc4f83f80d8b # Gluon next (tree/ar9344-reset)
 
 PATCH_DIR := ./patches
 SECRET_KEY_FILE ?= ${HOME}/.gluon-secret-key
