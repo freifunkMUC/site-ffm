@@ -12,6 +12,7 @@ ipq40xx-mikrotik
 ipq806x-generic
 kirkwood-generic
 lantiq-xrx200
+lantiq-xrx200_legacy
 lantiq-xway
 mediatek-filogic
 mediatek-mt7622
