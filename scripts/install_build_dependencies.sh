@@ -33,7 +33,13 @@ apt-get -y --no-install-recommends install \
     patch \
     perl \
     python3 \
+<<<<<<< HEAD
     python3-distutils \
+=======
+    python3-dev \
+    python3-pyelftools \
+    python3-setuptools \
+>>>>>>> 93178a7 (scripts: drop dependency on python3-distutils)
     qemu-utils \
     rsync \
     tar \
