@@ -8,6 +8,6 @@
 #		documented below
 GLUON_SITE_FEEDS='community'
 
-PACKAGES_COMMUNITY_REPO=https://github.com/freifunk-gluon/community-packages.git
-PACKAGES_COMMUNITY_COMMIT=a2015c4e4b6e0ec1ce7951a7d141dabb71bdfcae
-PACKAGES_COMMUNITY_BRANCH=master
+PACKAGES_COMMUNITY_REPO=https://github.com/T0biii/community-packages
+PACKAGES_COMMUNITY_COMMIT=12eef707d81faf8047e4b0f1ebacad943b25cb9a
+PACKAGES_COMMUNITY_BRANCH=add-gui
