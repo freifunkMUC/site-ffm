@@ -1,6 +1,6 @@
 GLUON_BUILD_DIR := gluon-build
-GLUON_GIT_URL := https://github.com/freifunk-gluon/gluon.git
-GLUON_GIT_REF := ab1c311845ba72484c88294fe2735fbc028b9ba5 # gluon main (2025-01-11)
+GLUON_GIT_URL := https://github.com/freifunkMUC/gluon.git
+GLUON_GIT_REF := 1515a09c45e088827991d9b58e4e79125be2b352 # ar9344-reset-old-timing
 
 PATCH_DIR := ./patches
 SECRET_KEY_FILE ?= ${HOME}/.gluon-secret-key
