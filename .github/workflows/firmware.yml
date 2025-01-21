@@ -58,7 +58,7 @@ jobs:
       - name: build target ${{ matrix.target }}
         id: compile
         run: |
-          git checkout -b patched ${GITHUB_SHA}
+          git checkout -b patched ${{ github.event.pull_request.head.sha || github.sha }}
           make BROKEN=1 GLUON_TARGETS=${{ matrix.target }} BUILD_NUMBER=${{ github.event.pull_request.number && format('pr{0}', github.event.pull_request.number) || github.run_id && format('run{0}', github.run_id) }} V=s
           echo "status=success" >> $GITHUB_OUTPUT
       - name: Upload firmware ${{ matrix.target }}
