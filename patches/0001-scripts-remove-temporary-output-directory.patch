@@ -1,0 +1,24 @@
+From f18ce98858d2e132199b7bba5e61374b61321542 Mon Sep 17 00:00:00 2001
+From: David Bauer <mail@david-bauer.net>
+Date: Sat, 1 Jun 2024 00:04:29 +0200
+Subject: [PATCH] scripts: remove temporary output directory
+
+Signed-off-by: David Bauer <mail@david-bauer.net>
+---
+ scripts/copy_output.lua | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/scripts/copy_output.lua b/scripts/copy_output.lua
+index 1af2f8f7..0557da7d 100755
+--- a/scripts/copy_output.lua
++++ b/scripts/copy_output.lua
+@@ -92,5 +92,6 @@ if (env.GLUON_DEVICES or '') == '' then
+ 	lib.exec {'rm', '-f', dest_dir('\0')..'/\0'}
+ 	lib.exec({'rmdir', '-p', dest_dir('\0')}, true, '2>/dev/null')
+ 	mkdir(dest_dir(package_prefix))
++	lib.exec {'rm', '-rf', 'openwrt/bin/targets/'..bindir..'/packages/tmp\0'}
+ 	lib.exec {'cp', 'openwrt/bin/targets/'..bindir..'/packages/\0', dest_dir(package_prefix)}
+ end
+-- 
+2.34.1
+

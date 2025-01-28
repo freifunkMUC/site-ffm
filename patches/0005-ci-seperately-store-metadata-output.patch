@@ -1,0 +1,25 @@
+From a7a1abc2dba406f10e9d1753ffc72718d9187eb2 Mon Sep 17 00:00:00 2001
+From: David Bauer <mail@david-bauer.net>
+Date: Tue, 12 Dec 2023 14:49:40 +0100
+Subject: [PATCH 5/5] ci: seperately store metadata output
+
+---
+ .github/workflows/build-gluon.yml | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/.github/workflows/build-gluon.yml b/.github/workflows/build-gluon.yml
+index 8f3cc236..80af672c 100644
+--- a/.github/workflows/build-gluon.yml
++++ b/.github/workflows/build-gluon.yml
+@@ -66,3 +66,8 @@ jobs:
+           name: ${{ matrix.target }}_output
+           path: output
+ 
++      - name: Archive metadata
++        uses: actions/upload-artifact@v3
++        with:
++          name: ${{ matrix.target }}_metadata
++          path: output/meta
+-- 
+2.34.1
+

@@ -1,0 +1,64 @@
+From 6fa08c99b0688cbd6dfa2be7276931db8199fa96 Mon Sep 17 00:00:00 2001
+From: David Bauer <mail@david-bauer.net>
+Date: Mon, 11 Dec 2023 16:18:22 +0100
+Subject: [PATCH 2/5] build: copy OpenWrt profile JSON
+
+Copy the OpenWrt profiles.json file generated for each target to the
+output directory.
+
+Signed-off-by: David Bauer <mail@david-bauer.net>
+---
+ Makefile                | 3 ++-
+ scripts/copy_output.lua | 8 ++++++++
+ 2 files changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/Makefile b/Makefile
+index 6419417f..95f13492 100644
+--- a/Makefile
++++ b/Makefile
+@@ -43,6 +43,7 @@ GLUON_OUTPUTDIR ?= output
+ GLUON_IMAGEDIR ?= $(GLUON_OUTPUTDIR)/images
+ GLUON_PACKAGEDIR ?= $(GLUON_OUTPUTDIR)/packages
+ GLUON_DEBUGDIR ?= $(GLUON_OUTPUTDIR)/debug
++GLUON_METADIR ?= $(GLUON_OUTPUTDIR)/meta
+ GLUON_TARGETSDIR ?= targets
+ GLUON_PATCHESDIR ?= patches
+ 
+@@ -73,7 +74,7 @@ GLUON_VARS = \
+ 	GLUON_VERSION GLUON_SITE_VERSION \
+ 	GLUON_RELEASE GLUON_REGION GLUON_MULTIDOMAIN GLUON_AUTOREMOVE GLUON_DEBUG GLUON_MINIFY GLUON_DEPRECATED \
+ 	GLUON_DEVICES GLUON_TARGETSDIR GLUON_PATCHESDIR GLUON_TMPDIR GLUON_IMAGEDIR GLUON_PACKAGEDIR GLUON_DEBUGDIR \
+-	GLUON_SITEDIR GLUON_AUTOUPDATER_BRANCH GLUON_AUTOUPDATER_ENABLED GLUON_LANGS GLUON_BASE_FEEDS \
++	GLUON_METADIR GLUON_SITEDIR GLUON_AUTOUPDATER_BRANCH GLUON_AUTOUPDATER_ENABLED GLUON_LANGS GLUON_BASE_FEEDS \
+ 	GLUON_TARGET BOARD SUBTARGET
+ 
+ unexport $(GLUON_VARS)
+diff --git a/scripts/copy_output.lua b/scripts/copy_output.lua
+index 1af2f8f7..bd52cb08 100755
+--- a/scripts/copy_output.lua
++++ b/scripts/copy_output.lua
+@@ -28,6 +28,7 @@ mkdir(env.GLUON_IMAGEDIR..'/factory')
+ mkdir(env.GLUON_IMAGEDIR..'/sysupgrade')
+ mkdir(env.GLUON_IMAGEDIR..'/other')
+ mkdir(env.GLUON_DEBUGDIR)
++mkdir(env.GLUON_METADIR..'/openwrt-profiles')
+ 
+ 
+ lib.include(target)
+@@ -81,6 +82,13 @@ local kernel_debug_dest = string.format('%s/gluon-%s-%s-%s-kernel-debug.tar.zst'
+ 	target)
+ lib.exec {'cp', kernel_debug_source, kernel_debug_dest}
+ 
++-- copy OpenWrt profile JSON
++local profile_json_source = string.format('openwrt/bin/targets/%s/profiles.json',
++	bindir)
++local profile_json_dest = string.format('%s/openwrt-profiles/%s.json',
++	env.GLUON_METADIR,
++	target)
++lib.exec {'cp', profile_json_source, profile_json_dest}
+ 
+ -- Copy opkg repo
+ if (env.GLUON_DEVICES or '') == '' then
+-- 
+2.34.1
+
