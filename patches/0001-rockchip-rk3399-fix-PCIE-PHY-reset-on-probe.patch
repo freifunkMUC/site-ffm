@@ -1,0 +1,93 @@
+From 78426715016fb767e15fc9c09db2e871d2631e70 Mon Sep 17 00:00:00 2001
+From: Tobias <5702338+T0biii@users.noreply.github.com>
+Date: Sun, 23 Feb 2025 18:40:29 +0000
+Subject: [PATCH] rockchip: rk3399 fix PCIE PHY reset on probe Fix LAN port
+ failing to initialize after reboot particularly on some FriendlyElec NanoPi
+ R4S devices Patch forked from Armbian (for further details see
+ armbian/build#6057)
+
+Signed-off-by: Juergen Wurzer <wurzer.juergen@gmail.com>
+---
+ ...p-rk3399-fix-PCIE-PHY-reset-on-probe.patch | 70 +++++++++++++++++++
+ 1 file changed, 70 insertions(+)
+ create mode 100644 patches/openwrt/0010-rockchip-rk3399-fix-PCIE-PHY-reset-on-probe.patch
+
+diff --git a/patches/openwrt/0010-rockchip-rk3399-fix-PCIE-PHY-reset-on-probe.patch b/patches/openwrt/0010-rockchip-rk3399-fix-PCIE-PHY-reset-on-probe.patch
+new file mode 100644
+index 00000000..f460d762
+--- /dev/null
++++ b/patches/openwrt/0010-rockchip-rk3399-fix-PCIE-PHY-reset-on-probe.patch
+@@ -0,0 +1,70 @@
++From f8c1f6e0f989eb224518938342be04bb8442d235 Mon Sep 17 00:00:00 2001
++From: Tobias <5702338+T0biii@users.noreply.github.com>
++Date: Sun, 23 Feb 2025 18:35:30 +0000
++Subject: [PATCH] rockchip: rk3399 fix PCIE PHY reset on probe Fix LAN port
++ failing to initialize after reboot particularly on some FriendlyElec NanoPi
++ R4S devices Patch forked from Armbian (for further details see
++ armbian/build#6057)
++
++Signed-off-by: Juergen Wurzer <wurzer.juergen@gmail.com>
++---
++ ...01-rk3399-fix-pci-phy-reset-on-probe.patch | 46 +++++++++++++++++++
++ 1 file changed, 46 insertions(+)
++ create mode 100644 target/linux/rockchip/patches-6.6/401-rk3399-fix-pci-phy-reset-on-probe.patch
++
++diff --git a/target/linux/rockchip/patches-6.6/401-rk3399-fix-pci-phy-reset-on-probe.patch b/target/linux/rockchip/patches-6.6/401-rk3399-fix-pci-phy-reset-on-probe.patch
++new file mode 100644
++index 0000000000..b97264681a
++--- /dev/null
+++++ b/target/linux/rockchip/patches-6.6/401-rk3399-fix-pci-phy-reset-on-probe.patch
++@@ -0,0 +1,46 @@
+++From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+++From: Andrey Safonov <andrey.safonov@gmail.com>
+++Date: Sat, 16 Dec 2023 22:46:35 +0300
+++Subject: rk3399 PCIE PHY reset on probe
+++
+++Signed-off-by: Andrey Safonov <andrey.safonov@gmail.com>
+++---
+++ drivers/phy/rockchip/phy-rockchip-pcie.c | 16 ++++++++++++++++
+++ 1 file changed, 16 insertions(+)
+++
+++diff --git a/drivers/phy/rockchip/phy-rockchip-pcie.c b/drivers/phy/rockchip/phy-rockchip-pcie.c
+++index 8234b83fdd88..aa5ca6db0563 100644
+++--- a/drivers/phy/rockchip/phy-rockchip-pcie.c
++++++ b/drivers/phy/rockchip/phy-rockchip-pcie.c
+++@@ -344,6 +344,20 @@ static const struct of_device_id rockchip_pcie_phy_dt_ids[] = {
+++ 
+++ MODULE_DEVICE_TABLE(of, rockchip_pcie_phy_dt_ids);
+++ 
++++static void rockchip_pcie_phy_reset(struct rockchip_pcie_phy *rk_phy)
++++{
++++	int i;
++++
++++	for (i = 0; i < PHY_MAX_LANE_NUM; i++)
++++		regmap_write(rk_phy->reg_base,
++++			     rk_phy->phy_data->pcie_laneoff,
++++			     HIWORD_UPDATE(PHY_LANE_IDLE_OFF,
++++					   PHY_LANE_IDLE_MASK,
++++					   PHY_LANE_IDLE_A_SHIFT + i));
++++
++++	reset_control_assert(rk_phy->phy_rst);
++++}
++++
+++ static int rockchip_pcie_phy_probe(struct platform_device *pdev)
+++ {
+++ 	struct device *dev = &pdev->dev;
+++@@ -394,6 +408,8 @@ static int rockchip_pcie_phy_probe(struct platform_device *pdev)
+++ 	phy_num = (phy_num == 0) ? 1 : PHY_MAX_LANE_NUM;
+++ 	dev_dbg(dev, "phy number is %d\n", phy_num);
+++ 
++++	rockchip_pcie_phy_reset(rk_phy);
++++
+++ 	for (i = 0; i < phy_num; i++) {
+++ 		rk_phy->phys[i].phy = devm_phy_create(dev, dev->of_node, &ops);
+++ 		if (IS_ERR(rk_phy->phys[i].phy)) {
+++-- 
+++Armbian
++\ No newline at end of file
++-- 
++2.47.1
++
+-- 
+2.47.1
+
