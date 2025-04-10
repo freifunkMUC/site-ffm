@@ -22,6 +22,7 @@ apt-get -y --no-install-recommends install \
     bash \
     bzip2 \
     curl \
+    clang \
     diffutils \
     file \
     g++ \
@@ -29,6 +30,7 @@ apt-get -y --no-install-recommends install \
     gcc \
     git \
     libncurses5-dev \
+    llvm \
     make \
     patch \
     perl \
