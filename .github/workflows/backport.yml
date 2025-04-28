@@ -13,18 +13,18 @@ jobs:
     if: github.event.pull_request.merged
     steps:
       - name: Get Github App Token
-        uses: actions/create-github-app-token@v1 # v1
+        uses: actions/create-github-app-token@v2
         id: app-token
         with:
           app-id: ${{ vars.APP_ID }}
           private-key: ${{ secrets.PRIVATE_KEY }}
-          
+
       - name: Clone Firmware
-        uses: actions/checkout@v4 # v4
+        uses: actions/checkout@v4
         with:
           # Token for git actions, e.g. git push
           token: ${{ steps.app-token.outputs.token }}
-          
+
       - name: Create backport pull requests
         uses: korthout/backport-action@436145e922f9561fc5ea157ff406f21af2d6b363 # v3.2.0
         with:
