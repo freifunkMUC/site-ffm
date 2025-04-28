@@ -9,10 +9,10 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Clone Firmware
-        uses: actions/checkout@v4 # v4
+        uses: actions/checkout@v4
 
       - name: Get Github App Token
-        uses: actions/create-github-app-token@v1 # v1
+        uses: actions/create-github-app-token@v2
         id: app-token
         with:
           app-id: ${{ vars.APP_ID }}
