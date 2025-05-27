@@ -43,4 +43,5 @@ apt-get -y --no-install-recommends install \
     swig \
     tar \
     unzip \
-    wget
+    wget \
+    xz-utils
