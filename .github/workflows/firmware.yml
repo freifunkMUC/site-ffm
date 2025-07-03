@@ -66,6 +66,21 @@ jobs:
           name: ${{ matrix.target }}_output
           path: ./output
 
+  # Workarround job so that there is a single job for the required status check
+  build_firmware_complete:
+    name: All Targets Build
+    runs-on: ubuntu-22.04
+    if: ${{ !cancelled() }}
+    needs: [build_firmware]
+    steps:
+      - name: Error out if there is a failure
+        if: ${{ needs.build_firmware.result != 'success' }}
+        run: |
+          echo "::error title=X Test failed::Build Matrix Result: ${{ needs.build_firmware.result }}"
+          exit 1
+      - name: All firmware builds succeded
+        run: echo "::notice title=✓ Test passed::All required builds succeded!"
+
   create_release:
     runs-on: ubuntu-latest
     needs: build_firmware
