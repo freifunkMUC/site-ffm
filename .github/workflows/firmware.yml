@@ -97,7 +97,7 @@ jobs:
             tar zcvf "${output}.tar.gz" "${output}"
           done
       - name: Create Release & Upload Release Assets
-        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631 # v2.2.2
+        uses: softprops/action-gh-release@72f2c25fcb47643c292f7107632f7a47c1df5cd8 # v2.3.2
         with:
           # Note: If there is no release name specified, releases created in
           # the GitHub UI do not trigger a failure and are modified instead.
