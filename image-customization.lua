@@ -24,6 +24,7 @@ packages{
     'ffbs-mesh-vpn-parker',
     'ffbs-wireguard-respondd',
     'ffda-node-whisperer',
+    'ffmuc-ebpfs-clat',
     'ffmuc-ipv6-ra-filter',
     'ffmuc-mesh-vpn-wireguard-vxlan',
     '-gluon-ebtables-limit-arp',
