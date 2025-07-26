@@ -24,11 +24,11 @@ packages{
     'ffbs-mesh-vpn-parker',
     'ffbs-wireguard-respondd',
     'ffda-node-whisperer',
+    'ffmuc-ebpf-clat',
     'ffmuc-ipv6-ra-filter',
     'ffmuc-mesh-vpn-wireguard-vxlan',
     '-gluon-ebtables-limit-arp',
     'iwinfo',
-    'kmod-nat46',
     'respondd-module-airtime',
 }
 
