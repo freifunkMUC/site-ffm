@@ -9,7 +9,7 @@
 GLUON_SITE_FEEDS='community packages_ffbs'
 
 PACKAGES_COMMUNITY_REPO=https://github.com/freifunkMUC/community-packages.git
-PACKAGES_COMMUNITY_COMMIT=e3ebd92efbef000c22c55c3f592ed7157ac82335
+PACKAGES_COMMUNITY_COMMIT=c3d0a52212f040e438223d0b7de390d9a684b882
 PACKAGES_COMMUNITY_BRANCH=ebpf-clat
 
 PACKAGES_PACKAGES_FFBS_REPO=https://gitli.stratum0.org/ffbs/ffbs-packages.git
