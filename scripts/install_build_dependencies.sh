@@ -21,6 +21,7 @@ apt-get -y --no-install-recommends install ca-certificates
 apt-get -y --no-install-recommends install \
     bash \
     bzip2 \
+    clang \
     curl \
     diffutils \
     file \
