@@ -29,7 +29,6 @@ packages{
     'ffmuc-mesh-vpn-wireguard-vxlan',
     '-gluon-ebtables-limit-arp',
     'iwinfo',
-    'kmod-nat46',
     'respondd-module-airtime',
 }
 
