@@ -41,13 +41,13 @@ apt-get -y --no-install-recommends install \
     unzip \
     wget
 
-# Install bpftool
+# We require bpftool 7.5+
+# https://github.com/libbpf/bpftool/releases#:~:text=work%20with%20object%20files%20in%20either%20endianness%20for%20some%20operations%20like%20object%20linking%20or%20light%20BPF%20skeleton%20creation
 apt-get -y --no-install-recommends install bpftool || # Ubuntu 25.04+
 {
-    # Fallback for Ubuntu 24.04 and earlier
-    latest_linux_tools=$(apt -q search "^linux-tools-[0-9].*-generic$" | grep "^linux-tools" | awk -F '/' '{ print $1 }' | sort -V | tail -n 1)
-    apt-get -y --no-install-recommends install "${latest_linux_tools}"
-    latest_bpftool=$(find /usr/lib/linux-tools/ -name bpftool | sort -V | tail -n 1)
-    rm -f /usr/sbin/bpftool # delete wrapper bpftool script
-    ln -s "${latest_bpftool}" /usr/sbin/bpftool
+    # Ubuntu 24.04 do not have bpftool as a package and rely on "linux-tools-$(uname -r)", but those can deliver only bpftool 7.4
+    curl -LO https://github.com/libbpf/bpftool/releases/download/v7.6.0/bpftool-v7.6.0-amd64.tar.gz
+    curl -LO https://github.com/libbpf/bpftool/releases/download/v7.6.0/bpftool-v7.6.0-amd64.tar.gz.sha256sum
+    tar xvf bpftool-v7.6.0-amd64.tar.gz -C /usr/local/bin
+    chmod +x /usr/local/bin/bpftool
 }
