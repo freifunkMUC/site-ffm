@@ -1,4 +1,4 @@
-From cf817cdeb09bcec7ce44f9ccb09055236aae35b5 Mon Sep 17 00:00:00 2001
+From 94a67c438928302fcc60c43eb3729f760d955729 Mon Sep 17 00:00:00 2001
 From: Grische <github@grische.xyz>
 Date: Thu, 31 Oct 2024 15:34:18 +0100
 Subject: [PATCH 11/11] wired-tpo for BatmanV: fix shellcheck error SC2086
@@ -22,5 +22,5 @@ index 2f7d3c13..caecb3dc 100755
 +	batctl hardif "${IFNAME}" throughput_override 1000mbit;
  fi
 -- 
-2.34.1
+2.43.0
 

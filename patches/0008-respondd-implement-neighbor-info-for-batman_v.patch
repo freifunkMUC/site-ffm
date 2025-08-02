@@ -1,4 +1,4 @@
-From 971f7f0b149ddb22230b1bfe9afc1de349ba989e Mon Sep 17 00:00:00 2001
+From d9d0f4ee1d424ddb42bab80312621ec188bbb26d Mon Sep 17 00:00:00 2001
 From: Grische <github@grische.xyz>
 Date: Mon, 28 Oct 2024 13:12:21 +0100
 Subject: [PATCH 08/11] respondd: implement neighbor info for batman_v
@@ -117,10 +117,10 @@ index 5785e358..fbc9a7bf 100644
  		json_object_put(opts.interfaces);
  		return NULL;
 diff --git a/package/libgluonutil/src/libgluonutil.c b/package/libgluonutil/src/libgluonutil.c
-index 772a5b68..baef221c 100644
+index 354f7179..14802006 100644
 --- a/package/libgluonutil/src/libgluonutil.c
 +++ b/package/libgluonutil/src/libgluonutil.c
-@@ -16,6 +16,7 @@
+@@ -17,6 +17,7 @@
  #include <string.h>
  #include <stdlib.h>
  #include <unistd.h>
@@ -128,7 +128,7 @@ index 772a5b68..baef221c 100644
  
  /**
   * Merges two JSON objects
-@@ -303,6 +304,14 @@ char * gluonutil_get_primary_domain(void) {
+@@ -304,6 +305,14 @@ char * gluonutil_get_primary_domain(void) {
  	return strdup(primary_domain_code);
  }
  
@@ -155,5 +155,5 @@ index 5ce9d448..1f72bcf7 100644
 +
  #endif /* _LIBGLUON_LIBGLUON_H_ */
 -- 
-2.34.1
+2.43.0
 
