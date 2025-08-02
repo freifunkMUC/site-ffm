@@ -1,4 +1,4 @@
-From 59714dd5655756b7a8f579c441aaa689ad9d35be Mon Sep 17 00:00:00 2001
+From a89f4e73d4a18504ea0362db52cc86f39b563a72 Mon Sep 17 00:00:00 2001
 From: Grische <github@grische.xyz>
 Date: Mon, 28 Oct 2024 13:12:59 +0100
 Subject: [PATCH 10/11] status page: implement neighbor info for batman_v
@@ -144,5 +144,5 @@ index ae930548..1845887d 100644
  		json_object_put(opts.obj);
  		return NULL;
 -- 
-2.34.1
+2.43.0
 
