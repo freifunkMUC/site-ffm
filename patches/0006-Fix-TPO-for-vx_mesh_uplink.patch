@@ -1,4 +1,4 @@
-From 6cfe993b03713feedc497e8c359e80d59c56e470 Mon Sep 17 00:00:00 2001
+From c1c9c9f003e4369aca8975c120bc77505f5e4b1c Mon Sep 17 00:00:00 2001
 From: goligo <ich@malte.de>
 Date: Tue, 15 Nov 2022 16:27:38 +0100
 Subject: [PATCH 06/11] Fix TPO for vx_mesh_uplink
@@ -22,5 +22,5 @@ index 137ae023..2f7d3c13 100755
          batctl hardif $IFNAME throughput_override 1000mbit;
  fi
 -- 
-2.34.1
+2.43.0
 

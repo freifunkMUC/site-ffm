@@ -1,4 +1,4 @@
-From c10d4dd4b3d3662f5f93d0896315e0e34f939a5b Mon Sep 17 00:00:00 2001
+From c715ebd8dba25069fc543bc3791546c9f9ba6cc8 Mon Sep 17 00:00:00 2001
 From: Grische <github@grische.xyz>
 Date: Mon, 28 Oct 2024 13:12:00 +0100
 Subject: [PATCH 07/11] Use gluon-radv-filterd patched for BATMAN V
@@ -12,14 +12,14 @@ site configuration to use it instead of ffmuc-simple-radv-filter
 Co-Authored-By: Steffen Förster <nemesis@chemnitz.freifunk.net>
 Co-Authored-By: Malte Wedel <ich@malte.de>
 ---
- .../src/gluon-radv-filterd.c                  | 125 +++++++++---------
- 1 file changed, 63 insertions(+), 62 deletions(-)
+ .../src/gluon-radv-filterd.c                  | 123 +++++++++---------
+ 1 file changed, 62 insertions(+), 61 deletions(-)
 
 diff --git a/package/gluon-radv-filterd/src/gluon-radv-filterd.c b/package/gluon-radv-filterd/src/gluon-radv-filterd.c
-index 1c0bc5f2..7e0433e6 100644
+index 7d18f9e4..0dd4a4a5 100644
 --- a/package/gluon-radv-filterd/src/gluon-radv-filterd.c
 +++ b/package/gluon-radv-filterd/src/gluon-radv-filterd.c
-@@ -41,11 +41,11 @@
+@@ -39,11 +39,11 @@
  
  #include "mac.h"
  
@@ -34,7 +34,7 @@ index 1c0bc5f2..7e0433e6 100644
  // Also, the first update will take at least this long
  #define MIN_INTERVAL 15
  
-@@ -56,8 +56,8 @@
+@@ -54,8 +54,8 @@
  // max execution time of a single ebtables call in seconds
  #define EBTABLES_TIMEOUT 2
  
@@ -45,7 +45,7 @@ index 1c0bc5f2..7e0433e6 100644
  
  #define BUFSIZE 1500
  
-@@ -95,6 +95,7 @@ struct router {
+@@ -93,6 +93,7 @@ struct router {
  	bool expired;
  	struct in6_addr lladdr;
  	struct in6_addr prefix;
@@ -53,7 +53,7 @@ index 1c0bc5f2..7e0433e6 100644
  };
  
  static struct global {
-@@ -102,8 +103,8 @@ static struct global {
+@@ -100,8 +101,8 @@ static struct global {
  	struct router *routers;
  	const char *mesh_iface;
  	const char *chain;
@@ -64,7 +64,7 @@ index 1c0bc5f2..7e0433e6 100644
  	struct router *best_router;
  	volatile sig_atomic_t stop_daemon;
  } G = {
-@@ -180,18 +181,18 @@ static void usage(const char *msg) {
+@@ -178,18 +179,18 @@ static void usage(const char *msg) {
  		fprintf(stderr, "ERROR: %s\n\n", msg);
  	}
  	fprintf(stderr,
@@ -95,7 +95,7 @@ index 1c0bc5f2..7e0433e6 100644
  	cleanup();
  	if (msg == NULL)
  		exit(EXIT_SUCCESS);
-@@ -283,9 +284,9 @@ static void parse_cmdline(int argc, char *argv[]) {
+@@ -281,9 +282,9 @@ static void parse_cmdline(int argc, char *argv[]) {
  				threshold = strtoul(optarg, &endptr, 10);
  				if (*endptr != '\0')
  					exit_errmsg("Threshold must be a number: %s", optarg);
@@ -108,16 +108,7 @@ index 1c0bc5f2..7e0433e6 100644
  				break;
  			case 'h':
  				usage(NULL);
-@@ -388,7 +389,7 @@ static void handle_ra(int sock) {
- 	// find prefix option
- 	len -= sizeof(pkt.hdr);
- 	ptr = (uint8_t*)&pkt + sizeof(pkt.hdr);
--	
-+
- 	while (len >= 8) {
- 		unsigned int o_type = ptr[0];
- 		unsigned int o_len = (unsigned int)ptr[1] << 3;
-@@ -507,7 +508,7 @@ static int parse_originator(struct nl_msg *msg,
+@@ -495,7 +496,7 @@ static int parse_originator(struct nl_msg *msg,
  
  	static const enum batadv_nl_attrs mandatory[] = {
  		BATADV_ATTR_ORIG_ADDRESS,
@@ -126,7 +117,7 @@ index 1c0bc5f2..7e0433e6 100644
  	};
  	struct nlattr *attrs[BATADV_ATTR_MAX + 1];
  	struct nlmsghdr *nlh = nlmsg_hdr(msg);
-@@ -515,7 +516,7 @@ static int parse_originator(struct nl_msg *msg,
+@@ -503,7 +504,7 @@ static int parse_originator(struct nl_msg *msg,
  	struct genlmsghdr *ghdr;
  	struct router *router;
  	uint8_t *orig;
@@ -135,7 +126,7 @@ index 1c0bc5f2..7e0433e6 100644
  
  	// parse netlink entry
  	if (!genlmsg_valid_hdr(nlh, 0))
-@@ -535,7 +536,7 @@ static int parse_originator(struct nl_msg *msg,
+@@ -523,7 +524,7 @@ static int parse_originator(struct nl_msg *msg,
  		return NL_OK;
  
  	orig = nla_data(attrs[BATADV_ATTR_ORIG_ADDRESS]);
@@ -144,7 +135,7 @@ index 1c0bc5f2..7e0433e6 100644
  
  	if (!attrs[BATADV_ATTR_FLAG_BEST])
  		return NL_OK;
-@@ -547,11 +548,11 @@ static int parse_originator(struct nl_msg *msg,
+@@ -535,11 +536,11 @@ static int parse_originator(struct nl_msg *msg,
  	if (!router)
  		return NL_OK;
  
@@ -161,7 +152,7 @@ index 1c0bc5f2..7e0433e6 100644
  
  	return NL_OK;
  }
-@@ -594,25 +595,25 @@ static int parse_tt_local(struct nl_msg *msg,
+@@ -582,25 +583,25 @@ static int parse_tt_local(struct nl_msg *msg,
  	if (!router)
  		return NL_OK;
  
@@ -195,7 +186,7 @@ index 1c0bc5f2..7e0433e6 100644
  		if (ether_addr_equal(router->originator, unspec))
  			update_originators = true;
  	}
-@@ -627,8 +628,8 @@ static void update_tqs(void) {
+@@ -615,8 +616,8 @@ static void update_tqs(void) {
  			fprintf(stderr, "Parsing of global translation table failed\n");
  	}
  
@@ -206,7 +197,7 @@ index 1c0bc5f2..7e0433e6 100644
  	opts.err = 0;
  	ret = batadv_genl_query(G.mesh_iface,
  				BATADV_CMD_GET_ORIGINATORS,
-@@ -636,12 +637,12 @@ static void update_tqs(void) {
+@@ -624,12 +625,12 @@ static void update_tqs(void) {
  	if (ret < 0)
  		fprintf(stderr, "Parsing of originators failed\n");
  
@@ -221,7 +212,7 @@ index 1c0bc5f2..7e0433e6 100644
  			break;
  	}
  	if (router != NULL) {
-@@ -657,14 +658,14 @@ static void update_tqs(void) {
+@@ -645,14 +646,14 @@ static void update_tqs(void) {
  		if (router->expired)
  			continue;
  
@@ -238,7 +229,7 @@ index 1c0bc5f2..7e0433e6 100644
  					F_MAC_VAR(router->originator),
  					F_MAC_VAR(router->src));
  		}
-@@ -774,11 +775,11 @@ static bool election_required(void)
+@@ -761,11 +762,11 @@ static bool election_required(void)
  	if (!G.best_router)
  		return true;
  
@@ -253,7 +244,7 @@ index 1c0bc5f2..7e0433e6 100644
  		return false;
  
  	return true;
-@@ -792,10 +793,10 @@ static void update_ebtables(void) {
+@@ -779,10 +780,10 @@ static void update_ebtables(void) {
  	struct router *router;
  
  	if (!election_required()) {
@@ -268,7 +259,7 @@ index 1c0bc5f2..7e0433e6 100644
  		return;
  	}
  
-@@ -803,21 +804,21 @@ static void update_ebtables(void) {
+@@ -790,21 +791,21 @@ static void update_ebtables(void) {
  		if (router->expired)
  			continue;
  
@@ -299,7 +290,7 @@ index 1c0bc5f2..7e0433e6 100644
  	G.best_router = router;
  
  	if (fork_execvp_timeout(&timeout, "ebtables-tiny", (const char *[])
-@@ -904,7 +905,7 @@ int main(int argc, char *argv[]) {
+@@ -891,7 +892,7 @@ int main(int argc, char *argv[]) {
  					next_invalidation.tv_sec += ORIGINATOR_CACHE_TTL;
  				}
  
@@ -309,5 +300,5 @@ index 1c0bc5f2..7e0433e6 100644
  
  				next_update = now;
 -- 
-2.34.1
+2.43.0
 
