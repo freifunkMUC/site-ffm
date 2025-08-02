@@ -1,7 +1,7 @@
-From cd7996447b8108c288297f0cb46f5af8c2ea470a Mon Sep 17 00:00:00 2001
+From 8ec14f211e115e88fa452b202c491da42ff359b1 Mon Sep 17 00:00:00 2001
 From: Annika Wickert <annika.wickert@exaring.de>
 Date: Mon, 31 Aug 2020 11:54:27 +0200
-Subject: [PATCH 02/11] wired tpo: add wireguard support to Batman V
+Subject: [PATCH 06/15] wired tpo: add wireguard support to Batman V
 
 ---
  .../core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo   | 2 ++
@@ -21,5 +21,5 @@ index 7185b4a0..2c488f16 100755
  
  if [ -f /sys/devices/virtual/net/mesh-vpn/batman_adv/throughput_override ]; then echo 1000000 > /sys/devices/virtual/net/mesh-vpn/batman_adv/throughput_override; fi
 -- 
-2.34.1
+2.50.1
 

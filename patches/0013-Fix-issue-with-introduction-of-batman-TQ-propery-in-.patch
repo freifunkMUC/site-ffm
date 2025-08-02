@@ -1,7 +1,7 @@
-From dd0c221426952d1c0e7c1399d4c599442d2995ba Mon Sep 17 00:00:00 2001
+From 63350055da2c07c68dc9e08a2ec7185f33923d56 Mon Sep 17 00:00:00 2001
 From: Grische <github@grische.xyz>
 Date: Mon, 28 Oct 2024 13:12:39 +0100
-Subject: [PATCH 09/11] Fix issue with introduction of batman TQ propery in
+Subject: [PATCH 13/15] Fix issue with introduction of batman TQ propery in
  respondd
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
@@ -59,5 +59,5 @@ index 28131fda..2fee70de 100644
  	sprintf(addr, "%02x:%02x:%02x:%02x:%02x:%02x",
  		router[0], router[1], router[2], router[3], router[4], router[5]);
 -- 
-2.34.1
+2.50.1
 

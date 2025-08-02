@@ -1,7 +1,7 @@
-From 7a5e752560bb035a6436b82b26892edfee795e8c Mon Sep 17 00:00:00 2001
+From 8d7ad85d1740895b7601acdd46ccb7b0766634ea Mon Sep 17 00:00:00 2001
 From: darkdragon-001 <darkdragon-001@users.noreply.github.com>
 Date: Tue, 9 Apr 2024 14:15:15 +0200
-Subject: [PATCH 1/2] kirkwood: add Linksys E4200 v2 (Viper) Router (#3240)
+Subject: [PATCH 02/15] kirkwood: add Linksys E4200 v2 (Viper) Router (#3240)
 
 ---
  .github/filters.yml                                    | 10 ++++++++++
@@ -69,5 +69,5 @@ index 14955134..20224a06 100644
  $(eval $(call GluonTarget,mvebu,cortexa9)) # BROKEN: No 11s support
  endif
 -- 
-2.34.1
+2.50.1
 

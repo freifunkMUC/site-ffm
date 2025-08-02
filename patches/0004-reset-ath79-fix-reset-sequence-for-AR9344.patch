@@ -1,7 +1,7 @@
-From 4d9905d11f34784183fca3ef4f70dacc949c5ff6 Mon Sep 17 00:00:00 2001
+From 46695ab01b3d96021888fdfbc75af557c55d43bc Mon Sep 17 00:00:00 2001
 From: nrb <38812627+nrbffs@users.noreply.github.com>
 Date: Tue, 17 Dec 2024 18:52:03 +0100
-Subject: [PATCH] reset: ath79: fix reset sequence for AR9344
+Subject: [PATCH 04/15] reset: ath79: fix reset sequence for AR9344
 
 According to datasheet, on AR9344 the switch and switch analog need to
 be reset first before initiating a full reset.
@@ -119,5 +119,5 @@ index 00000000..2d310e1d
 ++ 	return NOTIFY_DONE;
 ++ }
 -- 
-2.34.1
+2.50.1
 

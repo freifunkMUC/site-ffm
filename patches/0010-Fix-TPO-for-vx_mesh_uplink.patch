@@ -1,7 +1,7 @@
-From 6cfe993b03713feedc497e8c359e80d59c56e470 Mon Sep 17 00:00:00 2001
+From d9d7814856a1550c93d6a5436c51a48976c722a5 Mon Sep 17 00:00:00 2001
 From: goligo <ich@malte.de>
 Date: Tue, 15 Nov 2022 16:27:38 +0100
-Subject: [PATCH 06/11] Fix TPO for vx_mesh_uplink
+Subject: [PATCH 10/15] Fix TPO for vx_mesh_uplink
 
 Gluon v2022.1.1 uses a new interface called vx_mesh_uplink, which was
 not yet handled correctly in our BATMAN V Patch.
@@ -22,5 +22,5 @@ index 137ae023..2f7d3c13 100755
          batctl hardif $IFNAME throughput_override 1000mbit;
  fi
 -- 
-2.34.1
+2.50.1
 

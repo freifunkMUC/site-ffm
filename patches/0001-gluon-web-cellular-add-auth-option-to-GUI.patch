@@ -1,7 +1,7 @@
-From 3e1c937d0eb8946cc8226c7255734f6ffc26b3a5 Mon Sep 17 00:00:00 2001
+From 17dcffa2f63e4f39ad1531fda82a5be93eccbdbd Mon Sep 17 00:00:00 2001
 From: Tobias <5702338+T0biii@users.noreply.github.com>
 Date: Sat, 6 Jul 2024 01:03:28 +0200
-Subject: [PATCH] gluon-web-cellular: add auth option to GUI
+Subject: [PATCH 01/15] gluon-web-cellular: add auth option to GUI
 
 ---
  .../luasrc/lib/gluon/upgrade/250-cellular         |  2 ++
@@ -104,5 +104,5 @@ index 38a4dd2c..123ed6f2 100644
  
  	uci:commit('gluon')
 -- 
-2.45.1
+2.50.1
 

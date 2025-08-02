@@ -1,7 +1,7 @@
-From ba6fb82ef8438494a3ea6e82227d7b309ebd2f11 Mon Sep 17 00:00:00 2001
+From 28de4415a2aa33333bdbd32eb7fcf422232e63b5 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Steffen=20F=C3=B6rster?= <nemesis@chemnitz.freifunk.net>
 Date: Sat, 13 Apr 2019 19:16:38 +0200
-Subject: [PATCH 01/11] override wired tpo information for batman_v
+Subject: [PATCH 03/15] override wired tpo information for batman_v
 
 Co-Authored-By: Krombel <krombel@krombel.de>
 ---
@@ -25,5 +25,5 @@ index 00000000..7185b4a0
 +
 +if [ -f /sys/devices/virtual/net/mesh-vpn/batman_adv/throughput_override ]; then echo 1000000 > /sys/devices/virtual/net/mesh-vpn/batman_adv/throughput_override; fi
 -- 
-2.34.1
+2.50.1
 
