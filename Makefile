@@ -1,5 +1,5 @@
 GLUON_BUILD_DIR := gluon-build
-GLUON_GIT_URL := https://github.com/freifunkMUC/gluon.git
+GLUON_GIT_URL := https://github.com/t0biii/gluon.git
 GLUON_GIT_REF := add-cortexa53
 
 PATCH_DIR := ./patches
