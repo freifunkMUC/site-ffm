@@ -1,6 +1,6 @@
 GLUON_BUILD_DIR := gluon-build
 GLUON_GIT_URL := https://github.com/t0biii/gluon.git
-GLUON_GIT_REF := 89ca849d88d71ee1ecb4d3bead0a6150be9a4f0f #add-cortexa53
+GLUON_GIT_REF := fe5aeab0a9a2608fa0aef49f62130ca384ae7aae #add-cortexa53
 
 PATCH_DIR := ./patches
 SECRET_KEY_FILE ?= ${HOME}/.gluon-secret-key
