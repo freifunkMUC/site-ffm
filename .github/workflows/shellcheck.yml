@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Clone Firmware
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: shellcheck
         # Make sure the action is pinned to a commit, as all reviewdog repos
         # have hundreds of contributors with write access (breaks easy/often)
