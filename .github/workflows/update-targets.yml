@@ -58,5 +58,4 @@ jobs:
           committer: ${{ steps.app-token.outputs.app-slug }}[bot] <${{ steps.get-user-id.outputs.user-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com>
           branch: ${{ steps.branch-name.outputs.branch-name }}
           labels: ${{ github.ref_name }}
-          draft: true # this step does not trigger a CI run, so always mark them as draft
           delete-branch: true
