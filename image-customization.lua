@@ -214,3 +214,12 @@ if target('ramips', 'mt7621') or target('mediatek', 'mt7622') or target('mediate
         'ffac-mt7915-hotfix',
     }
 end
+
+-- disable devices with not enough flash
+if device({
+        'tp-link-archer-c6-v2-eu-ru-jp',
+        'tp-link-archer-c60-v1',
+        'tp-link-tl-wr902ac-v1',
+    }) then
+    disable()
+end
