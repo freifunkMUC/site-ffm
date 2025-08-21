@@ -112,9 +112,9 @@ pkgs_pci = {
     'kmod-bnx2', -- Broadcom NetExtreme BCM5706/5708/5709/5716
 }
 
-include_tls = not device({
-    'd-link-dir825b1',
-})
+
+-- we want TLS on all devices for the firmware downloader to use HTTPS
+include_tls = true
 
 if include_tls then
     features({ 'tls' })
