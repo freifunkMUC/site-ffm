@@ -112,9 +112,9 @@ pkgs_pci = {
     'kmod-bnx2', -- Broadcom NetExtreme BCM5706/5708/5709/5716
 }
 
-include_tls = not device({
-    'd-link-dir825b1',
-})
+
+-- we want TLS on all devices for the firmware downloader to use HTTPS
+include_tls = true
 
 if include_tls then
     features({ 'tls' })
@@ -147,11 +147,16 @@ if target('ath79', 'generic') and not device({
     include_usb = false
 end
 
--- 7M usable firmware space + USB port
+-- 7M/8M usable firmware space + USB port
 if device({
+    'd-link-dir825b1',
     'gl-mt300n-v2',
+    'tp-link-archer-c2-v1',
+    'tp-link-archer-c20-v1',
+    'tp-link-archer-c20i',
     'tp-link-td-w8970',
     'tp-link-td-w8980',
+    'tp-link-tl-wr902ac-v1',
 }) then
     include_usb = false
 end
@@ -161,8 +166,13 @@ if device({
     'avm-fritz-box-7412',
     'gl.inet-microuter-n300',
     'netgear-ex3700',
+    'netgear-ex6130',
     'netgear-ex6150',
     'netgear-r6020',
+    'nexx-wt3020-8m',
+    'tp-link-archer-c6-v2-eu-ru-jp',
+    'tp-link-archer-c50-v1',
+    'tp-link-archer-c60-v1',
     'ubiquiti-edgerouter-x-sfp',
     'ubiquiti-edgerouter-x',
     'ubiquiti-unifi-6-lr-v1',
@@ -203,4 +213,13 @@ if target('ramips', 'mt7621') or target('mediatek', 'mt7622') or target('mediate
     packages {
         'ffac-mt7915-hotfix',
     }
+end
+
+-- disable devices with not enough flash
+if device({
+        'tp-link-archer-c6-v2-eu-ru-jp',
+        'tp-link-archer-c60-v1',
+        'tp-link-tl-wr902ac-v1',
+    }) then
+    disable()
 end
