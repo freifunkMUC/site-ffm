@@ -1,0 +1,57 @@
+From 99449d09dd94a3e551c3a2112003332d7e8a894f Mon Sep 17 00:00:00 2001
+From: Tobias <5702338+T0biii@users.noreply.github.com>
+Date: Sat, 4 Oct 2025 20:19:23 +0000
+Subject: [PATCH RFC v3 3/3] arm64: dts: rockchip: drop PCIe 3v3
+ always-on  and boot-on
+
+---
+ ...RFC-v3-3-3-arm64-dts-rockchip-drop-P.patch | 37 +++++++++++++++++++
+ 1 file changed, 37 insertions(+)
+ create mode 100644 patches/packages/kernel/linux-rockchip/0003-PATCH-3-3-PATCH-RFC-v3-3-3-arm64-dts-rockchip-drop-P.patch
+
+diff --git a/patches/packages/kernel/linux-rockchip/0003-PATCH-3-3-PATCH-RFC-v3-3-3-arm64-dts-rockchip-drop-P.patch b/patches/packages/kernel/linux-rockchip/0003-PATCH-3-3-PATCH-RFC-v3-3-3-arm64-dts-rockchip-drop-P.patch
+new file mode 100644
+index 00000000..8145d5f7
+--- /dev/null
++++ b/patches/packages/kernel/linux-rockchip/0003-PATCH-3-3-PATCH-RFC-v3-3-3-arm64-dts-rockchip-drop-P.patch
+@@ -0,0 +1,37 @@
++From git@z Thu Jan  1 00:00:00 1970
++Subject: [PATCH RFC v3 3/3] arm64: dts: rockchip: drop PCIe 3v3 always-on
++ and boot-on
++From: Geraldo Nascimento <geraldogabriel@gmail.com>
++Date: Tue, 10 Jun 2025 16:05:53 -0300
++Message-Id: <da144ba62607c87bf89a71ecb12fa5055f1e6fde.1749582046.git.geraldogabriel@gmail.com>
++MIME-Version: 1.0
++Content-Type: text/plain; charset="utf-8"
++Content-Transfer-Encoding: 7bit
++
++Example commit of needed dropping of regulator always-on/boot-on
++declarations to make sure quirky devices known to not be working
++on RK3399 are able to enumerate on second try without
++assertion/deassertion of PERST# in-band PCIe reset signal.
++
++One example only, to avoid patch-bomb.
++
++Signed-off-by: Geraldo Nascimento <geraldogabriel@gmail.com>
++---
++ arch/arm64/boot/dts/rockchip/rk3399pro-vmarc-som.dtsi | 2 --
++ 1 file changed, 2 deletions(-)
++
++diff --git a/arch/arm64/boot/dts/rockchip/rk3399pro-vmarc-som.dtsi b/arch/arm64/boot/dts/rockchip/rk3399pro-vmarc-som.dtsi
++index 8ce7cee92af0..d31fd3d34cda 100644
++--- a/arch/arm64/boot/dts/rockchip/rk3399pro-vmarc-som.dtsi
+++++ b/arch/arm64/boot/dts/rockchip/rk3399pro-vmarc-som.dtsi
++@@ -25,8 +25,6 @@ vcc3v3_pcie: regulator-vcc-pcie {
++ 		pinctrl-names = "default";
++ 		pinctrl-0 = <&pcie_pwr>;
++ 		regulator-name = "vcc3v3_pcie";
++-		regulator-always-on;
++-		regulator-boot-on;
++ 		vin-supply = <&vcc5v0_sys>;
++ 	};
++ 
++-- 
++2.49.0
+-- 
+2.50.1
+
