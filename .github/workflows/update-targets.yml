@@ -59,3 +59,8 @@ jobs:
           branch: ${{ steps.branch-name.outputs.branch-name }}
           labels: ${{ github.ref_name }}
           delete-branch: true
+
+      - name: Enable Pull Request Automerge
+        run: gh pr merge --merge --auto "1"
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
