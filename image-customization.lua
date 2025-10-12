@@ -154,6 +154,7 @@ if device({
     'tp-link-archer-c2-v1',
     'tp-link-archer-c20-v1',
     'tp-link-archer-c20i',
+    'tp-link-archer-c50-v6-ca-eu-ru',
     'tp-link-td-w8970',
     'tp-link-td-w8980',
     'tp-link-tl-wr902ac-v1',
