@@ -7,20 +7,29 @@ on:
     tags:
       - v*
   pull_request:
-    paths-ignore:
-      - '**.md'
-      - '**/CODEOWNERS'
-      - '.github/ISSUE_TEMPLATE'
-      - '.github/*.yml'
-      - '.github/workflows/backport.yml'
-      - 'contrib/sign.sh'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
 
 jobs:
+  changed:
+    permissions:
+      contents: read  # for dorny/paths-filter to fetch a list of changed files
+      pull-requests: read  # for dorny/paths-filter to read pull requests
+    runs-on: ubuntu-latest
+    outputs:
+      firmware_changed: ${{ steps.filter.outputs.firmware }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 #v3.0.2 
+        id: filter
+        with:
+          filters: .github/filters.yml
+
   generate_target_matrix:
+    needs: [changed]
+    if: needs.changed.outputs.firmware_changed == 'true'
     runs-on: ubuntu-latest
     outputs:
       target_json: ${{ steps.set_target.outputs.target }}
@@ -37,7 +46,7 @@ jobs:
           echo "build_target={\"target\": $(echo $target_list)}" >> $GITHUB_OUTPUT
 
   build_firmware:
-    needs: generate_target_matrix
+    needs: [changed, generate_target_matrix]
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.generate_target_matrix.outputs.build_target_json) }}
@@ -76,12 +85,12 @@ jobs:
     needs: [build_firmware]
     steps:
       - name: Error out if there is a failure
-        if: ${{ needs.build_firmware.result != 'success' }}
+        if: needs.build_firmware.result != 'skipped' && needs.build_firmware.result != 'success'
         run: |
           echo "::error title=X Test failed::Build Matrix Result: ${{ needs.build_firmware.result }}"
           exit 1
-      - name: All firmware builds succeded
-        run: echo "::notice title=✓ Test passed::All required builds succeded!"
+      - name: All firmware builds succeeded or skipped
+        run: echo "::notice title=✓ Test passed or skipped::Build was successful or skipped due to no relevant changes."
 
   create_release:
     runs-on: ubuntu-latest
