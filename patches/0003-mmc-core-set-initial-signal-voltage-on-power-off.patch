@@ -1,0 +1,73 @@
+From a99e7c473d31db04605c93827aa1faa2f1f1a143 Mon Sep 17 00:00:00 2001
+From: Tobias <5702338+T0biii@users.noreply.github.com>
+Date: Thu, 16 Oct 2025 14:05:24 +0000
+Subject: [PATCH] mmc: core: set initial signal voltage on power off
+
+---
+ ...et-initial-signal-voltage-on-power-o.patch | 54 +++++++++++++++++++
+ 1 file changed, 54 insertions(+)
+ create mode 100644 patches/openwrt/0012-PATCH-mmc-core-set-initial-signal-voltage-on-power-o.patch
+
+diff --git a/patches/openwrt/0012-PATCH-mmc-core-set-initial-signal-voltage-on-power-o.patch b/patches/openwrt/0012-PATCH-mmc-core-set-initial-signal-voltage-on-power-o.patch
+new file mode 100644
+index 00000000..de7391cc
+--- /dev/null
++++ b/patches/openwrt/0012-PATCH-mmc-core-set-initial-signal-voltage-on-power-o.patch
+@@ -0,0 +1,54 @@
++From 556b882566c8001d59cd02e4e4e070fa53eaf459 Mon Sep 17 00:00:00 2001
++From: Tobias <5702338+T0biii@users.noreply.github.com>
++Date: Thu, 16 Oct 2025 14:04:23 +0000
++Subject: [PATCH] [PATCH] mmc: core: set initial signal voltage on power off
++
++Signed-off-by: GitHub <noreply@github.com>
++---
++ ...-initial-signal-voltage-on-power-off.patch | 34 +++++++++++++++++++
++ 1 file changed, 34 insertions(+)
++ create mode 100644 target/linux/rockchip/patches-6.6/501-mmc-core-set-initial-signal-voltage-on-power-off.patch
++
++diff --git a/target/linux/rockchip/patches-6.6/501-mmc-core-set-initial-signal-voltage-on-power-off.patch b/target/linux/rockchip/patches-6.6/501-mmc-core-set-initial-signal-voltage-on-power-off.patch
++new file mode 100644
++index 0000000000..cbb83902d5
++--- /dev/null
+++++ b/target/linux/rockchip/patches-6.6/501-mmc-core-set-initial-signal-voltage-on-power-off.patch
++@@ -0,0 +1,34 @@
+++From 0d329112c709d6cfedf0fffb19f0cc6b19043f6b Mon Sep 17 00:00:00 2001
+++From: Jonas Karlman <jonas@kwiboo.se>
+++Date: Wed, 20 Feb 2019 07:38:34 +0000
+++Subject: [PATCH] mmc: core: set initial signal voltage on power off
+++
+++Some boards have SD card connectors where the power rail cannot be switched
+++off by the driver. If the card has not been power cycled, it may still be
+++using 1.8V signaling after a warm re-boot. Bootroms expecting 3.3V signaling
+++will fail to boot from a UHS card that continue to use 1.8V signaling.
+++
+++Set initial signal voltage in mmc_power_off() to allow re-boot to function.
+++
+++This fixes re-boot with UHS cards on Asus Tinker Board (Rockchip RK3288),
+++same issue have been seen on some Rockchip RK3399 boards.
+++
+++I am sending this as a RFC because I have no insights into SD/MMC subsystem,
+++this change fix a re-boot issue on my boards and does not break emmc/sdio.
+++Is this an acceptable workaround? Any advice is appreciated.
+++
+++Signed-off-by: Jonas Karlman <jonas@kwiboo.se>
+++---
+++ drivers/mmc/core/core.c | 2 ++
+++ 1 file changed, 2 insertions(+)
+++
+++--- a/drivers/mmc/core/core.c
++++++ b/drivers/mmc/core/core.c
+++@@ -1370,6 +1370,8 @@ void mmc_power_off(struct mmc_host *host
+++ 
+++ 	mmc_pwrseq_power_off(host);
+++ 
++++	mmc_set_initial_signal_voltage(host);
++++
+++ 	host->ios.clock = 0;
+++ 	host->ios.vdd = 0;
++-- 
++2.50.1
++
+-- 
+2.50.1
+
