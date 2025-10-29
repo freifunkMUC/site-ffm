@@ -1,0 +1,29 @@
+From 3bdfeccde636a74422a7760d3510653dae0c69eb Mon Sep 17 00:00:00 2001
+From: Florian Maurer <f.maurer@outlook.de>
+Date: Thu, 18 Jun 2026 10:00:22 +0200
+Subject: [PATCH 2/2] targets: add support for aruba-ap32x
+
+---
+ targets/ipq806x-generic | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/targets/ipq806x-generic b/targets/ipq806x-generic
+index 641d89ce..1ac0fc77 100644
+--- a/targets/ipq806x-generic
++++ b/targets/ipq806x-generic
+@@ -11,6 +11,12 @@ local QCA9984_PACKAGES = {'kmod-ath10k', '-kmod-ath10k-ct', 'ath10k-firmware-qca
+ -- QCA9980 / QCA9990
+ --
+ 
++-- Aruba
++
++device('aruba-ap-32x', 'aruba_ap-32x', {
++	packages = QCA9980_PACKAGES, factory = false,
++})
++
+ -- Extreme Networks
+ 
+ device('extreme-networks-ap3935', 'extreme_ap3935', {
+-- 
+2.43.0
+
