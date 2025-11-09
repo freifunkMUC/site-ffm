@@ -1,0 +1,12 @@
+firmware:
+  - '.github/workflows/firmware.yml'
+  - 'domains/**'
+  - 'i18n/**'
+  - 'patches/**'
+  - 'scripts/**'
+  - 'image-customization.lua'
+  - 'Makefile'
+  - 'modules'
+  - 'site.conf'
+  - 'site.mk'
+  - 'targets'
