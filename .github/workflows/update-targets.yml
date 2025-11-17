@@ -46,6 +46,7 @@ jobs:
           echo "names=$(git diff --color=always|perl -wlne 'print $1 if /^\e\[32m\+\e\[m\e\[32m(.*)\e\[m$/' | tr '\n' ' ')" >> $GITHUB_OUTPUT
 
       - name: Create Pull Request
+        id: cpr
         uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
         with:
           token: ${{ steps.app-token.outputs.token }}
@@ -61,6 +62,7 @@ jobs:
           delete-branch: true
 
       - name: Enable Pull Request Automerge
-        run: gh pr merge --merge --auto "1"
+        if: ${{ steps.cpr.outputs.pull-request-number }}
+        run: gh pr merge ${{ steps.cpr.outputs.pull-request-number }} --merge --auto "1"
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
