@@ -1,0 +1,38 @@
+From e37f3d48c27fe42cf99e8b1242718b290ae1db69 Mon Sep 17 00:00:00 2001
+From: Florian Maurer <f.maurer@outlook.de>
+Date: Tue, 16 Dec 2025 16:16:04 +0100
+Subject: [PATCH] ath79: add openwrt patch for label-mac of comcast ew71v2
+
+---
+ patches/openwrt/0099-ew71v2-mac.patch | 22 ++++++++++++++++++++++
+ 1 file changed, 22 insertions(+)
+ create mode 100644 patches/openwrt/0099-ew71v2-mac.patch
+
+diff --git a/patches/openwrt/0099-ew71v2-mac.patch b/patches/openwrt/0099-ew71v2-mac.patch
+new file mode 100644
+index 0000000000..2c973e3125
+--- /dev/null
++++ b/patches/openwrt/0099-ew71v2-mac.patch
+@@ -0,0 +1,22 @@
++From 14f318c0a4f7b94ecb3b92024bb8fa44ebabf7e7 Mon Sep 17 00:00:00 2001
++From: Florian Maurer <f.maurer@outlook.de>
++Date: Tue, 16 Dec 2025 16:12:08 +0100
++Subject: [PATCH] ath79: set label-mac to eth0 for EW71-V2
++
++Signed-off-by: Florian Maurer <f.maurer@outlook.de>
++---
++ target/linux/ath79/dts/qca9531_comfast_cf-ew71-v2.dts | 1 +
++ 1 file changed, 1 insertion(+)
++
++diff --git a/target/linux/ath79/dts/qca9531_comfast_cf-ew71-v2.dts b/target/linux/ath79/dts/qca9531_comfast_cf-ew71-v2.dts
++index 934cb19a58b0dd..98ad7f871d9d0c 100644
++--- a/target/linux/ath79/dts/qca9531_comfast_cf-ew71-v2.dts
+++++ b/target/linux/ath79/dts/qca9531_comfast_cf-ew71-v2.dts
++@@ -15,6 +15,7 @@
++ 		led-boot = &led_wan;
++ 		led-failsafe = &led_wan;
++ 		led-upgrade = &led_wan;
+++		label-mac-device = &eth0;
++ 	};
++ 
++ 	leds {
