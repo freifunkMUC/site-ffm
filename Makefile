@@ -1,6 +1,6 @@
 GLUON_BUILD_DIR := gluon-build
 GLUON_GIT_URL := https://github.com/GoliathLabs/gluon.git
-GLUON_GIT_REF := b777c00d7ee141730cc286401530fd0b76210ce7 # gluon main (2025-12-16)
+GLUON_GIT_REF := 73d04d38edbc7193a0bf44288e093ebe84889d51 # gluon main (2025-12-16)
 
 PATCH_DIR := ./patches
 SECRET_KEY_FILE ?= ${HOME}/.gluon-secret-key
