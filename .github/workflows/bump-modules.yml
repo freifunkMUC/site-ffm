@@ -53,7 +53,8 @@ jobs:
           delete-branch: true
 
       - name: Enable Pull Request Automerge
-        run: gh pr merge --merge --auto "1"
+        if: ${{ steps.cpr.outputs.pull-request-number }}
+        run: gh pr merge ${{ steps.cpr.outputs.pull-request-number }} --merge --auto "1"
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
