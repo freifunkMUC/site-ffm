@@ -36,6 +36,7 @@ info:
 	@echo
 
 build: gluon-prepare output-clean
+	git --git-dir=.git describe --tags --always --abbrev=7 --dirty=+ 2>/dev/null > .scmversion
 ifeq ($(origin GLUON_DEVICES), undefined)
 	for target in ${GLUON_TARGETS}; do \
 		echo ""Building target $$target""; \
@@ -79,10 +80,12 @@ gluon-patch:
 
 gluon-clean:
 	rm -rf ${GLUON_BUILD_DIR}
+	rm -f .scmversion
 
 output-clean:
 	mkdir -p output/
 	rm -rf output/*
+	rm -f .scmversion
 
 clean: gluon-clean output-clean
 
