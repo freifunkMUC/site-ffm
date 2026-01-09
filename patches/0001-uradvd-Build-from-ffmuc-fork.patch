@@ -1,0 +1,48 @@
+From a0ace2ced0140bf37f41409c029bb1800a3ee889 Mon Sep 17 00:00:00 2001
+From: Grische <2787581+grische@users.noreply.github.com>
+Date: Fri, 9 Jan 2026 14:51:34 +0100
+Subject: [PATCH] uradvd: Build from ffmuc fork
+
+---
+ .../0002-uradvd-Build-from-ffmuc-fork.patch   | 29 +++++++++++++++++++
+ 1 file changed, 29 insertions(+)
+ create mode 100644 patches/packages/packages/0002-uradvd-Build-from-ffmuc-fork.patch
+
+diff --git a/patches/packages/packages/0002-uradvd-Build-from-ffmuc-fork.patch b/patches/packages/packages/0002-uradvd-Build-from-ffmuc-fork.patch
+new file mode 100644
+index 00000000..d1610c3c
+--- /dev/null
++++ b/patches/packages/packages/0002-uradvd-Build-from-ffmuc-fork.patch
+@@ -0,0 +1,29 @@
++From 9e2c0bbe48acbf2c36935a70227436e59f2d28c3 Mon Sep 17 00:00:00 2001
++From: Grische <2787581+grische@users.noreply.github.com>
++Date: Fri, 9 Jan 2026 14:50:15 +0100
++Subject: [PATCH] uradvd: Build from ffmuc fork
++
++---
++ net/uradvd/Makefile | 6 +++---
++ 1 file changed, 3 insertions(+), 3 deletions(-)
++
++diff --git a/net/uradvd/Makefile b/net/uradvd/Makefile
++index 121ebc240..11fad11e4 100644
++--- a/net/uradvd/Makefile
+++++ b/net/uradvd/Makefile
++@@ -4,9 +4,9 @@ PKG_NAME:=uradvd
++ PKG_RELEASE:=2
++ 
++ PKG_SOURCE_PROTO:=git
++-PKG_SOURCE_URL=https://gitli.stratum0.org/ffbs/uradvd.git
++-PKG_SOURCE_DATE:=2021-09-14
++-PKG_SOURCE_VERSION:=69e7a8c45d21a26c5956e601d5f7bd5725223cf8
+++PKG_SOURCE_URL=https://github.com/freifunkMUC/uradvd.git
+++PKG_SOURCE_DATE:=2026-01-09
+++PKG_SOURCE_VERSION:=780182a1fa24ece2a23e83a83e69fb325cedbdd7
++ PKG_MIRROR_HASH:=skip
++ 
++ PKG_MAINTAINER:=Moritz Warning <moritzwarning@web.de>
++-- 
++2.43.0
++
+-- 
+2.43.0
+
