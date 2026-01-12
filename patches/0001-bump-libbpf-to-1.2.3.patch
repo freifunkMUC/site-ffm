@@ -1,0 +1,54 @@
+From 746fe7117b3b015b857645fc07734fce758b3bb6 Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Mon, 12 Jan 2026 15:56:23 +0100
+Subject: [PATCH] bump libbpf to 1.2.3
+
+---
+ .../openwrt/0012-bump-libbpf-to-1.2.3.patch   | 35 +++++++++++++++++++
+ 1 file changed, 35 insertions(+)
+ create mode 100644 patches/openwrt/0012-bump-libbpf-to-1.2.3.patch
+
+diff --git a/patches/openwrt/0012-bump-libbpf-to-1.2.3.patch b/patches/openwrt/0012-bump-libbpf-to-1.2.3.patch
+new file mode 100644
+index 00000000..bbc4e003
+--- /dev/null
++++ b/patches/openwrt/0012-bump-libbpf-to-1.2.3.patch
+@@ -0,0 +1,35 @@
++From 0cd4ba23665b461ef4f1c126edd6dd8491660e27 Mon Sep 17 00:00:00 2001
++From: Grische <github@grische.xyz>
++Date: Mon, 12 Jan 2026 15:48:31 +0100
++Subject: [PATCH] bump libbpf to 1.2.3
++
++Important endianness bugfix and skeleton forward compatibility:
++See https://github.com/libbpf/libbpf/releases/tag/v1.2.3
++---
++ package/libs/libbpf/Makefile | 6 +++---
++ 1 file changed, 3 insertions(+), 3 deletions(-)
++
++diff --git a/package/libs/libbpf/Makefile b/package/libs/libbpf/Makefile
++index a034231138..d4b646c9f9 100644
++--- a/package/libs/libbpf/Makefile
+++++ b/package/libs/libbpf/Makefile
++@@ -8,13 +8,13 @@
++ include $(TOPDIR)/rules.mk
++ 
++ PKG_NAME:=libbpf
++-PKG_VERSION:=1.2.2
+++PKG_VERSION:=1.2.3
++ PKG_RELEASE:=1
++ 
++ PKG_SOURCE_URL:=https://github.com/libbpf/libbpf
++-PKG_MIRROR_HASH:=d20f5a226e5729c87c367f3fba61c44d5e13176ef12637d0e0b30629fa3ab0d6
+++PKG_MIRROR_HASH:=f69a34cad0088aad2bb8daf7cdd1c29d12c17f9377bf435c57b63c37e736f74f
++ PKG_SOURCE_PROTO:=git
++-PKG_SOURCE_VERSION:=1728e3e4bef0e138ea95ffe62163eb9a6ac6fa32
+++PKG_SOURCE_VERSION:=c504f227df9b47576a04314df161d76b2261eb4d
++ PKG_ABI_VERSION:=$(firstword $(subst .,$(space),$(PKG_VERSION)))
++ 
++ PKG_MAINTAINER:=Tony Ambardar <itugrok@yahoo.com>
++-- 
++2.47.3
++
+-- 
+2.47.3
+
