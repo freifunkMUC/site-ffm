@@ -1,0 +1,21 @@
+From 95871b825d4807198da1d73bc2125d69ab79e1bf Mon Sep 17 00:00:00 2001
+From: Tobias <5702338+T0biii@users.noreply.github.com>
+Date: Fri, 16 Jan 2026 09:20:51 +0000
+Subject: [PATCH] rockchip-armv8: add support for NanoPi R5C
+
+---
+ targets/rockchip-armv8 | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/targets/rockchip-armv8 b/targets/rockchip-armv8
+index 9cc8a220..7be2ef2f 100644
+--- a/targets/rockchip-armv8
++++ b/targets/rockchip-armv8
+@@ -6,3 +6,4 @@ defaults {
+ device('friendlyelec-nanopi-r2s', 'friendlyarm_nanopi-r2s')
+ device('friendlyelec-nanopi-r3s', 'friendlyarm_nanopi-r3s')
+ device('friendlyelec-nanopi-r4s', 'friendlyarm_nanopi-r4s') -- 4GB LPDDR4
++device('friendlyelec-nanopi-r5c', 'friendlyarm_nanopi-r5c')
+-- 
+2.52.0
+
