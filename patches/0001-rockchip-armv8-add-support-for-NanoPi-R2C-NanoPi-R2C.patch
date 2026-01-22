@@ -1,0 +1,49 @@
+From f318a106721fd2e02eb4a65ff03ca6ffa08e1d45 Mon Sep 17 00:00:00 2001
+From: Tobias <5702338+T0biii@users.noreply.github.com>
+Date: Thu, 22 Jan 2026 17:13:20 +0000
+Subject: [PATCH] rockchip-armv8: add support for NanoPi R2C, NanoPi R2C Plus,
+ NanoPi R5C, NanoPi R5S, NanoPi R6C, NanoPi R6S
+
+---
+ package/gluon-core/luasrc/lib/gluon/upgrade/010-primary-mac | 6 ++++++
+ targets/rockchip-armv8                                      | 6 ++++++
+ 2 files changed, 12 insertions(+)
+
+diff --git a/package/gluon-core/luasrc/lib/gluon/upgrade/010-primary-mac b/package/gluon-core/luasrc/lib/gluon/upgrade/010-primary-mac
+index 49b4bf0a..f2959deb 100755
+--- a/package/gluon-core/luasrc/lib/gluon/upgrade/010-primary-mac
++++ b/package/gluon-core/luasrc/lib/gluon/upgrade/010-primary-mac
+@@ -110,8 +110,14 @@ local primary_addrs = {
+ 		}},
+ 		{'rockchip', 'armv8', {
+ 			'friendlyarm,nanopi-r2s',
++			'friendlyarm,nanopi-r2c',
++			'friendlyarm,nanopi-r2c-plus',
+ 			'friendlyarm,nanopi-r3s',
+ 			'friendlyarm,nanopi-r4s',
++			'friendlyarm,nanopi-r5c',
++			'friendlyarm,nanopi-r5s',
++			'friendlyarm,nanopi-r6c',
++			'friendlyarm,nanopi-r6s',
+ 		}},
+ 		{'x86'},
+ 	}},
+diff --git a/targets/rockchip-armv8 b/targets/rockchip-armv8
+index 9cc8a220..9850f26a 100644
+--- a/targets/rockchip-armv8
++++ b/targets/rockchip-armv8
+@@ -4,5 +4,11 @@ defaults {
+ }
+ 
+ device('friendlyelec-nanopi-r2s', 'friendlyarm_nanopi-r2s')
++device('friendlyelec-nanopi-r2c', 'friendlyarm_nanopi-r2c')
++device('friendlyelec-nanopi-r2c-plus', 'friendlyarm_nanopi-r2c-plus')
+ device('friendlyelec-nanopi-r3s', 'friendlyarm_nanopi-r3s')
+ device('friendlyelec-nanopi-r4s', 'friendlyarm_nanopi-r4s') -- 4GB LPDDR4
++device('friendlyelec-nanopi-r5c', 'friendlyarm_nanopi-r5c')
++device('friendlyelec-nanopi-r5s', 'friendlyarm_nanopi-r5s')
++device('friendlyelec-nanopi-r6c', 'friendlyarm_nanopi-r6c')
++device('friendlyelec-nanopi-r6s', 'friendlyarm_nanopi-r6s')
+-- 
+2.52.0
+
