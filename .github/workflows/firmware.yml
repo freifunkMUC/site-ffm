@@ -78,7 +78,7 @@ jobs:
   # Workaround job so that there is a single job for the required status check
   build_firmware_complete:
     name: All Targets Build
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     if: ${{ !cancelled() }}
     needs: [build_firmware]
     steps:
