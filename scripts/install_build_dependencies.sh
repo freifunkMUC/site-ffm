@@ -21,7 +21,7 @@ apt-get -y --no-install-recommends install ca-certificates
 apt-get -y --no-install-recommends install \
     bash \
     bzip2 \
-    clang \
+    clang-20 \
     curl \
     clang \
     diffutils \
@@ -57,3 +57,12 @@ apt-get -y --no-install-recommends install bpftool || # Ubuntu 25.04+
     tar xvf bpftool-v7.6.0-amd64.tar.gz -C /usr/local/bin
     chmod +x /usr/local/bin/bpftool
 }
+
+# Remove older clang versions to force usage of clang-20
+apt-get -y --auto-remove purge \
+    clang-16 \
+    clang-17 \
+    clang-18
+
+# Refresh shell command hash cache
+hash -r
