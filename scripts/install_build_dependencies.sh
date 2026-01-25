@@ -17,6 +17,11 @@ apt-get update
 # ca-certificates required for Github git cloning
 apt-get -y --no-install-recommends install ca-certificates
 
+# Remove older clang versions to force usage of clang-20
+if [ -n "${DELETE_OTHER_CLANG_VERSIONS-}" ]; then
+    apt-get -y --auto-remove purge clang* || echo "No version of clang found for uninstallation"
+fi
+
 # Install build environment
 apt-get -y --no-install-recommends install \
     bash \
@@ -57,12 +62,6 @@ apt-get -y --no-install-recommends install bpftool || # Ubuntu 25.04+
     tar xvf bpftool-v7.6.0-amd64.tar.gz -C /usr/local/bin
     chmod +x /usr/local/bin/bpftool
 }
-
-# Remove older clang versions to force usage of clang-20
-apt-get -y --auto-remove purge \
-    clang-16 \
-    clang-17 \
-    clang-18
 
 # Refresh shell command hash cache
 hash -r
