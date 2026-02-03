@@ -1,28 +1,30 @@
-From d54355c13e7f38e47eb5c5a5ab441fc361a5fee8 Mon Sep 17 00:00:00 2001
+From 748274c48314b0f49636d1e6a4465067ff8390ae Mon Sep 17 00:00:00 2001
 From: Grische <2787581+grische@users.noreply.github.com>
-Date: Tue, 3 Feb 2026 22:05:15 +0100
+Date: Wed, 4 Feb 2026 00:29:54 +0100
 Subject: [PATCH] powerpc: fix eBPF JIT compilation
 
 ---
- ...015-powerpc-fix-eBPF-JIT-compilation.patch | 79 +++++++++++++++++++
- 1 file changed, 79 insertions(+)
+ ...015-powerpc-fix-eBPF-JIT-compilation.patch | 112 ++++++++++++++++++
+ 1 file changed, 112 insertions(+)
  create mode 100644 patches/openwrt/0015-powerpc-fix-eBPF-JIT-compilation.patch
 
 diff --git a/patches/openwrt/0015-powerpc-fix-eBPF-JIT-compilation.patch b/patches/openwrt/0015-powerpc-fix-eBPF-JIT-compilation.patch
 new file mode 100644
-index 00000000..e2e965be
+index 00000000..1b9c5467
 --- /dev/null
 +++ b/patches/openwrt/0015-powerpc-fix-eBPF-JIT-compilation.patch
-@@ -0,0 +1,79 @@
-+From 6fc215e96f43a847eb8c6f038f402ad9d27d0578 Mon Sep 17 00:00:00 2001
+@@ -0,0 +1,112 @@
++From 1547a241e545d18f07cbf1f118bab3aaeef773b3 Mon Sep 17 00:00:00 2001
 +From: Grische <2787581+grische@users.noreply.github.com>
 +Date: Tue, 3 Feb 2026 22:04:39 +0100
 +Subject: [PATCH] powerpc: fix eBPF JIT compilation
 +
 +---
 + ...861-powerpc-fix-eBPF-JIT-compilation.patch | 60 +++++++++++++++++++
-+ 1 file changed, 60 insertions(+)
++ ...862-powerpc-fix-eBPF-JIT-compilation.patch | 25 ++++++++
++ 2 files changed, 85 insertions(+)
 + create mode 100644 target/linux/generic/pending-5.15/861-powerpc-fix-eBPF-JIT-compilation.patch
++ create mode 100644 target/linux/generic/pending-5.15/862-powerpc-fix-eBPF-JIT-compilation.patch
 +
 +diff --git a/target/linux/generic/pending-5.15/861-powerpc-fix-eBPF-JIT-compilation.patch b/target/linux/generic/pending-5.15/861-powerpc-fix-eBPF-JIT-compilation.patch
 +new file mode 100644
@@ -87,6 +89,37 @@ index 00000000..e2e965be
 ++ 			break;
 ++ 
 ++ 		/*
+++-- 
+++2.43.0
+++
++diff --git a/target/linux/generic/pending-5.15/862-powerpc-fix-eBPF-JIT-compilation.patch b/target/linux/generic/pending-5.15/862-powerpc-fix-eBPF-JIT-compilation.patch
++new file mode 100644
++index 0000000000..65c628c387
++--- /dev/null
+++++ b/target/linux/generic/pending-5.15/862-powerpc-fix-eBPF-JIT-compilation.patch
++@@ -0,0 +1,25 @@
+++From 563b9a63568c96c4289c53005878f627fc943476 Mon Sep 17 00:00:00 2001
+++From: Grische <2787581+grische@users.noreply.github.com>
+++Date: Wed, 4 Feb 2026 00:26:20 +0100
+++Subject: [PATCH 2/2] fixup! powerpc: fix eBPF JIT compilation
+++
+++---
+++ arch/powerpc/net/bpf_jit_comp32.c | 2 +-
+++ 1 file changed, 1 insertion(+), 1 deletion(-)
+++
+++diff --git a/arch/powerpc/net/bpf_jit_comp32.c b/arch/powerpc/net/bpf_jit_comp32.c
+++index 2d02810b80fc..eccff1c51ad6 100644
+++--- a/arch/powerpc/net/bpf_jit_comp32.c
++++++ b/arch/powerpc/net/bpf_jit_comp32.c
+++@@ -884,7 +884,7 @@ int bpf_jit_build_body(struct bpf_prog *fp, u32 *image, struct codegen_context *
+++ 			 * with the non-zero bits in R4, which matches BPF_REG_1.
+++ 			 */
+++ 			if (insn[i].src_reg == BPF_PSEUDO_CALL)
+++-				EMIT(PPC_RAW_MR(_R3, bpf_to_ppc(BPF_REG_1)));
++++				EMIT(PPC_RAW_MR(_R3, bpf_to_ppc(ctx, BPF_REG_1)));
+++ 
+++ 			if (bpf_is_seen_register(ctx, bpf_to_ppc(ctx, BPF_REG_5))) {
+++ 				EMIT(PPC_RAW_STW(bpf_to_ppc(ctx, BPF_REG_5) - 1, _R1, 8));
 ++-- 
 ++2.43.0
 ++
