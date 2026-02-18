@@ -1,0 +1,133 @@
+From 73e058ad649cc73d7730b3032ade090a625f8a7c Mon Sep 17 00:00:00 2001
+From: Grische <2787581+grische@users.noreply.github.com>
+Date: Mon, 16 Feb 2026 13:21:51 +0100
+Subject: [PATCH] batman-adv: Fix recursive rtnl-lock in throughput detection
+
+---
+ ...ecursive-rtnl-lock-in-throughput-det.patch | 114 ++++++++++++++++++
+ 1 file changed, 114 insertions(+)
+ create mode 100644 patches/packages/routing/0004-batman-adv-Fix-recursive-rtnl-lock-in-throughput-det.patch
+
+diff --git a/patches/packages/routing/0004-batman-adv-Fix-recursive-rtnl-lock-in-throughput-det.patch b/patches/packages/routing/0004-batman-adv-Fix-recursive-rtnl-lock-in-throughput-det.patch
+new file mode 100644
+index 00000000..959e8871
+--- /dev/null
++++ b/patches/packages/routing/0004-batman-adv-Fix-recursive-rtnl-lock-in-throughput-det.patch
+@@ -0,0 +1,114 @@
++From 3113d5a9e92e12037c24daaafffa015c5d877cff Mon Sep 17 00:00:00 2001
++From: Grische <2787581+grische@users.noreply.github.com>
++Date: Mon, 16 Feb 2026 13:20:58 +0100
++Subject: [PATCH] batman-adv: Fix recursive rtnl-lock in throughput detection
++
++---
++ ...ecursive-rtnl-lock-in-throughput-det.patch | 95 +++++++++++++++++++
++ 1 file changed, 95 insertions(+)
++ create mode 100644 batman-adv/patches/0020-batman-adv-Fix-recursive-rtnl-lock-in-throughput-det.patch
++
++diff --git a/batman-adv/patches/0020-batman-adv-Fix-recursive-rtnl-lock-in-throughput-det.patch b/batman-adv/patches/0020-batman-adv-Fix-recursive-rtnl-lock-in-throughput-det.patch
++new file mode 100644
++index 0000000..70d51cc
++--- /dev/null
+++++ b/batman-adv/patches/0020-batman-adv-Fix-recursive-rtnl-lock-in-throughput-det.patch
++@@ -0,0 +1,95 @@
+++From 34e1a4c4e5da82b8dbc38bdb043ed12feb1009e3 Mon Sep 17 00:00:00 2001
+++From: Sven Eckelmann <sven@narfation.org>
+++Date: Mon, 16 Feb 2026 11:20:29 +0100
+++Subject: [PATCH] batman-adv: Fix recursive rtnl-lock in throughput detection
+++
+++TODO:
+++
+++* cancel_delayed_work_sync in batadv_v_elp_iface_disable (with rtnl)
+++* rtnl_lock again in batadv_get_real_netdev
+++
+++Fixes: 405d49a20a20 ("batman-adv: Drop unmanaged ELP metric worker")
+++Signed-off-by: Sven Eckelmann <sven@narfation.org>
+++---
+++ net/batman-adv/bat_v_elp.c      | 11 ++++++++++-
+++ net/batman-adv/hard-interface.c |  8 ++++----
+++ net/batman-adv/hard-interface.h |  1 +
+++ 3 files changed, 15 insertions(+), 5 deletions(-)
+++
+++diff --git a/net/batman-adv/bat_v_elp.c b/net/batman-adv/bat_v_elp.c
+++index 13b2f561..aba57848 100644
+++--- a/net/batman-adv/bat_v_elp.c
++++++ b/net/batman-adv/bat_v_elp.c
+++@@ -112,7 +112,16 @@ static bool batadv_v_elp_get_throughput(struct batadv_hardif_neigh_node *neigh,
+++ 			/* unsupported WiFi driver version */
+++ 			goto default_throughput;
+++ 
+++-		real_netdev = batadv_get_real_netdev(hard_iface->net_dev);
++++
++++		/* only use rtnl_trylock because the elp worker will be cancelled while
++++		 * the rntl_lock is held. the cancel_delayed_work_sync() would otherwise
++++		 * wait forever when the elp work_item was started and it is then also
++++		 * trying to rtnl_lock
++++		 */
++++		if (!rtnl_trylock())
++++			return false;
++++		real_netdev = __batadv_get_real_netdev(hard_iface->net_dev);
++++		rtnl_unlock();
+++ 		if (!real_netdev)
+++ 			goto default_throughput;
+++ 
+++diff --git a/net/batman-adv/hard-interface.c b/net/batman-adv/hard-interface.c
+++index 81893830..e5360234 100644
+++--- a/net/batman-adv/hard-interface.c
++++++ b/net/batman-adv/hard-interface.c
+++@@ -202,7 +202,7 @@ static bool batadv_is_valid_iface(const struct net_device *net_dev)
+++ }
+++ 
+++ /**
+++- * batadv_get_real_netdevice() - check if the given netdev struct is a virtual
++++ * __batadv_get_real_netdev() - check if the given netdev struct is a virtual
+++  *  interface on top of another 'real' interface
+++  * @netdev: the device to check
+++  *
+++@@ -212,7 +212,7 @@ static bool batadv_is_valid_iface(const struct net_device *net_dev)
+++  * Return: the 'real' net device or the original net device and NULL in case
+++  *  of an error.
+++  */
+++-static struct net_device *batadv_get_real_netdevice(struct net_device *netdev)
++++struct net_device *__batadv_get_real_netdev(struct net_device *netdev)
+++ {
+++ 	struct batadv_hard_iface *hard_iface = NULL;
+++ 	struct net_device *real_netdev = NULL;
+++@@ -265,7 +265,7 @@ struct net_device *batadv_get_real_netdev(struct net_device *net_device)
+++ 	struct net_device *real_netdev;
+++ 
+++ 	rtnl_lock();
+++-	real_netdev = batadv_get_real_netdevice(net_device);
++++	real_netdev = __batadv_get_real_netdev(net_device);
+++ 	rtnl_unlock();
+++ 
+++ 	return real_netdev;
+++@@ -333,7 +333,7 @@ static u32 batadv_wifi_flags_evaluate(struct net_device *net_device)
+++ 	if (batadv_is_cfg80211_netdev(net_device))
+++ 		wifi_flags |= BATADV_HARDIF_WIFI_CFG80211_DIRECT;
+++ 
+++-	real_netdev = batadv_get_real_netdevice(net_device);
++++	real_netdev = __batadv_get_real_netdev(net_device);
+++ 	if (!real_netdev)
+++ 		return wifi_flags;
+++ 
+++diff --git a/net/batman-adv/hard-interface.h b/net/batman-adv/hard-interface.h
+++index 64f660db..c7c2f17e 100644
+++--- a/net/batman-adv/hard-interface.h
++++++ b/net/batman-adv/hard-interface.h
+++@@ -68,6 +68,7 @@ enum batadv_hard_if_bcast {
+++ 
+++ extern struct notifier_block batadv_hard_if_notifier;
+++ 
++++struct net_device *__batadv_get_real_netdev(struct net_device *net_device);
+++ struct net_device *batadv_get_real_netdev(struct net_device *net_device);
+++ bool batadv_is_cfg80211_hardif(struct batadv_hard_iface *hard_iface);
+++ bool batadv_is_wifi_hardif(struct batadv_hard_iface *hard_iface);
+++-- 
+++2.47.3
+++
++-- 
++2.43.0
++
+-- 
+2.43.0
+
