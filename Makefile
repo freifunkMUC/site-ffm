@@ -18,10 +18,13 @@ else
 	GLUON_RELEASE := $(shell git describe --tags)~$(BUILD_NUMBER)
 endif
 
+GLUON_SITE_VERSION := $(shell git --git-dir=.git describe --tags --always --abbrev=7 --dirty=+ 2>/dev/null || echo unknown)
+
 JOBS ?= $(shell nproc)
 
 GLUON_MAKE := ${MAKE} -j ${JOBS} -C ${GLUON_BUILD_DIR} \
 	GLUON_RELEASE=${GLUON_RELEASE} \
+	GLUON_SITE_VERSION=${GLUON_SITE_VERSION} \
 	GLUON_AUTOUPDATER_BRANCH=${GLUON_AUTOUPDATER_BRANCH} \
 	GLUON_AUTOUPDATER_ENABLED=${GLUON_AUTOUPDATER_ENABLED}
 
@@ -36,7 +39,6 @@ info:
 	@echo
 
 build: gluon-prepare output-clean
-	git --git-dir=.git describe --tags --always --abbrev=7 --dirty=+ 2>/dev/null > .scmversion
 ifeq ($(origin GLUON_DEVICES), undefined)
 	for target in ${GLUON_TARGETS}; do \
 		echo ""Building target $$target""; \
@@ -80,12 +82,10 @@ gluon-patch:
 
 gluon-clean:
 	rm -rf ${GLUON_BUILD_DIR}
-	rm -f .scmversion
 
 output-clean:
 	mkdir -p output/
 	rm -rf output/*
-	rm -f .scmversion
 
 clean: gluon-clean output-clean
 
