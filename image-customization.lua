@@ -158,6 +158,8 @@ if device({
     'tp-link-td-w8970',
     'tp-link-td-w8980',
     'tp-link-tl-wr902ac-v1',
+    'tp-link-tl-wr902ac-v3',
+    'tp-link-tl-wr902ac-v4',
 }) then
     include_usb = false
 end
