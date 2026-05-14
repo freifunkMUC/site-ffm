@@ -1,0 +1,43 @@
+From 788432a058e6d10361012b90a090e6d66f373cb9 Mon Sep 17 00:00:00 2001
+From: Grische <2787581+grische@users.noreply.github.com>
+Date: Fri, 10 Apr 2026 17:15:14 +0200
+Subject: [PATCH] also deploy node-monitor
+
+---
+ .../community/0002-deploy-node-monitor.patch  | 24 +++++++++++++++++++
+ 1 file changed, 24 insertions(+)
+ create mode 100644 patches/packages/community/0002-deploy-node-monitor.patch
+
+diff --git a/patches/packages/community/0002-deploy-node-monitor.patch b/patches/packages/community/0002-deploy-node-monitor.patch
+new file mode 100644
+index 00000000..587ed057
+--- /dev/null
++++ b/patches/packages/community/0002-deploy-node-monitor.patch
+@@ -0,0 +1,24 @@
++From ea11ee2af9c354d705a607fc56376f286f801097 Mon Sep 17 00:00:00 2001
++From: Grische <2787581+grische@users.noreply.github.com>
++Date: Fri, 10 Apr 2026 17:14:07 +0200
++Subject: [PATCH] ffda-node-whisperer: also deploy node-monitor
++
++---
++ ffda-node-whisperer/Makefile | 1 +
++ 1 file changed, 1 insertion(+)
++
++diff --git a/ffda-node-whisperer/Makefile b/ffda-node-whisperer/Makefile
++index 75d4bfa..d089cdd 100644
++--- a/ffda-node-whisperer/Makefile
+++++ b/ffda-node-whisperer/Makefile
++@@ -36,6 +36,7 @@ endef
++ define Package/ffda-node-whisperer/install
++ 	$(INSTALL_DIR) $(1)/usr/bin $(1)/etc/init.d $(1)/etc/config $(1)/lib/gluon/upgrade
++ 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/src/node-whisperer $(1)/usr/bin
+++	$(INSTALL_BIN) $(PKG_BUILD_DIR)/src/node-monitor $(1)/usr/bin
++ 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/openwrt/node-whisperer/files/node-whisperer.init $(1)/etc/init.d/node-whisperer
++ 	$(CP) $(PKG_BUILD_DIR)/openwrt/node-whisperer/files/node-whisperer.uci $(1)/etc/config/node-whisperer
++ 	$(INSTALL_BIN) ./files/node-whisperer.upgrade.lua $(1)/lib/gluon/upgrade/150-node-whisperer
++-- 
++2.43.0
++
+-- 
+2.43.0
+
