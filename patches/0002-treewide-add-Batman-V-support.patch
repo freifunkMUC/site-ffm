@@ -1,0 +1,1020 @@
+From 908153f65ee448caedb167d65677da998bf90cb3 Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Fri, 10 Apr 2026 21:08:18 +0200
+Subject: [PATCH 2/7] treewide: add Batman V support
+
+---
+ .../src/respondd-neighbours.c                 | 133 +++++++++++++-----
+ .../src/respondd-statistics.c                 |  34 ++++-
+ .../src/gluon-radv-filterd.c                  | 132 ++++++++++-------
+ .../luasrc/lib/gluon/status-page/mesh.lua     |   2 +
+ .../src/neighbours-batadv.c                   |  80 ++++++++---
+ .../gluon/status-page/view/status-page.html   |   2 +-
+ .../javascript/status-page.js                 |  14 +-
+ .../javascript/status-page.min.js             |   2 +-
+ package/libbatadv/src/batadv-genl.c           | 102 ++++++++++++++
+ package/libbatadv/src/batadv-genl.h           |  16 +++
+ package/libgluonutil/src/CMakeLists.txt       |   2 +-
+ package/libgluonutil/src/libgluonutil.c       |  13 ++
+ package/libgluonutil/src/libgluonutil.h       |   3 +
+ 13 files changed, 411 insertions(+), 124 deletions(-)
+
+diff --git a/package/gluon-mesh-batman-adv/src/respondd-neighbours.c b/package/gluon-mesh-batman-adv/src/respondd-neighbours.c
+index 261d6b27..f588f005 100644
+--- a/package/gluon-mesh-batman-adv/src/respondd-neighbours.c
++++ b/package/gluon-mesh-batman-adv/src/respondd-neighbours.c
+@@ -44,7 +44,8 @@ static struct json_object * ifnames2addrs(struct json_object *interfaces) {
+ 	return ret;
+ }
+ 
+-static const enum batadv_nl_attrs parse_orig_list_mandatory[] = {
++/* Batman IV mandatory attrs */
++static const enum batadv_nl_attrs parse_orig_list_mandatory_batadv_iv[] = {
+ 	BATADV_ATTR_ORIG_ADDRESS,
+ 	BATADV_ATTR_NEIGH_ADDRESS,
+ 	BATADV_ATTR_TQ,
+@@ -52,20 +53,58 @@ static const enum batadv_nl_attrs parse_orig_list_mandatory[] = {
+ 	BATADV_ATTR_LAST_SEEN_MSECS,
+ };
+ 
+-static int parse_orig_list_netlink_cb(struct nl_msg *msg, void *arg)
++/* Batman V mandatory attrs */
++static const enum batadv_nl_attrs parse_neigh_list_mandatory_batadv_v[] = {
++	BATADV_ATTR_NEIGH_ADDRESS,
++	BATADV_ATTR_THROUGHPUT,
++	BATADV_ATTR_HARD_IFINDEX,
++	BATADV_ATTR_LAST_SEEN_MSECS,
++};
++
++static int add_neighbour(struct neigh_netlink_opts *opts, struct nlattr **attrs,
++		uint8_t *mac, uint8_t tq)
++{
++	uint32_t hardif;
++	uint32_t lastseen;
++	char ifname_buf[IF_NAMESIZE], *ifname;
++	char mac1[18];
++
++	hardif = nla_get_u32(attrs[BATADV_ATTR_HARD_IFINDEX]);
++	lastseen = nla_get_u32(attrs[BATADV_ATTR_LAST_SEEN_MSECS]);
++
++	ifname = if_indextoname(hardif, ifname_buf);
++	if (!ifname)
++		return NL_OK;
++
++	sprintf(mac1, "%02x:%02x:%02x:%02x:%02x:%02x",
++		mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
++
++	struct json_object *obj = json_object_new_object();
++	if (!obj)
++		return NL_OK;
++
++	struct json_object *interface;
++	if (!json_object_object_get_ex(opts->interfaces, ifname, &interface)) {
++		interface = json_object_new_object();
++		json_object_object_add(opts->interfaces, ifname, interface);
++	}
++
++	json_object_object_add(obj, "tq", json_object_new_int(tq));
++	json_object_object_add(obj, "lastseen", json_object_new_double(lastseen / 1000.));
++	json_object_object_add(obj, "best", json_object_new_boolean(nla_get_flag(attrs[BATADV_ATTR_FLAG_BEST])));
++	json_object_object_add(interface, mac1, obj);
++
++	return NL_OK;
++}
++
++static int parse_orig_list_netlink_cb_batadv_iv(struct nl_msg *msg, void *arg)
+ {
+ 	struct nlattr *attrs[BATADV_ATTR_MAX+1];
+ 	struct nlmsghdr *nlh = nlmsg_hdr(msg);
+ 	struct batadv_nlquery_opts *query_opts = arg;
+ 	struct genlmsghdr *ghdr;
+-	uint8_t *orig;
+-	uint8_t *dest;
+-	uint8_t tq;
+-	uint32_t hardif;
+-	uint32_t lastseen;
+-	char ifname_buf[IF_NAMESIZE], *ifname;
++	uint8_t *mac;
+ 	struct neigh_netlink_opts *opts;
+-	char mac1[18];
+ 
+ 	opts = batadv_container_of(query_opts, struct neigh_netlink_opts,
+ 			query_opts);
+@@ -82,42 +121,49 @@ static int parse_orig_list_netlink_cb(struct nl_msg *msg, void *arg)
+ 				genlmsg_len(ghdr), batadv_genl_policy))
+ 		return NL_OK;
+ 
+-	if (batadv_genl_missing_attrs(attrs, parse_orig_list_mandatory,
+-				BATADV_ARRAY_SIZE(parse_orig_list_mandatory)))
++	if (batadv_genl_missing_attrs(attrs, parse_orig_list_mandatory_batadv_iv,
++				BATADV_ARRAY_SIZE(parse_orig_list_mandatory_batadv_iv)))
+ 		return NL_OK;
+ 
+-	orig = nla_data(attrs[BATADV_ATTR_ORIG_ADDRESS]);
+-	dest = nla_data(attrs[BATADV_ATTR_NEIGH_ADDRESS]);
+-	tq = nla_get_u8(attrs[BATADV_ATTR_TQ]);
+-	hardif = nla_get_u32(attrs[BATADV_ATTR_HARD_IFINDEX]);
+-	lastseen = nla_get_u32(attrs[BATADV_ATTR_LAST_SEEN_MSECS]);
+-
+-	if (memcmp(orig, dest, 6) != 0)
++	mac = nla_data(attrs[BATADV_ATTR_ORIG_ADDRESS]);
++	if (memcmp(mac, nla_data(attrs[BATADV_ATTR_NEIGH_ADDRESS]), 6) != 0)
+ 		return NL_OK;
+ 
+-	ifname = if_indextoname(hardif, ifname_buf);
+-	if (!ifname)
++	return add_neighbour(opts, attrs, mac, nla_get_u8(attrs[BATADV_ATTR_TQ]));
++}
++
++static int parse_neigh_list_netlink_cb_batadv_v(struct nl_msg *msg, void *arg)
++{
++	struct nlattr *attrs[BATADV_ATTR_MAX+1];
++	struct nlmsghdr *nlh = nlmsg_hdr(msg);
++	struct batadv_nlquery_opts *query_opts = arg;
++	struct genlmsghdr *ghdr;
++	uint8_t *mac;
++	struct neigh_netlink_opts *opts;
++
++	opts = batadv_container_of(query_opts, struct neigh_netlink_opts,
++			query_opts);
++
++	if (!genlmsg_valid_hdr(nlh, 0))
+ 		return NL_OK;
+ 
+-	sprintf(mac1, "%02x:%02x:%02x:%02x:%02x:%02x",
+-		orig[0], orig[1], orig[2], orig[3], orig[4], orig[5]);
++	ghdr = nlmsg_data(nlh);
+ 
+-	struct json_object *obj = json_object_new_object();
+-	if (!obj)
++	if (ghdr->cmd != BATADV_CMD_GET_NEIGHBORS)
+ 		return NL_OK;
+ 
+-	struct json_object *interface;
+-	if (!json_object_object_get_ex(opts->interfaces, ifname, &interface)) {
+-		interface = json_object_new_object();
+-		json_object_object_add(opts->interfaces, ifname, interface);
+-	}
++	if (nla_parse(attrs, BATADV_ATTR_MAX, genlmsg_attrdata(ghdr, 0),
++				genlmsg_len(ghdr), batadv_genl_policy))
++		return NL_OK;
+ 
+-	json_object_object_add(obj, "tq", json_object_new_int(tq));
+-	json_object_object_add(obj, "lastseen", json_object_new_double(lastseen / 1000.));
+-	json_object_object_add(obj, "best", json_object_new_boolean(nla_get_flag(attrs[BATADV_ATTR_FLAG_BEST])));
+-	json_object_object_add(interface, mac1, obj);
++	if (batadv_genl_missing_attrs(attrs, parse_neigh_list_mandatory_batadv_v,
++				BATADV_ARRAY_SIZE(parse_neigh_list_mandatory_batadv_v)))
++		return NL_OK;
+ 
+-	return NL_OK;
++	mac = nla_data(attrs[BATADV_ATTR_NEIGH_ADDRESS]);
++
++	return add_neighbour(opts, attrs, mac,
++			gluonutil_get_pseudo_tq(nla_get_u32(attrs[BATADV_ATTR_THROUGHPUT])));
+ }
+ 
+ static struct json_object * get_batadv(void) {
+@@ -127,14 +173,27 @@ static struct json_object * get_batadv(void) {
+ 		},
+ 	};
+ 	int ret;
++	enum batadv_algo algo;
+ 
+ 	opts.interfaces = json_object_new_object();
+ 	if (!opts.interfaces)
+ 		return NULL;
+ 
+-	ret = batadv_genl_query("bat0", BATADV_CMD_GET_ORIGINATORS,
+-				parse_orig_list_netlink_cb, NLM_F_DUMP,
+-				&opts.query_opts);
++	if (batadv_genl_get_algo("bat0", &algo) < 0) {
++		json_object_put(opts.interfaces);
++		return NULL;
++	}
++
++	if (algo == BATADV_ALGO_BATMAN_V) {
++		ret = batadv_genl_query("bat0", BATADV_CMD_GET_NEIGHBORS,
++					parse_neigh_list_netlink_cb_batadv_v, NLM_F_DUMP,
++					&opts.query_opts);
++	} else {
++		ret = batadv_genl_query("bat0", BATADV_CMD_GET_ORIGINATORS,
++					parse_orig_list_netlink_cb_batadv_iv, NLM_F_DUMP,
++					&opts.query_opts);
++	}
++
+ 	if (ret < 0) {
+ 		json_object_put(opts.interfaces);
+ 		return NULL;
+diff --git a/package/gluon-mesh-batman-adv/src/respondd-statistics.c b/package/gluon-mesh-batman-adv/src/respondd-statistics.c
+index 28131fda..004a3b2f 100644
+--- a/package/gluon-mesh-batman-adv/src/respondd-statistics.c
++++ b/package/gluon-mesh-batman-adv/src/respondd-statistics.c
+@@ -34,16 +34,23 @@ struct clients_netlink_opts {
+ 
+ struct gw_netlink_opts {
+ 	struct json_object *obj;
++	enum batadv_algo algo;
+ 	struct batadv_nlquery_opts query_opts;
+ };
+ 
+ 
+-static const enum batadv_nl_attrs gateways_mandatory[] = {
++static const enum batadv_nl_attrs gateways_mandatory_batadv_iv[] = {
+ 	BATADV_ATTR_ORIG_ADDRESS,
+ 	BATADV_ATTR_ROUTER,
+ 	BATADV_ATTR_TQ,
+ };
+ 
++static const enum batadv_nl_attrs gateways_mandatory_batadv_v[] = {
++	BATADV_ATTR_ORIG_ADDRESS,
++	BATADV_ATTR_ROUTER,
++	BATADV_ATTR_THROUGHPUT,
++};
++
+ static int parse_gw_list_netlink_cb(struct nl_msg *msg, void *arg)
+ {
+ 	struct nlattr *attrs[BATADV_ATTR_MAX+1];
+@@ -52,7 +59,6 @@ static int parse_gw_list_netlink_cb(struct nl_msg *msg, void *arg)
+ 	struct genlmsghdr *ghdr;
+ 	uint8_t *orig;
+ 	uint8_t *router;
+-	uint8_t tq;
+ 	struct gw_netlink_opts *opts;
+ 	char addr[18];
+ 
+@@ -71,22 +77,34 @@ static int parse_gw_list_netlink_cb(struct nl_msg *msg, void *arg)
+ 				genlmsg_len(ghdr), batadv_genl_policy))
+ 		return NL_OK;
+ 
+-	if (batadv_genl_missing_attrs(attrs, gateways_mandatory,
+-				BATADV_ARRAY_SIZE(gateways_mandatory)))
+-		return NL_OK;
++	if (opts->algo == BATADV_ALGO_BATMAN_V) {
++		if (batadv_genl_missing_attrs(attrs, gateways_mandatory_batadv_v,
++					BATADV_ARRAY_SIZE(gateways_mandatory_batadv_v)))
++			return NL_OK;
++	} else {
++		if (batadv_genl_missing_attrs(attrs, gateways_mandatory_batadv_iv,
++					BATADV_ARRAY_SIZE(gateways_mandatory_batadv_iv)))
++			return NL_OK;
++	}
+ 
+ 	if (!attrs[BATADV_ATTR_FLAG_BEST])
+ 		return NL_OK;
+ 
+ 	orig = nla_data(attrs[BATADV_ATTR_ORIG_ADDRESS]);
+ 	router = nla_data(attrs[BATADV_ATTR_ROUTER]);
+-	tq = nla_get_u8(attrs[BATADV_ATTR_TQ]);
+ 
+ 	sprintf(addr, "%02x:%02x:%02x:%02x:%02x:%02x",
+ 		orig[0], orig[1], orig[2], orig[3], orig[4], orig[5]);
+ 
+ 	json_object_object_add(opts->obj, "gateway", json_object_new_string(addr));
+-	json_object_object_add(opts->obj, "gateway_tq", json_object_new_int(tq));
++
++	if (opts->algo == BATADV_ALGO_BATMAN_V) {
++		uint32_t throughput = nla_get_u32(attrs[BATADV_ATTR_THROUGHPUT]);
++		json_object_object_add(opts->obj, "gateway_throughput", json_object_new_int64(throughput));
++	} else {
++		uint8_t tq = nla_get_u8(attrs[BATADV_ATTR_TQ]);
++		json_object_object_add(opts->obj, "gateway_tq", json_object_new_int(tq));
++	}
+ 
+ 	sprintf(addr, "%02x:%02x:%02x:%02x:%02x:%02x",
+ 		router[0], router[1], router[2], router[3], router[4], router[5]);
+@@ -103,6 +121,8 @@ static void add_gateway(struct json_object *obj) {
+ 			.err = 0,
+ 		},
+ 	};
++	if (batadv_genl_get_algo("bat0", &opts.algo) < 0)
++		return;
+ 
+ 	batadv_genl_query("bat0", BATADV_CMD_GET_GATEWAYS,
+ 			parse_gw_list_netlink_cb, NLM_F_DUMP,
+diff --git a/package/gluon-radv-filterd/src/gluon-radv-filterd.c b/package/gluon-radv-filterd/src/gluon-radv-filterd.c
+index 29d126ac..55c974d5 100644
+--- a/package/gluon-radv-filterd/src/gluon-radv-filterd.c
++++ b/package/gluon-radv-filterd/src/gluon-radv-filterd.c
+@@ -37,11 +37,11 @@
+ 
+ #include "mac.h"
+ 
+-// Recheck TQs after this time even if no RA was received
++// Recheck metrics after this time even if no RA was received
+ #define MAX_INTERVAL 60
+ 
+-// Recheck TQs at most this often, even if new RAs were received (they won't
+-// become the preferred routers until the TQs have been rechecked)
++// Recheck metrics at most this often, even if new RAs were received (they won't
++// become the preferred routers until the metrics have been rechecked)
+ // Also, the first update will take at least this long
+ #define MIN_INTERVAL 15
+ 
+@@ -87,7 +87,7 @@ struct router {
+ 	struct ether_addr src;
+ 	struct timespec eol;
+ 	struct ether_addr originator;
+-	uint16_t tq;
++	uint32_t metric;
+ };
+ 
+ static struct global {
+@@ -95,9 +95,10 @@ static struct global {
+ 	struct router *routers;
+ 	const char *mesh_iface;
+ 	const char *chain;
+-	uint16_t max_tq;
+-	uint16_t hysteresis_thresh;
++	uint32_t max_metric;
++	uint32_t hysteresis_thresh;
+ 	struct router *best_router;
++	enum batadv_algo algo;
+ 	volatile sig_atomic_t stop_daemon;
+ } G = {
+ 	.mesh_iface = "bat0",
+@@ -167,8 +168,9 @@ static void usage(const char *msg) {
+ 	fprintf(stderr,
+ 		"Usage: %s [-m <mesh_iface>] [-t <thresh>] -c <chain> -i <iface>\n\n"
+ 		"  -m <mesh_iface>  B.A.T.M.A.N. advanced mesh interface used to get metric\n"
+-		"                   information (\"TQ\") for the available gateways. Default: bat0\n"
+-		"  -t <thresh>      Minimum TQ difference required to switch the gateway.\n"
++		"                   information (TQ or throughput) for the available gateways.\n"
++		"                   Default: bat0\n"
++		"  -t <thresh>      Minimum metric difference required to switch the gateway.\n"
+ 		"                   Default: 0\n"
+ 		"  -c <chain>       ebtables chain that should be managed by the daemon. The\n"
+ 		"                   chain already has to exist on program invocation and should\n"
+@@ -268,9 +270,7 @@ static void parse_cmdline(int argc, char *argv[]) {
+ 				threshold = strtoul(optarg, &endptr, 10);
+ 				if (*endptr != '\0')
+ 					exit_errmsg("Threshold must be a number: %s", optarg);
+-				if (threshold > BATMAN_IV_MAX_THRESHOLD)
+-					exit_errmsg("Threshold too large: %ld (max is %d)", threshold, BATMAN_IV_MAX_THRESHOLD);
+-				G.hysteresis_thresh = (uint16_t) threshold;
++				G.hysteresis_thresh = (uint32_t) threshold;
+ 				break;
+ 			case 'h':
+ 				usage(NULL);
+@@ -432,21 +432,26 @@ static int parse_tt_global(struct nl_msg *msg,
+ 	return NL_OK;
+ }
+ 
++static const enum batadv_nl_attrs originator_mandatory_batadv_iv[] = {
++	BATADV_ATTR_ORIG_ADDRESS,
++	BATADV_ATTR_TQ,
++};
++
++static const enum batadv_nl_attrs originator_mandatory_batadv_v[] = {
++	BATADV_ATTR_ORIG_ADDRESS,
++	BATADV_ATTR_THROUGHPUT,
++};
++
+ static int parse_originator(struct nl_msg *msg,
+ 		void *arg __attribute__((unused)))
+ {
+-
+-	static const enum batadv_nl_attrs mandatory[] = {
+-		BATADV_ATTR_ORIG_ADDRESS,
+-		BATADV_ATTR_TQ,
+-	};
+ 	struct nlattr *attrs[BATADV_ATTR_MAX + 1];
+ 	struct nlmsghdr *nlh = nlmsg_hdr(msg);
+ 	struct ether_addr mac_a;
+ 	struct genlmsghdr *ghdr;
+ 	struct router *router;
+ 	uint8_t *orig;
+-	uint8_t tq;
++	uint32_t metric;
+ 
+ 	// parse netlink entry
+ 	if (!genlmsg_valid_hdr(nlh, 0))
+@@ -462,15 +467,24 @@ static int parse_originator(struct nl_msg *msg,
+ 		return NL_OK;
+ 	}
+ 
+-	if (batadv_genl_missing_attrs(attrs, mandatory, ARRAY_SIZE(mandatory)))
+-		return NL_OK;
+-
+-	orig = nla_data(attrs[BATADV_ATTR_ORIG_ADDRESS]);
+-	tq = nla_get_u8(attrs[BATADV_ATTR_TQ]);
++	if (G.algo == BATADV_ALGO_BATMAN_V) {
++		if (batadv_genl_missing_attrs(attrs, originator_mandatory_batadv_v,
++					ARRAY_SIZE(originator_mandatory_batadv_v)))
++			return NL_OK;
++	} else {
++		if (batadv_genl_missing_attrs(attrs, originator_mandatory_batadv_iv,
++					ARRAY_SIZE(originator_mandatory_batadv_iv)))
++			return NL_OK;
++	}
+ 
+ 	if (!attrs[BATADV_ATTR_FLAG_BEST])
+ 		return NL_OK;
+ 
++	orig = nla_data(attrs[BATADV_ATTR_ORIG_ADDRESS]);
++	metric = (G.algo == BATADV_ALGO_BATMAN_V)
++		? nla_get_u32(attrs[BATADV_ATTR_THROUGHPUT])
++		: nla_get_u8(attrs[BATADV_ATTR_TQ]);
++
+ 	MAC2ETHER(mac_a, orig);
+ 
+ 	// update router
+@@ -478,11 +492,11 @@ static int parse_originator(struct nl_msg *msg,
+ 	if (!router)
+ 		return NL_OK;
+ 
+-	DEBUG_MSG("Found TQ for router " F_MAC " (originator " F_MAC "), it's %d",
+-			F_MAC_VAR(router->src), F_MAC_VAR(router->originator), tq);
+-	router->tq = tq;
+-	if (router->tq > G.max_tq)
+-		G.max_tq = router->tq;
++	DEBUG_MSG("Found metric for router " F_MAC " (originator " F_MAC "), it's %u",
++			F_MAC_VAR(router->src), F_MAC_VAR(router->originator), metric);
++	router->metric = metric;
++	if (router->metric > G.max_metric)
++		G.max_metric = router->metric;
+ 
+ 	return NL_OK;
+ }
+@@ -525,25 +539,25 @@ static int parse_tt_local(struct nl_msg *msg,
+ 	if (!router)
+ 		return NL_OK;
+ 
+-	router->tq = UINT16_MAX;
+-	DEBUG_MSG("Found router " F_MAC " in transtable_local, assigning TQ %d",
+-			F_MAC_VAR(router->src), router->tq);
+-	if (router->tq > G.max_tq)
+-		G.max_tq = router->tq;
++	router->metric = UINT32_MAX;
++	DEBUG_MSG("Found router " F_MAC " in transtable_local, assigning metric %u",
++			F_MAC_VAR(router->src), router->metric);
++	if (router->metric > G.max_metric)
++		G.max_metric = router->metric;
+ 
+ 	return NL_OK;
+ }
+ 
+-static void update_tqs(void) {
++static void update_metrics(void) {
+ 	static const struct ether_addr unspec = {};
+ 	struct router *router;
+ 	bool update_originators = false;
+ 	struct batadv_nlquery_opts opts;
+ 	int ret;
+ 
+-	// reset TQs
++	// reset metrics
+ 	foreach(router, G.routers) {
+-		router->tq = 0;
++		router->metric = 0;
+ 		if (ether_addr_equal(router->originator, unspec))
+ 			update_originators = true;
+ 	}
+@@ -558,8 +572,8 @@ static void update_tqs(void) {
+ 			fprintf(stderr, "Parsing of global translation table failed\n");
+ 	}
+ 
+-	// look up TQs of originators
+-	G.max_tq = 0;
++	// look up metrics of originators
++	G.max_metric = 0;
+ 	opts.err = 0;
+ 	ret = batadv_genl_query(G.mesh_iface,
+ 				BATADV_CMD_GET_ORIGINATORS,
+@@ -567,9 +581,9 @@ static void update_tqs(void) {
+ 	if (ret < 0)
+ 		fprintf(stderr, "Parsing of originators failed\n");
+ 
+-	// if all routers have a TQ value, we don't need to check translocal
++	// if all routers have a metric value, we don't need to check translocal
+ 	foreach(router, G.routers) {
+-		if (router->tq == 0)
++		if (router->metric == 0)
+ 			break;
+ 	}
+ 	if (router != NULL) {
+@@ -582,14 +596,14 @@ static void update_tqs(void) {
+ 	}
+ 
+ 	foreach(router, G.routers) {
+-		if (router->tq == 0) {
++		if (router->metric == 0) {
+ 			if (ether_addr_equal(router->originator, unspec))
+ 				DEBUG_MSG(
+ 					"Unable to find router " F_MAC " in transtable_{global,local}",
+ 					F_MAC_VAR(router->src));
+ 			else
+ 				DEBUG_MSG(
+-					"Unable to find TQ for originator " F_MAC " (router " F_MAC ")",
++					"Unable to find metric for originator " F_MAC " (router " F_MAC ")",
+ 					F_MAC_VAR(router->originator),
+ 					F_MAC_VAR(router->src));
+ 		}
+@@ -655,11 +669,11 @@ static bool election_required(void)
+ 	if (!G.best_router)
+ 		return true;
+ 
+-	/* should never happen. G.max_tq also contains G.best_router->tq */
+-	if (G.max_tq < G.best_router->tq)
++	/* should never happen. G.max_metric also contains G.best_router->metric */
++	if (G.max_metric < G.best_router->metric)
+ 		return false;
+ 
+-	if ((G.max_tq - G.best_router->tq) <= G.hysteresis_thresh)
++	if ((G.max_metric - G.best_router->metric) <= G.hysteresis_thresh)
+ 		return false;
+ 
+ 	return true;
+@@ -673,29 +687,29 @@ static void update_ebtables(void) {
+ 	struct router *router;
+ 
+ 	if (!election_required()) {
+-		DEBUG_MSG(F_MAC " is still good enough with TQ=%d (max_tq=%d), not executing ebtables",
++		DEBUG_MSG(F_MAC " is still good enough with metric=%u (max_metric=%u), not executing ebtables",
+ 			F_MAC_VAR(G.best_router->src),
+-			G.best_router->tq,
+-			G.max_tq);
++			G.best_router->metric,
++			G.max_metric);
+ 		return;
+ 	}
+ 
+ 	foreach(router, G.routers) {
+-		if (router->tq == G.max_tq) {
++		if (router->metric == G.max_metric) {
+ 			snprintf(mac, sizeof(mac), F_MAC, F_MAC_VAR(router->src));
+ 			break;
+ 		}
+ 	}
+ 	if (G.best_router)
+-		fprintf(stderr, "Switching from " F_MAC " (TQ=%d) to %s (TQ=%d)\n",
++		fprintf(stderr, "Switching from " F_MAC " (metric=%u) to %s (metric=%u)\n",
+ 			F_MAC_VAR(G.best_router->src),
+-			G.best_router->tq,
++			G.best_router->metric,
+ 			mac,
+-			G.max_tq);
++			G.max_metric);
+ 	else
+-		fprintf(stderr, "Switching to %s (TQ=%d)\n",
++		fprintf(stderr, "Switching to %s (metric=%u)\n",
+ 			mac,
+-			G.max_tq);
++			G.max_metric);
+ 	G.best_router = router;
+ 
+ 	if (fork_execvp_timeout(&timeout, "ebtables-tiny", (const char *[])
+@@ -743,6 +757,16 @@ int main(int argc, char *argv[]) {
+ 	if (G.chain == NULL)
+ 		usage("No chain set!");
+ 
++	if (batadv_genl_get_algo(G.mesh_iface, &G.algo) < 0)
++		exit_errmsg("Failed to detect batman-adv routing algorithm on %s", G.mesh_iface);
++
++	fprintf(stderr, "Using batman-adv algorithm: %s\n",
++		G.algo == BATADV_ALGO_BATMAN_V ? "BATMAN_V" : "BATMAN_IV");
++
++	if (G.algo == BATADV_ALGO_BATMAN_IV && G.hysteresis_thresh > BATMAN_IV_MAX_THRESHOLD)
++		exit_errmsg("Threshold too large: %u (max is %u)",
++			G.hysteresis_thresh, BATMAN_IV_MAX_THRESHOLD);
++
+ 	G.stop_daemon = 0;
+ 	signal(SIGINT, sighandler);
+ 	signal(SIGTERM, sighandler);
+@@ -780,7 +804,7 @@ int main(int argc, char *argv[]) {
+ 					next_invalidation.tv_sec += ORIGINATOR_CACHE_TTL;
+ 				}
+ 
+-				update_tqs();
++				update_metrics();
+ 				update_ebtables();
+ 
+ 				next_update = now;
+diff --git a/package/gluon-status-page-mesh-batman-adv/luasrc/lib/gluon/status-page/mesh.lua b/package/gluon-status-page-mesh-batman-adv/luasrc/lib/gluon/status-page/mesh.lua
+index 733e6d7c..010371c8 100644
+--- a/package/gluon-status-page-mesh-batman-adv/luasrc/lib/gluon/status-page/mesh.lua
++++ b/package/gluon-status-page-mesh-batman-adv/luasrc/lib/gluon/status-page/mesh.lua
+@@ -4,7 +4,9 @@ return {
+ 	-- 1) the internal identifier (JSON key)
+ 	-- 2) human-readable key (not translatable yet)
+ 	-- 3) value suffix (optional)
++	-- 4) formatter name (optional) -- key into status-page.js formats{}
+ 	attrs = {
+ 		{'tq', 'TQ', ' %'},
++		{'tp', 'Throughput', 'bit/s', 'bitrate'},
+ 	},
+ }
+diff --git a/package/gluon-status-page-mesh-batman-adv/src/neighbours-batadv.c b/package/gluon-status-page-mesh-batman-adv/src/neighbours-batadv.c
+index 58e626c9..dd84200e 100644
+--- a/package/gluon-status-page-mesh-batman-adv/src/neighbours-batadv.c
++++ b/package/gluon-status-page-mesh-batman-adv/src/neighbours-batadv.c
+@@ -11,10 +11,12 @@
+ 
+ struct neigh_netlink_opts {
+ 	struct json_object *obj;
++	enum batadv_algo algo;
+ 	struct batadv_nlquery_opts query_opts;
+ };
+ 
+-static const enum batadv_nl_attrs parse_orig_list_mandatory[] = {
++/* Batman IV mandatory attrs */
++static const enum batadv_nl_attrs parse_orig_list_mandatory_batadv_iv[] = {
+ 	BATADV_ATTR_ORIG_ADDRESS,
+ 	BATADV_ATTR_NEIGH_ADDRESS,
+ 	BATADV_ATTR_TQ,
+@@ -22,15 +24,21 @@ static const enum batadv_nl_attrs parse_orig_list_mandatory[] = {
+ 	BATADV_ATTR_LAST_SEEN_MSECS,
+ };
+ 
+-static int parse_orig_list_netlink_cb(struct nl_msg *msg, void *arg)
++/* Batman V mandatory attrs */
++static const enum batadv_nl_attrs parse_neigh_list_mandatory_batadv_v[] = {
++	BATADV_ATTR_NEIGH_ADDRESS,
++	BATADV_ATTR_THROUGHPUT,
++	BATADV_ATTR_HARD_IFINDEX,
++	BATADV_ATTR_LAST_SEEN_MSECS,
++};
++
++static int parse_orig_neigh_list_netlink_cb(struct nl_msg *msg, void *arg)
+ {
+ 	struct nlattr *attrs[BATADV_ATTR_MAX+1];
+ 	struct nlmsghdr *nlh = nlmsg_hdr(msg);
+ 	struct batadv_nlquery_opts *query_opts = arg;
+ 	struct genlmsghdr *ghdr;
+-	uint8_t *orig;
+-	uint8_t *dest;
+-	uint8_t tq;
++	uint8_t *mac;
+ 	uint32_t hardif;
+ 	char ifname_buf[IF_NAMESIZE], *ifname;
+ 	struct neigh_netlink_opts *opts;
+@@ -43,37 +51,53 @@ static int parse_orig_list_netlink_cb(struct nl_msg *msg, void *arg)
+ 
+ 	ghdr = nlmsg_data(nlh);
+ 
+-	if (ghdr->cmd != BATADV_CMD_GET_ORIGINATORS)
+-		return NL_OK;
+-
+ 	if (nla_parse(attrs, BATADV_ATTR_MAX, genlmsg_attrdata(ghdr, 0),
+ 				genlmsg_len(ghdr), batadv_genl_policy))
+ 		return NL_OK;
+ 
+-	if (batadv_genl_missing_attrs(attrs, parse_orig_list_mandatory,
+-				BATADV_ARRAY_SIZE(parse_orig_list_mandatory)))
+-		return NL_OK;
++	if (opts->algo == BATADV_ALGO_BATMAN_V) {
++		if (ghdr->cmd != BATADV_CMD_GET_NEIGHBORS)
++			return NL_OK;
+ 
+-	orig = nla_data(attrs[BATADV_ATTR_ORIG_ADDRESS]);
+-	dest = nla_data(attrs[BATADV_ATTR_NEIGH_ADDRESS]);
+-	tq = nla_get_u8(attrs[BATADV_ATTR_TQ]);
+-	hardif = nla_get_u32(attrs[BATADV_ATTR_HARD_IFINDEX]);
++		if (batadv_genl_missing_attrs(attrs, parse_neigh_list_mandatory_batadv_v,
++					BATADV_ARRAY_SIZE(parse_neigh_list_mandatory_batadv_v)))
++			return NL_OK;
+ 
+-	if (memcmp(orig, dest, 6) != 0)
+-		return NL_OK;
++		mac = nla_data(attrs[BATADV_ATTR_NEIGH_ADDRESS]);
++	} else {
++		if (ghdr->cmd != BATADV_CMD_GET_ORIGINATORS)
++			return NL_OK;
++
++		if (batadv_genl_missing_attrs(attrs, parse_orig_list_mandatory_batadv_iv,
++					BATADV_ARRAY_SIZE(parse_orig_list_mandatory_batadv_iv)))
++			return NL_OK;
++
++		mac = nla_data(attrs[BATADV_ATTR_ORIG_ADDRESS]);
++		if (memcmp(mac, nla_data(attrs[BATADV_ATTR_NEIGH_ADDRESS]), 6) != 0)
++			return NL_OK;
++	}
++
++	hardif = nla_get_u32(attrs[BATADV_ATTR_HARD_IFINDEX]);
+ 
+ 	ifname = if_indextoname(hardif, ifname_buf);
+ 	if (!ifname)
+ 		return NL_OK;
+ 
+ 	sprintf(mac1, "%02x:%02x:%02x:%02x:%02x:%02x",
+-			orig[0], orig[1], orig[2], orig[3], orig[4], orig[5]);
++			mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+ 
+ 	struct json_object *neigh = json_object_new_object();
+ 	if (!neigh)
+ 		return NL_OK;
+ 
+-	json_object_object_add(neigh, "tq", json_object_new_int(tq * 100 / 255));
++	if (opts->algo == BATADV_ALGO_BATMAN_V) {
++		json_object_object_add(neigh, "tp",
++			json_object_new_int64(nla_get_u32(attrs[BATADV_ATTR_THROUGHPUT])));
++	} else {
++		uint8_t tq = nla_get_u8(attrs[BATADV_ATTR_TQ]);
++		json_object_object_add(neigh, "tq", json_object_new_int(tq * 100 / 255));
++	}
++
+ 	json_object_object_add(neigh, "ifname", json_object_new_string(ifname));
+ 	json_object_object_add(neigh, "best", json_object_new_boolean(nla_get_flag(attrs[BATADV_ATTR_FLAG_BEST])));
+ 
+@@ -94,9 +118,21 @@ static json_object *neighbours(void) {
+ 	if (!opts.obj)
+ 		return NULL;
+ 
+-	ret = batadv_genl_query("bat0", BATADV_CMD_GET_ORIGINATORS,
+-			parse_orig_list_netlink_cb, NLM_F_DUMP,
+-			&opts.query_opts);
++	if (batadv_genl_get_algo("bat0", &opts.algo) < 0) {
++		json_object_put(opts.obj);
++		return NULL;
++	}
++
++	if (opts.algo == BATADV_ALGO_BATMAN_V) {
++		ret = batadv_genl_query("bat0", BATADV_CMD_GET_NEIGHBORS,
++				parse_orig_neigh_list_netlink_cb, NLM_F_DUMP,
++				&opts.query_opts);
++	} else {
++		ret = batadv_genl_query("bat0", BATADV_CMD_GET_ORIGINATORS,
++				parse_orig_neigh_list_netlink_cb, NLM_F_DUMP,
++				&opts.query_opts);
++	}
++
+ 	if (ret < 0) {
+ 		json_object_put(opts.obj);
+ 		return NULL;
+diff --git a/package/gluon-status-page/files/lib/gluon/status-page/view/status-page.html b/package/gluon-status-page/files/lib/gluon/status-page/view/status-page.html
+index 6b458d49..9ce21342 100644
+--- a/package/gluon-status-page/files/lib/gluon/status-page/view/status-page.html
++++ b/package/gluon-status-page/files/lib/gluon/status-page/view/status-page.html
+@@ -290,7 +290,7 @@
+ 								<tr>
+ 									<th><%:Node%></th>
+ 									<% for i, v in ipairs(mesh.attrs or {}) do %>
+-										<th<%= attr('class', 'row-' .. v[1] ) .. attr('data-key', v[1]) .. attr('data-suffix', v[3]) %>><%| v[2] %></th>
++										<th<%= attr('class', 'row-' .. v[1] ) .. attr('data-key', v[1]) .. attr('data-suffix', v[3]) .. attr('data-format', v[4]) %>><%| v[2] %></th>
+ 									<% end %>
+ 									<% if wireless then %>
+ 										<th class="row-signal">dBm</th>
+diff --git a/package/gluon-status-page/javascript/status-page.js b/package/gluon-status-page/javascript/status-page.js
+index 5ad207f2..d26d3172 100644
+--- a/package/gluon-status-page/javascript/status-page.js
++++ b/package/gluon-status-page/javascript/status-page.js
+@@ -136,6 +136,10 @@
+ 		},
+ 		'tq': function(value) {
+ 			return formatNumber(100/255 * value, 1) + '%';
++		},
++		// input value is in kbit/s
++		'bitrate': function(value) {
++			return prettyPrefix([ "", "K", "M", "G", "T" ], 1000, value * 1000);
+ 		}
+ 	}
+ 
+@@ -475,6 +479,7 @@
+ 				return;
+ 
+ 			var suffix = attr.getAttribute('data-suffix') || '';
++			var formatter = attr.getAttribute('data-format') || '';
+ 
+ 			var td = el.insertCell();
+ 			td.textContent = '-';
+@@ -483,6 +488,7 @@
+ 			meshAttrs[key] = {
+ 				'td': td,
+ 				'suffix': suffix,
++				'formatter': formatter,
+ 			};
+ 		}
+ 
+@@ -667,7 +673,13 @@
+ 			'update_mesh': function(mesh) {
+ 				Object.keys(meshAttrs).forEach(function(key) {
+ 					var attr = meshAttrs[key];
+-					attr.td.textContent = mesh[key] + attr.suffix;
++					var raw = mesh[key];
++					if (raw === undefined)
++						return;
++					var rendered = (attr.formatter && formats[attr.formatter])
++						? formats[attr.formatter](raw)
++						: raw;
++					attr.td.textContent = rendered + attr.suffix;
+ 				});
+ 
+ 				updated();
+diff --git a/package/gluon-status-page/javascript/status-page.min.js b/package/gluon-status-page/javascript/status-page.min.js
+index b5b84133..5958aa65 100644
+--- a/package/gluon-status-page/javascript/status-page.min.js
++++ b/package/gluon-status-page/javascript/status-page.min.js
+@@ -1 +1 @@
+-"use strict";!function(){var o=JSON.parse(document.body.getAttribute("data-translations"));function i(t,e){return t.toFixed(e).replace(/\./,o["."])}function a(t,e){e--;for(var n=t;10<=n&&0<e;n/=10)e--;return i(t,e)}function r(t){var e=["","K","M","G","T"],n=1024,i=t,r=0;if(void 0===i)return"- ";for(;n<i&&r<e.length-1;)i/=n,r++;return(i=a(i,3))+" "+e[r]}String.prototype.sprintf=function(){var t=0,e=arguments;return this.replace(/%s/g,function(){return e[t++]})};var u={id:function(t){return t},decimal:function(t){return i(t,2)},percent:function(t){return o["%s used"].sprintf(a(100*t,3)+"%")},memory:function(t){t=1-t.available/t.total;return u.percent(t)},time:function(t){var t=Math.round(t/60),e=Math.floor(t/1440),n=Math.floor(t%1440/60),t=Math.floor(t%60),i="";return 1===e?i+=o["1 day"]+", ":1<e&&(i+=o["%s days"].sprintf(e)+", "),i+=n+":",t<10&&(i+="0"),i+=t},packetsDiff:function(t,e,n){if(0<n)return t=(t-e)/n,o["%s packets/s"].sprintf(i(t,0))},bytesDiff:function(t,e,n){if(0<n)return r(8*((t-e)/n))+"bps"},bytes:function(t){return r(t)+"B"},neighbour:function(t){if(!t)return"";for(var e in c){var n,i,r=c[e].lookup_neigh(t);if(r)return(n=document.createElement("span")).appendChild(document.createTextNode("via ")),(i=document.createElement("a")).href="http://["+r.get_addr()+"]/",i.textContent=r.get_hostname(),n.appendChild(i),n.appendChild(document.createTextNode(" ("+e+")")),n}return"via "+t+" (unknown iface)"},tq:function(t){return a(100/255*t,1)+"%"}};function s(e,t){return t.split("/").forEach(function(t){e=e&&e[t]}),e}function d(t,e){var n=new EventSource(t),i={};n.onmessage=function(t){t=JSON.parse(t.data);e(t,i),i=t},n.onerror=function(){n.close(),window.setTimeout(function(){d(t,e)},3e3)}}var E,k=document.body.getAttribute("data-node-address");try{E=JSON.parse(document.body.getAttribute("data-node-location"))}catch(t){}function t(t){var e=document.getElementById("mesh-vpn");if(t){e.style.display="";for(var r=document.getElementById("mesh-vpn-peers");r.lastChild;)r.removeChild(r.lastChild);t=function e(n,i){return Object.keys(i.peers||{}).forEach(function(t){n.push([t,i.peers[t]])}),Object.keys(i.groups||{}).forEach(function(t){e(n,i.groups[t])}),n}([],t);t.sort(),t.forEach(function(t){var e,n=document.createElement("tr"),i=document.createElement("th"),i=(i.textContent=t[0],n.appendChild(i),document.createElement("td"));t[1]&&null!=t[1].established?(e=t[1].method?", "+t[1].method:"",i.textContent=o.connected+" ("+u.time(t[1].established)+e+")"):i.textContent=o["not connected"],n.appendChild(i),r.appendChild(n)})}else e.style.display="none"}var e=document.querySelectorAll("[data-statistics]");d("/cgi-bin/dyn/statistics",function(o,a){var c=o.uptime-a.uptime;e.forEach(function(t){var e=t.getAttribute("data-statistics"),n=t.getAttribute("data-format"),i=s(a,e),e=s(o,e);try{var r=u[n](e,i,c);"object"==typeof r?(t.lastChild&&t.removeChild(t.lastChild),t.appendChild(r)):t.textContent=r}catch(t){console.error(t)}});try{t(o.mesh_vpn)}catch(t){console.error(t)}});var c={};function A(n){var i=document.createElement("canvas"),r=i.getContext("2d"),o=null;return{canvas:i,highlight:!1,resize:function(t,e){var n;try{n=r.getImageData(0,0,t,e)}catch(t){}i.width=t,i.height=e,n&&r.putImageData(n,0,0)},draw:function(t,e){var e=e(o);r.clearRect(t,0,5,i.height),e&&(t=t,e=e,r.beginPath(),r.fillStyle=n,r.arc(t,e,1.2,0,2*Math.PI,!1),r.closePath(),r.fill())},set:function(t){o=t}}}function h(){var o=-100,a=0,c=0,u=[],s=document.createElement("canvas"),l=(s.className="signalgraph",s.height=200,s.getContext("2d"));function d(){s.width=s.clientWidth,u.forEach(function(t){t.resize(s.width,s.height)})}function n(){if(0!==s.clientWidth){s.width!==s.clientWidth&&d(),l.clearRect(0,0,s.width,s.height);var e=!1,t=(u.forEach(function(t){t.highlight&&(e=!0)}),l.save(),u.forEach(function(t){e&&(l.globalAlpha=.2),t.highlight&&(l.globalAlpha=1),t.draw(c,function(t){return e=s.height,(1-(t-o)/(a-o))*e;var e}),l.drawImage(t.canvas,0,0)}),l.restore(),l.save(),l.beginPath(),l.strokeStyle="rgba(255, 180, 0, 0.15)",l.lineWidth=5,l.moveTo(c+2.5,0),l.lineTo(c+2.5,s.height),l.stroke(),Math.floor(s.height/40));l.save(),l.lineWidth=.5,l.strokeStyle="rgba(0, 0, 0, 0.25)",l.fillStyle="rgba(0, 0, 0, 0.5)",l.textAlign="end",l.textBaseline="bottom",l.beginPath();for(var n=0;n<t;n++){var i=s.height-40*n,r=(l.moveTo(0,i-.5),l.lineTo(s.width,i-.5),Math.round((r=s.height,(o*i+a*(r-i))/r))+" dBm");l.save(),l.strokeStyle="rgba(255, 255, 255, 0.9)",l.lineWidth=4,l.miterLimit=2,l.strokeText(r,s.width-5,i-2.5),l.fillText(r,s.width-5,i-2.5),l.restore()}l.stroke(),l.strokeStyle="rgba(0, 0, 0, 0.83)",l.lineWidth=1.5,l.strokeRect(.5,.5,s.width-1,s.height-1),l.restore()}}d(),window.addEventListener("resize",n);var i=0;return window.requestAnimationFrame(function t(e){40<e-i&&(n(),c=(c+1)%s.width,i=e),window.requestAnimationFrame(t)}),{el:s,addSignal:function(t){u.push(t),t.resize(s.width,s.height)},removeSignal:function(t){u.splice(u.indexOf(t),1)}}}function f(t,a,e,n){var i,r=t.tbody.querySelector("tr"),o=t.tbody.insertRow(),c=o.insertCell(),u=(c.setAttribute("data-label",r.children[0].textContent),t.wireless&&((i=document.createElement("span")).textContent="⬤ ",i.style.color=e,c.appendChild(i)),document.createElement("span")),s=(u.textContent=a,c.appendChild(u),{});for(var l,d,h,f,g,p,m,v,b,C=0;C<r.children.length;C++)l=r.children[C],f=h=d=void 0,(f=l.getAttribute("data-key"))&&(d=l.getAttribute("data-suffix")||"",(h=o.insertCell()).textContent="-",h.setAttribute("data-label",l.textContent),s[f]={td:h,suffix:d});function y(){b&&window.clearTimeout(b),b=window.setTimeout(function(){v&&t.signalgraph.removeSignal(v),o.parentNode.removeChild(o),n()},6e4)}function w(t){var e,t=function(t){"::"==(t="::"==t.slice(0,2)?"0"+t:t).slice(-2)&&(t+="0");for(var e=t.split(":"),n=e.length,i=[],r=0;r<e.length;r++){var o=e[r];if(""===o)for(;n++<=8;)i.push(0);else{if(!/^[a-f0-9]{1,4}$/i.test(o))return;i.push(parseInt(o,16))}}return i}(t);if(t)return e="",t.forEach(function(t){e+=("0000000000000000"+t.toString(2)).slice(-16)}),e}function x(t){var i=w(k);if(t&&t[0])return(t=t.map(function(t){var e,n=w(t);return n?(e=0,[e=i?function(t,e){for(var n=0;n<t.length&&n<e.length&&t[n]===e[n];n++);return n}(i,n):e,n,t]):[-1]})).sort(function(t,e){return t[0]<e[0]?1:t[0]>e[0]||t[1]<e[1]?-1:t[1]>e[1]?1:0}),(t=t[0][2])&&!/^fe80:/i.test(t)?t:void 0}return t.wireless&&((g=o.insertCell()).textContent="-",g.setAttribute("data-label",r.children[Object.keys(s).length+1].textContent),(p=o.insertCell()).textContent="-",p.setAttribute("data-label",r.children[Object.keys(s).length+2].textContent),(m=o.insertCell()).textContent="-",m.setAttribute("data-label",r.children[Object.keys(s).length+3].textContent),v=A(e),t.signalgraph.addSignal(v)),o.onmouseenter=function(){o.classList.add("highlight"),v&&(v.highlight=!0)},o.onmouseleave=function(){o.classList.remove("highlight"),v&&(v.highlight=!1)},y(),{get_hostname:function(){return u.textContent},get_addr:function(){return a},update_nodeinfo:function(t){var e,n,i,r,o;(a=x(t.network.addresses))&&("span"===u.nodeName.toLowerCase()&&(e=u,u=document.createElement("a"),e.parentNode.replaceChild(u,e)),u.href="http://["+a+"]/"),u.textContent=t.hostname,E&&t.location&&(e=E.latitude,n=E.longitude,i=t.location.latitude,t=t.location.longitude,r=Math.PI/180,o=(i*=r)-(e*=r),t=(t*=r)-(n*=r),r=Math.sin(o/2)*Math.sin(o/2)+Math.sin(t/2)*Math.sin(t/2)*Math.cos(e)*Math.cos(i),n=6372.8*(2*Math.asin(Math.sqrt(r))),p.textContent=Math.round(1e3*n)+" m"),y()},update_mesh:function(n){Object.keys(s).forEach(function(t){var e=s[t];e.td.textContent=n[t]+e.suffix}),y()},update_wifi:function(t){g.textContent=t.signal,m.textContent=Math.round(t.inactive/1e3)+" s",o.classList.toggle("inactive",200<t.inactive),v.set(200<t.inactive?null:t.signal),y()}}}function l(t,e,n){var i,o={},r=(n&&(i=h(),t.appendChild(i.el)),{tbody:t.querySelector("tbody"),signalgraph:i,ifname:e,wireless:n}),a=!1,c={},u=[];function s(){var t;a||(a=!0,(t=new EventSource("/cgi-bin/dyn/neighbours-nodeinfo?"+encodeURIComponent(e))).addEventListener("neighbour",function(t){try{var n=JSON.parse(t.data);i=[],r=n.network.mesh,Object.keys(r).forEach(function(t){var e=r[t].interfaces;Object.keys(e).forEach(function(t){e[t].forEach(function(t){i.push(t)})})}),i.forEach(function(t){var e=o[t];if(e){delete c[t];try{e.update_nodeinfo(n)}catch(t){console.error(t)}}})}catch(t){console.error(t)}var i,r},!1),t.onerror=function(){t.close(),a=!1,Object.keys(c).forEach(function(t){0<c[t]&&(c[t]--,s())})})}function l(t){var e=o[t];return e||(c[t]=3,e=o[t]=f(r,t,(u=u[0]?u:["#396AB1","#DA7C30","#3E9651","#CC2529","#535154","#6B4C9A","#922428","#948B3D"]).shift(),function(){delete c[t],delete o[t]}),s()),e}return n&&d("/cgi-bin/dyn/stations?"+encodeURIComponent(e),function(n){Object.keys(n).forEach(function(t){var e=n[t];l(t).update_wifi(e)})}),{get_neigh:l,lookup_neigh:function(t){return o[t]}}}document.querySelectorAll("[data-interface]").forEach(function(t){var e=t.getAttribute("data-interface"),n=(t.getAttribute("data-interface-address"),!!t.getAttribute("data-interface-wireless"));c[e]=l(t,e,n)});var n=document.body.getAttribute("data-mesh-provider");n&&d(n,function(i){Object.keys(i).forEach(function(t){var e=i[t],n=c[e.ifname];n&&n.get_neigh(t).update_mesh(e)})})}();
+\ No newline at end of file
++"use strict";!function(){var t=JSON.parse(document.body.getAttribute("data-translations"));function e(e,n){return e.toFixed(n).replace(/\./,t["."])}function n(t,n){n--;for(var r=t;r>=10&&n>0;r/=10)n--;return e(t,n)}function r(t,e,r){var i=0;if(void 0===r)return"- ";for(;r>e&&i<t.length-1;)r/=e,i++;return(r=n(r,3))+" "+t[i]}function i(t){return r(["","K","M","G","T"],1024,t)}String.prototype.sprintf=function(){var t=0,e=arguments;return this.replace(/%s/g,(function(){return e[t++]}))};var a={id:function(t){return t},decimal:function(t){return e(t,2)},percent:function(e){return t["%s used"].sprintf(n(100*e,3)+"%")},memory:function(t){var e=1-t.available/t.total;return a.percent(e)},time:function(e){var n=Math.round(e/60),r=Math.floor(n/1440),i=Math.floor(n%1440/60);n=Math.floor(n%60);var a="";return 1===r?a+=t["1 day"]+", ":r>1&&(a+=t["%s days"].sprintf(r)+", "),a+=i+":",n<10&&(a+="0"),a+=n},packetsDiff:function(n,r,i){if(i>0)return a=(n-r)/i,t["%s packets/s"].sprintf(e(a,0));var a},bytesDiff:function(t,e,n){if(n>0)return i(8*((t-e)/n))+"bps"},bytes:function(t){return i(t)+"B"},neighbour:function(t){if(!t)return"";for(var e in d){var n=d[e].lookup_neigh(t);if(n){var r=document.createElement("span");r.appendChild(document.createTextNode("via "));var i=document.createElement("a");return i.href="http://["+n.get_addr()+"]/",i.textContent=n.get_hostname(),r.appendChild(i),r.appendChild(document.createTextNode(" ("+e+")")),r}}return"via "+t+" (unknown iface)"},tq:function(t){return n(100/255*t,1)+"%"},bitrate:function(t){return r(["","K","M","G","T"],1e3,1e3*t)}};function o(t,e){return e.split("/").forEach((function(e){t&&(t=t[e])})),t}function c(t,e){var n=new EventSource(t),r={};n.onmessage=function(t){var n=JSON.parse(t.data);e(n,r),r=n},n.onerror=function(){n.close(),window.setTimeout((function(){c(t,e)}),3e3)}}var u,s=document.body.getAttribute("data-node-address");try{u=JSON.parse(document.body.getAttribute("data-node-location"))}catch(t){}var l=document.querySelectorAll("[data-statistics]");c("/cgi-bin/dyn/statistics",(function(e,n){var r=e.uptime-n.uptime;l.forEach((function(t){var i=t.getAttribute("data-statistics"),c=t.getAttribute("data-format"),u=o(n,i),s=o(e,i);try{var l=a[c](s,u,r);if("object"==typeof l)t.lastChild&&t.removeChild(t.lastChild),t.appendChild(l);else t.textContent=l}catch(t){console.error(t)}}));try{!function(e){var n=document.getElementById("mesh-vpn");if(e){n.style.display="";for(var r=document.getElementById("mesh-vpn-peers");r.lastChild;)r.removeChild(r.lastChild);var i=function t(e,n){return Object.keys(n.peers||{}).forEach((function(t){e.push([t,n.peers[t]])})),Object.keys(n.groups||{}).forEach((function(r){t(e,n.groups[r])})),e}([],e);i.sort(),i.forEach((function(e){var n=document.createElement("tr"),i=document.createElement("th");i.textContent=e[0],n.appendChild(i);var o=document.createElement("td");if(e[1]&&null!=e[1].established){var c=e[1].method?", "+e[1].method:"";o.textContent=t.connected+" ("+a.time(e[1].established)+c+")"}else o.textContent=t["not connected"];n.appendChild(o),r.appendChild(n)}))}else n.style.display="none"}(e.mesh_vpn)}catch(t){console.error(t)}}));var d={};function f(t){var e=document.createElement("canvas"),n=e.getContext("2d"),r=null;return{canvas:e,highlight:!1,resize:function(t,r){var i;try{i=n.getImageData(0,0,t,r)}catch(t){}e.width=t,e.height=r,i&&n.putImageData(i,0,0)},draw:function(i,a){var o=a(r);n.clearRect(i,0,5,e.height),o&&function(e,r){n.beginPath(),n.fillStyle=t,n.arc(e,r,1.2,0,2*Math.PI,!1),n.closePath(),n.fill()}(i,o)},set:function(t){r=t}}}function h(){var t=-100,e=0,n=0,r=[],i=document.createElement("canvas");i.className="signalgraph",i.height=200;var a=i.getContext("2d");function o(t,e,n,r){return(e*t+n*(r-t))/r}function c(){i.width=i.clientWidth,r.forEach((function(t){t.resize(i.width,i.height)}))}function u(){if(0!==i.clientWidth){i.width!==i.clientWidth&&c(),a.clearRect(0,0,i.width,i.height);var u=!1;r.forEach((function(t){t.highlight&&(u=!0)})),a.save(),r.forEach((function(r){u&&(a.globalAlpha=.2),r.highlight&&(a.globalAlpha=1),r.draw(n,(function(n){return function(t,e,n,r){return(1-(t-e)/(n-e))*r}(n,t,e,i.height)})),a.drawImage(r.canvas,0,0)})),a.restore(),a.save(),a.beginPath(),a.strokeStyle="rgba(255, 180, 0, 0.15)",a.lineWidth=5,a.moveTo(n+2.5,0),a.lineTo(n+2.5,i.height),a.stroke(),function(){var n=Math.floor(i.height/40);a.save(),a.lineWidth=.5,a.strokeStyle="rgba(0, 0, 0, 0.25)",a.fillStyle="rgba(0, 0, 0, 0.5)",a.textAlign="end",a.textBaseline="bottom",a.beginPath();for(var r=0;r<n;r++){var c=i.height-40*r;a.moveTo(0,c-.5),a.lineTo(i.width,c-.5);var u=Math.round(o(c,t,e,i.height))+" dBm";a.save(),a.strokeStyle="rgba(255, 255, 255, 0.9)",a.lineWidth=4,a.miterLimit=2,a.strokeText(u,i.width-5,c-2.5),a.fillText(u,i.width-5,c-2.5),a.restore()}a.stroke(),a.strokeStyle="rgba(0, 0, 0, 0.83)",a.lineWidth=1.5,a.strokeRect(.5,.5,i.width-1,i.height-1),a.restore()}()}}c(),window.addEventListener("resize",u);var s=0;return window.requestAnimationFrame((function t(e){e-s>40&&(u(),n=(n+1)%i.width,s=e),window.requestAnimationFrame(t)})),{el:i,addSignal:function(t){r.push(t),t.resize(i.width,i.height)},removeSignal:function(t){r.splice(r.indexOf(t),1)}}}function g(t,e,n,r){var i=t.tbody.querySelector("tr"),o=t.tbody.insertRow(),c=o.insertCell();if(c.setAttribute("data-label",i.children[0].textContent),t.wireless){var l=document.createElement("span");l.textContent="⬤ ",l.style.color=n,c.appendChild(l)}var d=document.createElement("span");d.textContent=e,c.appendChild(d);var h,g,v,m,p,b={};function C(t){var e=t.getAttribute("data-key");if(e){var n=t.getAttribute("data-suffix")||"",r=t.getAttribute("data-format")||"",i=o.insertCell();i.textContent="-",i.setAttribute("data-label",t.textContent),b[e]={td:i,suffix:n,formatter:r}}}for(var y=0;y<i.children.length;y++)C(i.children[y]);function w(){p&&window.clearTimeout(p),p=window.setTimeout((function(){m&&t.signalgraph.removeSignal(m),o.parentNode.removeChild(o),r()}),6e4)}function x(t){var e=function(t){"::"==t.slice(0,2)&&(t="0"+t),"::"==t.slice(-2)&&(t+="0");for(var e=t.split(":"),n=e.length,r=[],i=0;i<e.length;i++){var a=e[i];if(""===a)for(;n++<=8;)r.push(0);else{if(!/^[a-f0-9]{1,4}$/i.test(a))return;r.push(parseInt(a,16))}}return r}(t);if(e){var n="";return e.forEach((function(t){n+=("0000000000000000"+t.toString(2)).slice(-16)})),n}}return t.wireless&&((h=o.insertCell()).textContent="-",h.setAttribute("data-label",i.children[Object.keys(b).length+1].textContent),(g=o.insertCell()).textContent="-",g.setAttribute("data-label",i.children[Object.keys(b).length+2].textContent),(v=o.insertCell()).textContent="-",v.setAttribute("data-label",i.children[Object.keys(b).length+3].textContent),m=f(n),t.signalgraph.addSignal(m)),o.onmouseenter=function(){o.classList.add("highlight"),m&&(m.highlight=!0)},o.onmouseleave=function(){o.classList.remove("highlight"),m&&(m.highlight=!1)},w(),{get_hostname:function(){return d.textContent},get_addr:function(){return e},update_nodeinfo:function(t){if(e=function(t){var e=x(s);if(t&&t[0]){t=t.map((function(t){var n=x(t);if(!n)return[-1];var r=0;return e&&(r=function(t,e){var n;for(n=0;n<t.length&&n<e.length&&t[n]===e[n];n++);return n}(e,n)),[r,n,t]})),t.sort((function(t,e){return t[0]<e[0]?1:t[0]>e[0]||t[1]<e[1]?-1:t[1]>e[1]?1:0}));var n=t[0][2];return n&&!/^fe80:/i.test(n)?n:void 0}}(t.network.addresses),e){if("span"===d.nodeName.toLowerCase()){var n=d;d=document.createElement("a"),n.parentNode.replaceChild(d,n)}d.href="http://["+e+"]/"}if(d.textContent=t.hostname,u&&t.location){var r=(i=u.latitude,a=u.longitude,o=t.location.latitude,c=t.location.longitude,l=Math.PI/180,f=(o*=l)-(i*=l),h=(c*=l)-(a*=l),v=Math.sin(f/2)*Math.sin(f/2)+Math.sin(h/2)*Math.sin(h/2)*Math.cos(i)*Math.cos(o),2*Math.asin(Math.sqrt(v))*6372.8);g.textContent=Math.round(1e3*r)+" m"}var i,a,o,c,l,f,h,v;w()},update_mesh:function(t){Object.keys(b).forEach((function(e){var n=b[e],r=t[e];if(void 0!==r){var i=n.formatter&&a[n.formatter]?a[n.formatter](r):r;n.td.textContent=i+n.suffix}})),w()},update_wifi:function(t){h.textContent=t.signal,v.textContent=Math.round(t.inactive/1e3)+" s",o.classList.toggle("inactive",t.inactive>200),m.set(t.inactive>200?null:t.signal),w()}}}function v(t,e,n){var r,i={};n&&(r=h(),t.appendChild(r.el));var a={tbody:t.querySelector("tbody"),signalgraph:r,ifname:e,wireless:n},o=!1,u={},s=[];function l(){if(!o){o=!0;var t=new EventSource("/cgi-bin/dyn/neighbours-nodeinfo?"+encodeURIComponent(e));t.addEventListener("neighbour",(function(t){try{var e=JSON.parse(t.data);(n=e,r=[],a=n.network.mesh,Object.keys(a).forEach((function(t){var e=a[t].interfaces;Object.keys(e).forEach((function(t){e[t].forEach((function(t){r.push(t)}))}))})),r).forEach((function(t){var n=i[t];if(n){delete u[t];try{n.update_nodeinfo(e)}catch(t){console.error(t)}}}))}catch(t){console.error(t)}var n,r,a}),!1),t.onerror=function(){t.close(),o=!1,Object.keys(u).forEach((function(t){u[t]>0&&(u[t]--,l())}))}}}function d(t){var e=i[t];return e||(u[t]=3,e=i[t]=g(a,t,(s[0]||(s=["#396AB1","#DA7C30","#3E9651","#CC2529","#535154","#6B4C9A","#922428","#948B3D"]),s.shift()),(function(){delete u[t],delete i[t]})),l()),e}return n&&c("/cgi-bin/dyn/stations?"+encodeURIComponent(e),(function(t){Object.keys(t).forEach((function(e){var n=t[e];d(e).update_wifi(n)}))})),{get_neigh:d,lookup_neigh:function(t){return i[t]}}}document.querySelectorAll("[data-interface]").forEach((function(t){var e=t.getAttribute("data-interface"),n=(t.getAttribute("data-interface-address"),!!t.getAttribute("data-interface-wireless"));d[e]=v(t,e,n)}));var m=document.body.getAttribute("data-mesh-provider");m&&c(m,(function(t){Object.keys(t).forEach((function(e){var n=t[e],r=d[n.ifname];r&&r.get_neigh(e).update_mesh(n)}))}))}();
+\ No newline at end of file
+diff --git a/package/libbatadv/src/batadv-genl.c b/package/libbatadv/src/batadv-genl.c
+index 7d421dbe..b159c034 100644
+--- a/package/libbatadv/src/batadv-genl.c
++++ b/package/libbatadv/src/batadv-genl.c
+@@ -361,3 +361,105 @@ err_free_sock:
+ 
+ 	return query_opts->err;
+ }
++
++struct batadv_algoname_opts {
++	char *algoname;
++	size_t algoname_len;
++	bool found;
++	struct batadv_nlquery_opts query_opts;
++};
++
++static int batadv_algoname_cb(struct nl_msg *msg, void *arg)
++{
++	struct nlattr *attrs[BATADV_ATTR_MAX + 1];
++	struct batadv_nlquery_opts *query_opts = arg;
++	struct batadv_algoname_opts *opts;
++	struct nlmsghdr *nlh = nlmsg_hdr(msg);
++	struct genlmsghdr *ghdr;
++
++	opts = batadv_container_of(query_opts, struct batadv_algoname_opts,
++			query_opts);
++
++	if (!genlmsg_valid_hdr(nlh, 0))
++		return NL_OK;
++
++	ghdr = nlmsg_data(nlh);
++
++	if (ghdr->cmd != BATADV_CMD_GET_MESH)
++		return NL_OK;
++
++	if (nla_parse(attrs, BATADV_ATTR_MAX, genlmsg_attrdata(ghdr, 0),
++				genlmsg_len(ghdr), batadv_genl_policy))
++		return NL_OK;
++
++	if (!attrs[BATADV_ATTR_ALGO_NAME])
++		return NL_OK;
++
++	nla_strlcpy(opts->algoname, attrs[BATADV_ATTR_ALGO_NAME],
++			opts->algoname_len);
++
++	opts->found = true;
++	return NL_OK;
++}
++
++/**
++ * batadv_genl_get_algoname() - Query the routing algorithm name of a mesh
++ * @mesh_iface: name of the batman-adv mesh interface
++ * @algoname: buffer to store the algorithm name (e.g. "BATMAN_IV", "BATMAN_V")
++ * @algoname_len: size of @algoname buffer
++ *
++ * Return: 0 on success or negative error value otherwise
++ */
++__attribute__ ((visibility ("default")))
++int batadv_genl_get_algoname(const char *mesh_iface, char *algoname,
++		size_t algoname_len)
++{
++	struct batadv_algoname_opts opts = {
++		.algoname = algoname,
++		.algoname_len = algoname_len,
++		.found = false,
++		.query_opts = { .err = 0 },
++	};
++	int ret;
++
++	ret = batadv_genl_query(mesh_iface, BATADV_CMD_GET_MESH,
++			batadv_algoname_cb, 0, &opts.query_opts);
++	if (ret < 0)
++		return ret;
++
++	if (!opts.found)
++		return -EOPNOTSUPP;
++
++	return 0;
++}
++
++/**
++ * batadv_genl_get_algo() - Query the routing algorithm of a mesh as enum
++ * @mesh_iface: name of the batman-adv mesh interface
++ * @algo: pointer to store the algorithm (BATADV_ALGO_BATMAN_IV or
++ *  BATADV_ALGO_BATMAN_V)
++ *
++ * Return: 0 on success or negative error value otherwise
++ */
++__attribute__ ((visibility ("default")))
++int batadv_genl_get_algo(const char *mesh_iface, enum batadv_algo *algo)
++{
++	char algoname[256];
++	int ret;
++
++	*algo = BATADV_ALGO_UNKNOWN;
++
++	ret = batadv_genl_get_algoname(mesh_iface, algoname, sizeof(algoname));
++	if (ret < 0)
++		return ret;
++
++	if (strcmp(algoname, "BATMAN_IV") == 0) {
++		*algo = BATADV_ALGO_BATMAN_IV;
++		return 0;
++	} else if (strcmp(algoname, "BATMAN_V") == 0) {
++		*algo = BATADV_ALGO_BATMAN_V;
++		return 0;
++	}
++
++	return -EINVAL;
++}
+diff --git a/package/libbatadv/src/batadv-genl.h b/package/libbatadv/src/batadv-genl.h
+index d9912fb6..0bef1449 100644
+--- a/package/libbatadv/src/batadv-genl.h
++++ b/package/libbatadv/src/batadv-genl.h
+@@ -29,10 +29,21 @@
+ #include <netlink/genl/genl.h>
+ #include <netlink/genl/ctrl.h>
+ #include <stddef.h>
++#include <stdint.h>
+ #include <stdbool.h>
+ 
+ #include "batman_adv.h"
+ 
++/* Zero-init default at slot 0: a struct field that misses
++ * batadv_genl_get_algo() trips a defined sentinel rather than
++ * silently being treated as BATMAN_IV.
++ */
++enum batadv_algo {
++	BATADV_ALGO_UNKNOWN = 0,
++	BATADV_ALGO_BATMAN_IV,
++	BATADV_ALGO_BATMAN_V,
++};
++
+ /**
+  * struct batadv_nlquery_opts - internal state for batadv_genl_query()
+  *
+@@ -97,4 +108,9 @@ int batadv_genl_query(const char *mesh_iface, enum batadv_nl_commands nl_cmd,
+ 		nl_recvmsg_msg_cb_t callback, int flags,
+ 		struct batadv_nlquery_opts *query_opts);
+ 
++int batadv_genl_get_algoname(const char *mesh_iface, char *algoname,
++		size_t algoname_len);
++
++int batadv_genl_get_algo(const char *mesh_iface, enum batadv_algo *algo);
++
+ #endif /* _BATADV_GENL_H_ */
+diff --git a/package/libgluonutil/src/CMakeLists.txt b/package/libgluonutil/src/CMakeLists.txt
+index a20ff0bd..6ff5b1c4 100644
+--- a/package/libgluonutil/src/CMakeLists.txt
++++ b/package/libgluonutil/src/CMakeLists.txt
+@@ -6,7 +6,7 @@ set_property(DIRECTORY PROPERTY COMPILE_DEFINITIONS _GNU_SOURCE)
+ 
+ add_library(gluonutil SHARED libgluonutil.c)
+ set_property(TARGET gluonutil PROPERTY COMPILE_FLAGS "-Wall -std=c99")
+-target_link_libraries(gluonutil json-c uci)
++target_link_libraries(gluonutil json-c uci m)
+ install(TARGETS gluonutil
+   ARCHIVE DESTINATION lib
+   LIBRARY DESTINATION lib
+diff --git a/package/libgluonutil/src/libgluonutil.c b/package/libgluonutil/src/libgluonutil.c
+index 354f7179..ea39d2d7 100644
+--- a/package/libgluonutil/src/libgluonutil.c
++++ b/package/libgluonutil/src/libgluonutil.c
+@@ -11,6 +11,7 @@
+ 
+ #include <errno.h>
+ #include <glob.h>
++#include <math.h>
+ #include <libgen.h>
+ #include <limits.h>
+ #include <stdio.h>
+@@ -337,3 +338,15 @@ err:
+ 	json_object_put(site);
+ 	return NULL;
+ }
++
++uint8_t gluonutil_get_pseudo_tq(uint32_t throughput) {
++	return throughput >= 54000 ? 255 :
++		throughput < 417 ? 0 :
++		(uint8_t)(
++			(
++				1.42459274279287898080 * log2(throughput) -
++				12.39555493934044793479
++			)
++			* 25.5
++		);
++}
+diff --git a/package/libgluonutil/src/libgluonutil.h b/package/libgluonutil/src/libgluonutil.h
+index 5ce9d448..69fee07d 100644
+--- a/package/libgluonutil/src/libgluonutil.h
++++ b/package/libgluonutil/src/libgluonutil.h
+@@ -8,6 +8,7 @@
+ #include <net/if.h>
+ #include <netinet/in.h>
+ #include <stdbool.h>
++#include <stdint.h>
+ 
+ 
+ char * gluonutil_read_line(const char *filename);
+@@ -35,4 +36,6 @@ char * gluonutil_get_domain(void);
+ char * gluonutil_get_primary_domain(void);
+ struct json_object * gluonutil_load_site_config(void);
+ 
++uint8_t gluonutil_get_pseudo_tq(uint32_t throughput);
++
+ #endif /* _LIBGLUON_LIBGLUON_H_ */
+-- 
+2.43.0
+

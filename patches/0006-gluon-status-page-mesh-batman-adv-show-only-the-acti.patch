@@ -1,0 +1,68 @@
+From 9176b6cca46f8e0ce3c027532b1f16a2c928e735 Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Wed, 15 Apr 2026 17:39:35 +0200
+Subject: [PATCH 6/7] gluon-status-page-mesh-batman-adv: show only the active
+ algorithm's metric column
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+A given Gluon build runs exactly one batman-adv routing algorithm
+(mesh.batman_adv.routing_algo in site config). Showing both TQ and TP
+columns on the status page always leaves one permanently blank and
+confuses users. Emit only the relevant attr tuple:
+
+- BATMAN_V → TP (throughput)
+- BATMAN_IV → TQ (link quality)
+
+The value is read from gluon.site at render time (mesh.lua is loaded
+fresh per request), so it tracks the authoritative site config that
+also drives gluon_bat0.sh and the kernel. check_site already
+guarantees the field is one of {'BATMAN_IV', 'BATMAN_V'}.
+
+No JS or HTML template change: status-page.html iterates mesh.attrs
+dynamically, and the minified JS builds per-key cells from the
+rendered <th data-key="..."> headers, so shrinking the list works
+transparently. The Monitoring panel's separate "Gateway (TQ: ...)"
+line is unrelated (batman-adv reports gateway TQ for both algos) and
+stays unchanged.
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+---
+ .../luasrc/lib/gluon/status-page/mesh.lua      | 18 ++++++++++++++----
+ 1 file changed, 14 insertions(+), 4 deletions(-)
+
+diff --git a/package/gluon-status-page-mesh-batman-adv/luasrc/lib/gluon/status-page/mesh.lua b/package/gluon-status-page-mesh-batman-adv/luasrc/lib/gluon/status-page/mesh.lua
+index 010371c8..4795891b 100644
+--- a/package/gluon-status-page-mesh-batman-adv/luasrc/lib/gluon/status-page/mesh.lua
++++ b/package/gluon-status-page-mesh-batman-adv/luasrc/lib/gluon/status-page/mesh.lua
+@@ -1,3 +1,16 @@
++local site = require 'gluon.site'
++
++local attrs
++if site.mesh.batman_adv.routing_algo() == 'BATMAN_V' then
++	attrs = {
++		{'tp', 'Throughput', 'bit/s', 'bitrate'},
++	}
++else
++	attrs = {
++		{'tq', 'TQ', ' %'},
++	}
++end
++
+ return {
+ 	provider = '/cgi-bin/dyn/neighbours-batadv',
+ 	-- List of mesh-specific attributes, each a tuple of
+@@ -5,8 +18,5 @@ return {
+ 	-- 2) human-readable key (not translatable yet)
+ 	-- 3) value suffix (optional)
+ 	-- 4) formatter name (optional) -- key into status-page.js formats{}
+-	attrs = {
+-		{'tq', 'TQ', ' %'},
+-		{'tp', 'Throughput', 'bit/s', 'bitrate'},
+-	},
++	attrs = attrs,
+ }
+-- 
+2.43.0
+

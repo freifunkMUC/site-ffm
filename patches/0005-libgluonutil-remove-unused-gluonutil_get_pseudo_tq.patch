@@ -1,0 +1,73 @@
+From b062d5acf8790218558dd45291c225d0f0b0f17c Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Wed, 15 Apr 2026 08:55:38 +0200
+Subject: [PATCH 5/7] libgluonutil: remove unused gluonutil_get_pseudo_tq
+
+The function synthesised a fake Batman IV TQ from a Batman V throughput
+value via a log formula. Its only caller in the tree was respondd-
+neighbours.c, which now emits the raw throughput field directly.
+
+Drop the function, the <math.h> include it required, and the -lm
+linkage it forced on every libgluonutil consumer.
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+---
+ package/libgluonutil/src/CMakeLists.txt |  2 +-
+ package/libgluonutil/src/libgluonutil.c | 12 ------------
+ package/libgluonutil/src/libgluonutil.h |  2 --
+ 3 files changed, 1 insertion(+), 15 deletions(-)
+
+diff --git a/package/libgluonutil/src/CMakeLists.txt b/package/libgluonutil/src/CMakeLists.txt
+index 6ff5b1c4..a20ff0bd 100644
+--- a/package/libgluonutil/src/CMakeLists.txt
++++ b/package/libgluonutil/src/CMakeLists.txt
+@@ -6,7 +6,7 @@ set_property(DIRECTORY PROPERTY COMPILE_DEFINITIONS _GNU_SOURCE)
+ 
+ add_library(gluonutil SHARED libgluonutil.c)
+ set_property(TARGET gluonutil PROPERTY COMPILE_FLAGS "-Wall -std=c99")
+-target_link_libraries(gluonutil json-c uci m)
++target_link_libraries(gluonutil json-c uci)
+ install(TARGETS gluonutil
+   ARCHIVE DESTINATION lib
+   LIBRARY DESTINATION lib
+diff --git a/package/libgluonutil/src/libgluonutil.c b/package/libgluonutil/src/libgluonutil.c
+index ea39d2d7..86079585 100644
+--- a/package/libgluonutil/src/libgluonutil.c
++++ b/package/libgluonutil/src/libgluonutil.c
+@@ -11,7 +11,6 @@
+ 
+ #include <errno.h>
+ #include <glob.h>
+-#include <math.h>
+ #include <libgen.h>
+ #include <limits.h>
+ #include <stdio.h>
+@@ -339,14 +338,3 @@ err:
+ 	return NULL;
+ }
+ 
+-uint8_t gluonutil_get_pseudo_tq(uint32_t throughput) {
+-	return throughput >= 54000 ? 255 :
+-		throughput < 417 ? 0 :
+-		(uint8_t)(
+-			(
+-				1.42459274279287898080 * log2(throughput) -
+-				12.39555493934044793479
+-			)
+-			* 25.5
+-		);
+-}
+diff --git a/package/libgluonutil/src/libgluonutil.h b/package/libgluonutil/src/libgluonutil.h
+index 69fee07d..9391dbbd 100644
+--- a/package/libgluonutil/src/libgluonutil.h
++++ b/package/libgluonutil/src/libgluonutil.h
+@@ -36,6 +36,4 @@ char * gluonutil_get_domain(void);
+ char * gluonutil_get_primary_domain(void);
+ struct json_object * gluonutil_load_site_config(void);
+ 
+-uint8_t gluonutil_get_pseudo_tq(uint32_t throughput);
+-
+ #endif /* _LIBGLUON_LIBGLUON_H_ */
+-- 
+2.43.0
+
