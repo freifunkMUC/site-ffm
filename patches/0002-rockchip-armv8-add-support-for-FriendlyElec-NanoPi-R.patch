@@ -1,0 +1,41 @@
+From a3673aaedd9e801686193c7f47c13d9cb0b11ada Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Wed, 17 Jun 2026 14:27:25 +0200
+Subject: [PATCH 2/2] rockchip-armv8: add support for FriendlyElec NanoPi R2S
+ Plus
+
+Register the NanoPi R2S Plus, a NanoPi R2S with on-board eMMC sharing
+the same RK3328 SoC. Sysupgrade only, no factory image.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+---
+ docs/user/supported_devices.rst | 1 +
+ targets/rockchip-armv8          | 1 +
+ 2 files changed, 2 insertions(+)
+
+diff --git a/docs/user/supported_devices.rst b/docs/user/supported_devices.rst
+index ea29e9bc..40c90bff 100644
+--- a/docs/user/supported_devices.rst
++++ b/docs/user/supported_devices.rst
+@@ -632,6 +632,7 @@ rockchip-armv8
+ * FriendlyElec
+ 
+   - NanoPi R2S
++  - NanoPi R2S Plus
+   - NanoPi R3S
+   - NanoPi R4S (4GB LPDDR4)
+ 
+diff --git a/targets/rockchip-armv8 b/targets/rockchip-armv8
+index 9cc8a220..4e1a256d 100644
+--- a/targets/rockchip-armv8
++++ b/targets/rockchip-armv8
+@@ -4,5 +4,6 @@ defaults {
+ }
+ 
+ device('friendlyelec-nanopi-r2s', 'friendlyarm_nanopi-r2s')
++device('friendlyelec-nanopi-r2s-plus', 'friendlyarm_nanopi-r2s-plus')
+ device('friendlyelec-nanopi-r3s', 'friendlyarm_nanopi-r3s')
+ device('friendlyelec-nanopi-r4s', 'friendlyarm_nanopi-r4s') -- 4GB LPDDR4
+-- 
+2.43.0
+
