@@ -1,4 +1,4 @@
-From 9fe42158777eccdd16d9aab25690b9ca091adadc Mon Sep 17 00:00:00 2001
+From e95d62042663fb2b1957d9e612a9e557fbb08e32 Mon Sep 17 00:00:00 2001
 From: Grische <github@grische.xyz>
 Date: Wed, 17 Jun 2026 14:27:21 +0200
 Subject: [PATCH 1/2] patches: add OpenWrt support for FriendlyElec NanoPi R2S
@@ -12,18 +12,18 @@ across microSD/eMMC boots.
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
 ---
  ...rockchip-add-NanoPi-R2S-Plus-support.patch | 267 ++++++++++++++++++
- ...port-for-FriendlyARM-NanoPi-R2S-Plus.patch |  93 ++++++
- 2 files changed, 360 insertions(+)
+ ...port-for-FriendlyARM-NanoPi-R2S-Plus.patch | 127 +++++++++
+ 2 files changed, 394 insertions(+)
  create mode 100644 patches/openwrt/0014-uboot-rockchip-add-NanoPi-R2S-Plus-support.patch
  create mode 100644 patches/openwrt/0015-rockchip-Add-support-for-FriendlyARM-NanoPi-R2S-Plus.patch
 
 diff --git a/patches/openwrt/0014-uboot-rockchip-add-NanoPi-R2S-Plus-support.patch b/patches/openwrt/0014-uboot-rockchip-add-NanoPi-R2S-Plus-support.patch
 new file mode 100644
-index 00000000..92339563
+index 00000000..b123c0a3
 --- /dev/null
 +++ b/patches/openwrt/0014-uboot-rockchip-add-NanoPi-R2S-Plus-support.patch
 @@ -0,0 +1,267 @@
-+From 515a3f914aa732299f3d43f92b21f107f69b59da Mon Sep 17 00:00:00 2001
++From abe014e6b5fa755b41e1abafc4c834fc89f4503d Mon Sep 17 00:00:00 2001
 +From: Grische <github@grische.xyz>
 +Date: Wed, 17 Jun 2026 14:09:18 +0200
 +Subject: [PATCH 1/2] uboot-rockchip: add NanoPi R2S Plus support
@@ -288,15 +288,15 @@ index 00000000..92339563
 +++CONFIG_TPL_TINY_MEMSET=y
 +++CONFIG_ERRNO_STR=y
 +-- 
-+2.43.0
++2.54.0
 +
 diff --git a/patches/openwrt/0015-rockchip-Add-support-for-FriendlyARM-NanoPi-R2S-Plus.patch b/patches/openwrt/0015-rockchip-Add-support-for-FriendlyARM-NanoPi-R2S-Plus.patch
 new file mode 100644
-index 00000000..4eeea39d
+index 00000000..478ea4d2
 --- /dev/null
 +++ b/patches/openwrt/0015-rockchip-Add-support-for-FriendlyARM-NanoPi-R2S-Plus.patch
-@@ -0,0 +1,93 @@
-+From 7817847f476c9538d41209a4e1772d1a10896a2f Mon Sep 17 00:00:00 2001
+@@ -0,0 +1,127 @@
++From 67b39570083d8c3ee84448aa23198f341c93ab07 Mon Sep 17 00:00:00 2001
 +From: Grische <github@grische.xyz>
 +Date: Wed, 17 Jun 2026 14:09:18 +0200
 +Subject: [PATCH 2/2] rockchip: Add support for FriendlyARM NanoPi R2S Plus
@@ -308,32 +308,54 @@ index 00000000..4eeea39d
 +
 +Hardware
 +--------
-+Rockchip RK3328 ARM64 (4 cores)
++Rockchip RK3328 (4x Cortex-A53, up to 1.4 GHz)
 +1GB DDR4 RAM
-+on-board eMMC
-+1x 1000 Base-T (native, RTL8211 via GMAC) - WAN
-+1x 1000 Base-T (USB 3.0, RTL8153) - LAN
-+1x USB 2.0 Type-A
-+microSD Slot
-+1 Button (Reset)
-+LEDs (SYS, WAN, LAN)
-+USB Type-C power (5V)
++32GB eMMC 5.1
++microSD slot (up to 128GB)
++1x 1000 Base-T (native, RTL8211F via GMAC) - WAN
++1x 1000 Base-T (USB 3.0, RTL8153B) - LAN
++Optional M.2 SDIO Wi-Fi
++2x USB 2.0 Type-A host
++1x USB-C (5V power input, USB device for Maskrom update)
++1x USB-C (onboard USB-to-UART debug console, 1500000 bps)
++1x serial debug header / UART0 (3.3V TTL, 3-pin 2.54mm)
++2 Buttons (GPIO key, Maskrom)
++3 LEDs (SYS red, WAN green, LAN green)
++DC 5V/2A power
++Operating temperature 0 to 70 C
 +
 +The MAC addresses are derived from the eMMC CID, so they are stable
 +regardless of whether the device boots from microSD or eMMC.
 +
 +Installation
 +------------
-+Uncompress the OpenWrt sysupgrade and write it to the microSD card or
-+internal eMMC using dd.
++
++On RK3328 the BootROM boots the eMMC before the microSD slot, so the
++Maskrom button must be held to boot from microSD while stock firmware is
++still on the eMMC.
++
++How to boot from eMMC:
++
++1. Write the uncompressed sysupgrade image to sdcard
++2. Hold the "Mask" button while powering on the device
++3. Wait until OpenWrt is fully booted
++4. Copy the compressed .gz sysupgrade image to the machine's /tmp folder using scp
++5. Run: gunzip -c /tmp/openwrt-...-friendlyarm_nanopi-r2s-plus-squashfs-sysupgrade.img.gz | dd of=/dev/mmcblk1 bs=4M conv=fsync
++6. Power the device off, remove the sdcard and power it back on
++
++Tested:
++- microSD boot (via Maskrom button) and native eMMC boot
++- Both Ethernet ports (RTL8211F WAN, RTL8153B LAN)
++- eMMC-derived MAC addresses
 +
 +Signed-off-by: Grische <github@grische.xyz>
-+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
++Assisted-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
 +---
 + .../linux/rockchip/armv8/base-files/etc/board.d/01_leds   | 1 +
 + .../rockchip/armv8/base-files/etc/board.d/02_network      | 2 ++
++ .../base-files/etc/hotplug.d/net/40-net-smp-affinity      | 1 +
 + target/linux/rockchip/image/armv8.mk                      | 8 ++++++++
-+ 3 files changed, 11 insertions(+)
++ 4 files changed, 12 insertions(+)
 +
 +diff --git a/target/linux/rockchip/armv8/base-files/etc/board.d/01_leds b/target/linux/rockchip/armv8/base-files/etc/board.d/01_leds
 +index 6e2c95ada7..e4e41a95a9 100644
@@ -367,6 +389,18 @@ index 00000000..4eeea39d
 + 	friendlyarm,nanopi-r4s|\
 + 	friendlyarm,nanopi-r5s|\
 + 	sinovoip,rk3568-bpi-r2pro)
++diff --git a/target/linux/rockchip/armv8/base-files/etc/hotplug.d/net/40-net-smp-affinity b/target/linux/rockchip/armv8/base-files/etc/hotplug.d/net/40-net-smp-affinity
++index 9277dad3e7..313f950234 100644
++--- a/target/linux/rockchip/armv8/base-files/etc/hotplug.d/net/40-net-smp-affinity
+++++ b/target/linux/rockchip/armv8/base-files/etc/hotplug.d/net/40-net-smp-affinity
++@@ -42,6 +42,7 @@ sinovoip,rk3568-bpi-r2pro)
++ friendlyarm,nanopi-r2c|\
++ friendlyarm,nanopi-r2c-plus|\
++ friendlyarm,nanopi-r2s|\
+++friendlyarm,nanopi-r2s-plus|\
++ radxa,cm3-io|\
++ xunlong,orangepi-r1-plus|\
++ xunlong,orangepi-r1-plus-lts)
 +diff --git a/target/linux/rockchip/image/armv8.mk b/target/linux/rockchip/image/armv8.mk
 +index c28835d5cd..2fa503012d 100644
 +--- a/target/linux/rockchip/image/armv8.mk
@@ -387,8 +421,8 @@ index 00000000..4eeea39d
 +   DEVICE_VENDOR := FriendlyARM
 +   DEVICE_MODEL := NanoPi R3S
 +-- 
-+2.43.0
++2.54.0
 +
 -- 
-2.43.0
+2.54.0
 
