@@ -9,8 +9,10 @@ jobs:
   backport:
     name: Backport pull request
     runs-on: ubuntu-slim
-    # Don't run on closed unmerged pull requests
-    if: github.event.pull_request.merged
+    # Only run on merged PRs with a backport label (default `label_pattern`)
+    if: >
+      github.event.pull_request.merged &&
+      contains(toJSON(github.event.pull_request.labels.*.name), '"backport ')
     steps:
       - name: Get Github App Token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
