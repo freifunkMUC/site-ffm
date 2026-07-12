@@ -1,22 +1,22 @@
-From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: Grische <2787581+grische@users.noreply.github.com>
-Date: Sun, 12 Jul 2026 10:55:07 +0200
+From 109d85acef7d8d91acec1e87f12cf9f3339aabdc Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Sun, 12 Jul 2026 11:04:30 +0200
 Subject: [PATCH] use ffmuc node-whisperer with Batman V support
 
 ---
- .../0001-use-Batman-V-node-whisperer.patch    | 29 +++++++++++++++++++
+ ...node-whisperer-with-Batman-V-support.patch | 29 +++++++++++++++++++
  1 file changed, 29 insertions(+)
- create mode 100644 patches/packages/community/0001-use-Batman-V-node-whisperer.patch
+ create mode 100644 patches/packages/community/0001-use-ffmuc-node-whisperer-with-Batman-V-support.patch
 
-diff --git a/patches/packages/community/0001-use-Batman-V-node-whisperer.patch b/patches/packages/community/0001-use-Batman-V-node-whisperer.patch
+diff --git a/patches/packages/community/0001-use-ffmuc-node-whisperer-with-Batman-V-support.patch b/patches/packages/community/0001-use-ffmuc-node-whisperer-with-Batman-V-support.patch
 new file mode 100644
-index 00000000..cfea37c6
+index 00000000..b53e5836
 --- /dev/null
-+++ b/patches/packages/community/0001-use-Batman-V-node-whisperer.patch
++++ b/patches/packages/community/0001-use-ffmuc-node-whisperer-with-Batman-V-support.patch
 @@ -0,0 +1,29 @@
-+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-+From: Grische <2787581+grische@users.noreply.github.com>
-+Date: Sun, 12 Jul 2026 10:54:30 +0200
++From 022e6e3942b6a93d19b75a5556962215d7d189c3 Mon Sep 17 00:00:00 2001
++From: Grische <github@grische.xyz>
++Date: Sun, 12 Jul 2026 11:03:14 +0200
 +Subject: [PATCH] use ffmuc node-whisperer with Batman V support
 +
 +---
@@ -24,7 +24,7 @@ index 00000000..cfea37c6
 + 1 file changed, 3 insertions(+), 3 deletions(-)
 +
 +diff --git a/ffda-node-whisperer/Makefile b/ffda-node-whisperer/Makefile
-+index 78ab21c..8fb0f69 100644
++index 347343c..dd9dfe0 100644
 +--- a/ffda-node-whisperer/Makefile
 ++++ b/ffda-node-whisperer/Makefile
 +@@ -4,9 +4,9 @@ PKG_NAME:=ffda-node-whisperer
@@ -35,8 +35,8 @@ index 00000000..cfea37c6
 +-PKG_SOURCE_DATE:=2026-05-16
 +-PKG_SOURCE_VERSION:=c0f09545607006b8b8551a76a29d9f825f0dc128
 ++PKG_SOURCE_URL=https://github.com/freifunkMUC/node-whisperer.git
-++PKG_SOURCE_DATE:=2026-05-14
-++PKG_SOURCE_VERSION:=f42f9d332fe3456ce3baf369672de6eb5ae71c90
+++PKG_SOURCE_DATE:=2026-07-12
+++PKG_SOURCE_VERSION:=5296cbcb65492cec085eaa7dbf969b4cee593fae
 + 
 + PKG_MAINTAINER:=David Bauer <mail@david-bauer.net>
 + PKG_LICENSE:=GPL-2.0-or-later
