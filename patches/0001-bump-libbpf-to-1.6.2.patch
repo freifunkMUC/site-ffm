@@ -1,24 +1,28 @@
-From 5442e9b792172d00753860aa987fee0e080b5d5e Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Grische <2787581+grische@users.noreply.github.com>
-Date: Thu, 22 Jan 2026 19:49:43 +0100
+Date: Sun, 12 Jul 2026 10:49:20 +0200
 Subject: [PATCH] bump libbpf to 1.6.2
 
+OpenWrt 24.10 ships libbpf 1.5.0. Bump it to 1.6.2 and carry the
+bpf_tc_classid patch required by ffmuc-ebpf-clat.
 ---
- .../openwrt/0014-bump-libbpf-to-1.6.2.patch   | 101 ++++++++++++++++++
- 1 file changed, 101 insertions(+)
+ .../openwrt/0014-bump-libbpf-to-1.6.2.patch   | 103 ++++++++++++++++++
+ 1 file changed, 103 insertions(+)
  create mode 100644 patches/openwrt/0014-bump-libbpf-to-1.6.2.patch
 
 diff --git a/patches/openwrt/0014-bump-libbpf-to-1.6.2.patch b/patches/openwrt/0014-bump-libbpf-to-1.6.2.patch
 new file mode 100644
-index 00000000..212c26a9
+index 00000000..d04ff8d5
 --- /dev/null
 +++ b/patches/openwrt/0014-bump-libbpf-to-1.6.2.patch
-@@ -0,0 +1,101 @@
-+From 27ac65f2f3d730a58793efcc244ced89e0a025cc Mon Sep 17 00:00:00 2001
+@@ -0,0 +1,103 @@
++From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 +From: Grische <2787581+grische@users.noreply.github.com>
-+Date: Thu, 22 Jan 2026 19:48:03 +0100
++Date: Sun, 12 Jul 2026 10:48:55 +0200
 +Subject: [PATCH] bump libbpf to 1.6.2
 +
++Includes important fixes for eBPF program loading and adds the
++bpf_tc_classid patch required by ffmuc-ebpf-clat.
 +---
 + package/libs/libbpf/Makefile                  |  6 +--
 + .../libbpf/patches/100-bpf_tc_classid.patch   | 54 +++++++++++++++++++
@@ -26,19 +30,19 @@ index 00000000..212c26a9
 + create mode 100644 package/libs/libbpf/patches/100-bpf_tc_classid.patch
 +
 +diff --git a/package/libs/libbpf/Makefile b/package/libs/libbpf/Makefile
-+index 0ea38bfba7..8cdcd8384d 100644
++index 4d918e7bbf..8cdcd8384d 100644
 +--- a/package/libs/libbpf/Makefile
 ++++ b/package/libs/libbpf/Makefile
 +@@ -8,11 +8,11 @@
 + include $(TOPDIR)/rules.mk
 + 
 + PKG_NAME:=libbpf
-+-PKG_VERSION:=1.5.1
++-PKG_VERSION:=1.5.0
 ++PKG_VERSION:=1.6.2
 + PKG_RELEASE:=1
 + 
 + PKG_SOURCE_URL:=https://github.com/libbpf/libbpf
-+-PKG_MIRROR_HASH:=668fd072fbade0204543fd629f4542071add50bc3953586aa14e77c3265663a0
++-PKG_MIRROR_HASH:=7699fcfa89bf0f6e756c4555fbd3fdb8cbcfcc770e5944aebdd0e9244031f022
 ++PKG_MIRROR_HASH:=9620f45b4fc0ee5e0f43502634fe48fbcb34ab49d2553b7275fa92f7e02d3dc7
 + PKG_SOURCE_PROTO:=git
 + PKG_SOURCE_VERSION:=v$(PKG_VERSION)
@@ -113,8 +117,8 @@ index 00000000..212c26a9
 ++ 
 ++ 	info.opts = opts;
 +-- 
-+2.43.0
++2.52.0
 +
 -- 
-2.43.0
+2.52.0
 
