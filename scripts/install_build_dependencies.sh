@@ -28,7 +28,6 @@ apt-get -y --no-install-recommends install \
     bzip2 \
     clang-20 \
     curl \
-    clang \
     diffutils \
     file \
     g++ \
