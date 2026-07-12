@@ -17,16 +17,11 @@ apt-get update
 # ca-certificates required for Github git cloning
 apt-get -y --no-install-recommends install ca-certificates
 
-# Remove older clang versions to force usage of clang-20
-if [ -n "${DELETE_OTHER_CLANG_VERSIONS-}" ]; then
-    apt-get -y --auto-remove purge clang* || echo "No version of clang found for uninstallation"
-fi
-
 # Install build environment
 apt-get -y --no-install-recommends install \
     bash \
     bzip2 \
-    clang-20 \
+    clang \
     curl \
     diffutils \
     file \
@@ -34,7 +29,7 @@ apt-get -y --no-install-recommends install \
     gawk \
     gcc \
     git \
-    libncurses5-dev \
+    libncurses-dev \
     llvm \
     make \
     patch \
@@ -50,6 +45,13 @@ apt-get -y --no-install-recommends install \
     unzip \
     wget \
     xz-utils
+
+# ffmuc-ebpf-clat requires clang >= 20
+clang_major="$(clang -dumpversion | cut -d. -f1)"
+if [ "${clang_major}" -lt 20 ]; then
+    echo "Error: clang >= 20 is required for ffmuc-ebpf-clat, found clang ${clang_major}"
+    exit 1
+fi
 
 # We require bpftool 7.5+
 # https://github.com/libbpf/bpftool/releases#:~:text=work%20with%20object%20files%20in%20either%20endianness%20for%20some%20operations%20like%20object%20linking%20or%20light%20BPF%20skeleton%20creation
