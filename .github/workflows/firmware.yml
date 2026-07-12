@@ -48,7 +48,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.generate_target_matrix.outputs.build_target_json) }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Maximize build space
         run: |
@@ -61,7 +61,6 @@ jobs:
           fetch-depth: 0
       - name: Install build dependencies
         run: |
-          export DELETE_OTHER_CLANG_VERSIONS=yes
           sudo -E ./scripts/install_build_dependencies.sh
       - name: build target ${{ matrix.target }}
         id: compile
