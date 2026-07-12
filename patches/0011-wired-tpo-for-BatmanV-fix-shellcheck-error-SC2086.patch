@@ -1,8 +1,9 @@
-From 1b35624253d82b2c3b85576c4127e21e21e0ee5f Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Grische <github@grische.xyz>
 Date: Thu, 31 Oct 2024 15:34:18 +0100
 Subject: [PATCH 11/11] wired-tpo for BatmanV: fix shellcheck error SC2086
 
+Also change indentation to tabs to make editorconfig happy
 ---
  .../core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo   | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
@@ -19,5 +20,5 @@ index 95e66831..caecb3dc 100755
 +	batctl hardif "${IFNAME}" throughput_override 1000mbit;
  fi
 -- 
-2.43.0
+2.52.0
 
