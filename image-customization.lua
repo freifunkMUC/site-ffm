@@ -36,6 +36,7 @@ if not device_class('tiny') then
     }
     packages{
         'ffmuc-custom-banner',
+        'ffmuc-leds-off',
     }
 end
 
