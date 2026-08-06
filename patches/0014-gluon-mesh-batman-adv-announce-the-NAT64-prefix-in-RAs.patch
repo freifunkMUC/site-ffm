@@ -1,0 +1,78 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Thu, 6 Aug 2026 16:00:03 +0000
+Subject: [PATCH 1/2] gluon-mesh-batman-adv: announce the NAT64 prefix in
+ router advertisements
+
+radvd/arguments has been dying on every start of gluon-radvd since
+97a0d9a4 ("radvd/arguments: Announce parker node's prefix and DNS")
+dropped the gluon.site import but kept the site.radvd() lookups at the
+end of the script. uradvd still received the prefix and the RDNSS
+address, because Lua had already flushed those to stdout by the time the
+script hit the undefined global, but site.radvd.preferred_lifetime and
+site.radvd.valid_lifetime were silently never applied. Restore the
+import.
+
+While here, announce the NAT64 prefix (RFC 8781) when /tmp/pref64
+exists. noderoute writes that file on the nodes that translate IPv4 for
+their clients, and only there: --pref64 needs uradvd from the
+freifunkMUC fork (implemented in c472302, pinned by site-ffm at
+780182a), and a uradvd built without it rejects the unknown option and
+exits before sending a single advertisement.
+
+Reading the runtime files through gluon.util.readfile also gets rid of
+the duplicated local and of the space indentation the script picked up
+in 97a0d9a4, which luacheck and editorconfig-checker had both been
+complaining about.
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+---
+ .../luasrc/lib/gluon/radvd/arguments          | 28 ++++++++++++-------
+ 1 file changed, 18 insertions(+), 10 deletions(-)
+
+diff --git a/package/gluon-mesh-batman-adv/luasrc/lib/gluon/radvd/arguments b/package/gluon-mesh-batman-adv/luasrc/lib/gluon/radvd/arguments
+index d44f8a3e..1fae015e 100755
+--- a/package/gluon-mesh-batman-adv/luasrc/lib/gluon/radvd/arguments
++++ b/package/gluon-mesh-batman-adv/luasrc/lib/gluon/radvd/arguments
+@@ -1,20 +1,28 @@
+ #!/usr/bin/lua
+ 
+-local f = io.open("/tmp/range6","r")
+-if f then
+-    local range6 = f:read('*a')
+-    f:close()
++local site = require "gluon.site"
++local util = require "gluon.util"
+ 
+-    io.write("-i br-client -p " .. range6)
++-- noderoute writes these files while it configures the client network, so
++-- uradvd only picks up changes when it is restarted afterwards.
++
++local range6 = util.readfile("/tmp/range6")
++if range6 then
++	io.write("-i br-client -p " .. range6)
+ end
+ 
+-local f = io.open("/tmp/addr6","r")
+-if f then
+-    local addr6 = f:read('*a')
+-    f:close()
++local addr6 = util.readfile("/tmp/addr6")
++if addr6 then
++	io.write(" --rdnss " .. addr6)
++end
+ 
+-    io.write(" --rdnss " .. addr6)
++-- Only a node that translates IPv4 for its clients announces a NAT64
++-- prefix (RFC 8781); the file is absent on all other nodes.
++local pref64 = util.readfile("/tmp/pref64")
++if pref64 then
++	io.write(" --pref64 " .. pref64)
+ end
++
+ if site.radvd() then
+ 	if site.radvd.preferred_lifetime() then
+ 		io.write(" --preferred-lifetime " .. site.radvd.preferred_lifetime())
+-- 
+2.54.0
+
