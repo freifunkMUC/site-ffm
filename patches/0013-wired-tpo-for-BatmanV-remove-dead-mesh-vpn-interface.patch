@@ -1,0 +1,34 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Thu, 6 Aug 2026 14:39:05 +0000
+Subject: [PATCH] wired-tpo for BatmanV: remove dead mesh-vpn interface
+
+On parker the mesh VPN is handled by ffbs-mesh-vpn-parker, which creates one
+plain WireGuard interface per concentrator (wg_c<id>) and routes over it at
+L3. None of them is ever attached to batman-adv as a hardif, and no interface
+called "mesh-vpn" exists anymore, so that arm of the condition can never
+match. It is a leftover from the fastd-era single mesh-vpn hardif.
+
+Keep vx_mesh_uplink and vx_mesh_other: Batman V still runs the local wired and
+wireless mesh, and the throughput override is what makes wired links outrank
+wireless ones there.
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+---
+ .../core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo   | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo b/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo
+index caecb3dc..06ef5673 100755
+--- a/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo
++++ b/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo
+@@ -1,6 +1,6 @@
+ #!/bin/sh
+ 
+-if [ "$IFNAME" = "vx_mesh_uplink" ] || [ "$IFNAME" = "vx_mesh_other" ] || [ "$IFNAME" = "mesh-vpn" ]; then
++if [ "$IFNAME" = "vx_mesh_uplink" ] || [ "$IFNAME" = "vx_mesh_other" ]; then
+ 	sleep 3;
+ 	batctl hardif "${IFNAME}" throughput_override 1000mbit;
+ fi
+-- 
+2.54.0
