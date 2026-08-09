@@ -1,0 +1,125 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Sun, 9 Aug 2026 10:01:14 +0000
+Subject: [PATCH] gluon-radv-filterd: stop electing an uninitialized router
+
+Since 2fdf8e96 ("gluon-radv-filterd: expire routers instead of removing
+them") routers stay on G.routers once their advertisement lifetime has
+run out, so the election loop in update_ebtables() can walk the whole
+list without ever hitting an unexpired router that carries the maximum
+metric. That happens as soon as every known router has expired, and the
+loop then leaves the mac buffer on the stack untouched -- yet the buffer
+is handed to fprintf() and to ebtables-tiny anyway. On a lab node
+running the site's THROUGHPUT variant of the daemon, this showed up once
+per minute as
+
+  Switching to `Q\x92 (THROUGHPUT=0)
+  Problem with specified source mac '`Q\x92'
+  warning: adding new rule to ebtables chain RADV_FILTER failed
+
+Because the chain is flushed before the failing add, RADV_FILTER was
+left empty with its DROP policy in place, i.e. every forwarded router
+advertisement was dropped -- and as the terminated loop also set
+G.best_router to NULL, election_required() kept asking for a new
+election and the whole dance repeated every interval.
+
+Decide that state instead of stumbling into it: when no unexpired router
+is left there is nothing to elect, so only flush the chain -- its DROP
+policy is precisely the wanted "no known router" behaviour -- report it
+once and remember it in G.drop_all, which turns the following intervals
+into no-ops. The next advertisement unexpires its router, so the regular
+election runs again and re-adds the ACCEPT rule.
+
+The mac buffer is initialized on top of that, so that a loop which fails
+to match can never again leak stack contents into an ebtables argument.
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+---
+ .../src/gluon-radv-filterd.c                  | 48 ++++++++++++++++++-
+ 1 file changed, 47 insertions(+), 1 deletion(-)
+
+diff --git a/package/gluon-radv-filterd/src/gluon-radv-filterd.c b/package/gluon-radv-filterd/src/gluon-radv-filterd.c
+index 7d18f9e4..140257c3 100644
+--- a/package/gluon-radv-filterd/src/gluon-radv-filterd.c
++++ b/package/gluon-radv-filterd/src/gluon-radv-filterd.c
+@@ -97,6 +97,10 @@ struct router {
+ 
+ static struct global {
+ 	int sock;
++	/* set while the chain is intentionally left empty because no
++	 * unexpired router is known, so that all router advertisements are
++	 * dropped by its policy */
++	bool drop_all;
+ 	struct router *routers;
+ 	const char *mesh_iface;
+ 	const char *chain;
+@@ -756,8 +760,28 @@ static int fork_execvp_timeout(struct timespec *timeout, const char *file, const
+ 	return -1;
+ }
+ 
++/* Whether any router is still alive. The maximum metric is only ever taken
++ * from unexpired routers, so as long as one of them is left, at least one of
++ * them matches the maximum and can be elected.
++ */
++static bool have_active_router(void)
++{
++	struct router *router;
++
++	foreach(router, G.routers) {
++		if (!router->expired)
++			return true;
++	}
++
++	return false;
++}
++
+ static bool election_required(void)
+ {
++	/* Only meaningful while a router is left to elect: update_ebtables()
++	 * checks have_active_router() itself, as G.best_router may also be
++	 * NULL because there is no candidate at all.
++	 */
+ 	if (!G.best_router)
+ 		return true;
+ 
+@@ -775,7 +799,7 @@ static void update_ebtables(void) {
+ 	struct timespec timeout = {
+ 		.tv_sec = EBTABLES_TIMEOUT,
+ 	};
+-	char mac[F_MAC_LEN + 1];
++	char mac[F_MAC_LEN + 1] = "";
+ 	struct router *router;
+ 
+ 	if (!election_required()) {
+@@ -786,6 +810,28 @@ static void update_ebtables(void) {
+ 		return;
+ 	}
+ 
++	if (!have_active_router()) {
++		/* Nothing to elect. Leave the chain empty, so that its DROP
++		 * policy keeps filtering every forwarded router advertisement,
++		 * and don't touch ebtables again until a router shows up.
++		 */
++		if (G.drop_all)
++			return;
++
++		fprintf(stderr, "No router left, dropping all router advertisements\n");
++
++		G.best_router = NULL;
++		G.drop_all = true;
++
++		if (fork_execvp_timeout(&timeout, "ebtables-tiny", (const char *[])
++				{ "ebtables-tiny", "-F", G.chain, NULL }))
++			error_message(0, 0, "warning: flushing ebtables chain %s failed", G.chain);
++
++		return;
++	}
++
++	G.drop_all = false;
++
+ 	foreach(router, G.routers) {
+ 		if (router->expired)
+ 			continue;
+-- 
+2.54.0
+
