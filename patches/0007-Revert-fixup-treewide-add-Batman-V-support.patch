@@ -1,0 +1,30 @@
+From be7a291bd7b995ffa511630a1489e2849f281ce6 Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Fri, 17 Apr 2026 22:42:43 +0200
+Subject: [PATCH 7/7] Revert "fixup! treewide: add Batman V support"
+
+This reverts commit 3a7b9859f22cbe3ace33aa2c60220143e8079118.
+---
+ .../post-setup.d/40-gluon-mesh-batman-adv-wired-tpo    | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+ create mode 100755 package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo
+
+diff --git a/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo b/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo
+new file mode 100755
+index 00000000..0fd50612
+--- /dev/null
++++ b/package/gluon-mesh-batman-adv/files/lib/gluon/core/mesh/post-setup.d/40-gluon-mesh-batman-adv-wired-tpo
+@@ -0,0 +1,10 @@
++#!/bin/sh
++
++# throughput_override is only relevant for Batman V
++algo=$(batctl routing_algo 2>/dev/null)
++[ "$algo" = "BATMAN_V" ] || exit 0
++
++if [ "$IFNAME" = "vx_mesh_uplink" ] || [ "$IFNAME" = "vx_mesh_other" ] || [ "$IFNAME" = "mesh-vpn" ]; then
++	sleep 3
++	batctl hardif "${IFNAME}" throughput_override 1000mbit
++fi
+-- 
+2.43.0
+

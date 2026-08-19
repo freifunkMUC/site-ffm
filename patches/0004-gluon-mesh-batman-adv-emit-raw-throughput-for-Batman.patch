@@ -1,0 +1,112 @@
+From 56d0860741ad5e183f00edfd6b412fc393491e90 Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Wed, 15 Apr 2026 08:55:05 +0200
+Subject: [PATCH 4/7] gluon-mesh-batman-adv: emit raw throughput for Batman V
+ neighbours
+
+Each routing algorithm now emits its native link-quality metric in its
+own JSON field: tq (uint8, 0-255) for Batman IV; throughput (uint32,
+kbps) for Batman V. Each neighbour link carries exactly one of the two.
+
+This matches the pattern in respondd-statistics.c (gateway_tq vs
+gateway_throughput) and removes the need to fake a TQ value from
+throughput via gluonutil_get_pseudo_tq().
+
+Note: the status-page pipeline (neighbours-batadv.c) keeps emitting
+"tp" as a pre-formatted display string (e.g. "123M"); only the respondd
+neighbours output gains the raw numeric "throughput" here for machine
+consumers (yanic, meshviewer).
+
+add_neighbour() now takes a metric name plus a caller-allocated
+json_object value and owns that value, json_object_put()-ing it on the
+two early-return paths (ifname lookup fail, inner object alloc fail).
+The IV and V callbacks pass the appropriate (name, value) pair.
+
+Throughput is wrapped with json_object_new_int64 to avoid int32
+truncation of the uint32 source; gateway_throughput in
+respondd-statistics.c still uses json_object_new_int and can be widened
+in a follow-up.
+
+The libgluonutil include is no longer needed in this file.
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+---
+ .../src/respondd-neighbours.c                 | 20 +++++++++++--------
+ 1 file changed, 12 insertions(+), 8 deletions(-)
+
+diff --git a/package/gluon-mesh-batman-adv/src/respondd-neighbours.c b/package/gluon-mesh-batman-adv/src/respondd-neighbours.c
+index f588f005..3b8ecd52 100644
+--- a/package/gluon-mesh-batman-adv/src/respondd-neighbours.c
++++ b/package/gluon-mesh-batman-adv/src/respondd-neighbours.c
+@@ -4,7 +4,6 @@
+ #include "respondd-common.h"
+ 
+ #include <batadv-genl.h>
+-#include <libgluonutil.h>
+ 
+ #include <json-c/json.h>
+ 
+@@ -62,7 +61,7 @@ static const enum batadv_nl_attrs parse_neigh_list_mandatory_batadv_v[] = {
+ };
+ 
+ static int add_neighbour(struct neigh_netlink_opts *opts, struct nlattr **attrs,
+-		uint8_t *mac, uint8_t tq)
++		uint8_t *mac, const char *metric_name, struct json_object *metric_value)
+ {
+ 	uint32_t hardif;
+ 	uint32_t lastseen;
+@@ -73,15 +72,19 @@ static int add_neighbour(struct neigh_netlink_opts *opts, struct nlattr **attrs,
+ 	lastseen = nla_get_u32(attrs[BATADV_ATTR_LAST_SEEN_MSECS]);
+ 
+ 	ifname = if_indextoname(hardif, ifname_buf);
+-	if (!ifname)
++	if (!ifname) {
++		json_object_put(metric_value);
+ 		return NL_OK;
++	}
+ 
+ 	sprintf(mac1, "%02x:%02x:%02x:%02x:%02x:%02x",
+ 		mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+ 
+ 	struct json_object *obj = json_object_new_object();
+-	if (!obj)
++	if (!obj) {
++		json_object_put(metric_value);
+ 		return NL_OK;
++	}
+ 
+ 	struct json_object *interface;
+ 	if (!json_object_object_get_ex(opts->interfaces, ifname, &interface)) {
+@@ -89,7 +92,7 @@ static int add_neighbour(struct neigh_netlink_opts *opts, struct nlattr **attrs,
+ 		json_object_object_add(opts->interfaces, ifname, interface);
+ 	}
+ 
+-	json_object_object_add(obj, "tq", json_object_new_int(tq));
++	json_object_object_add(obj, metric_name, metric_value);
+ 	json_object_object_add(obj, "lastseen", json_object_new_double(lastseen / 1000.));
+ 	json_object_object_add(obj, "best", json_object_new_boolean(nla_get_flag(attrs[BATADV_ATTR_FLAG_BEST])));
+ 	json_object_object_add(interface, mac1, obj);
+@@ -129,7 +132,8 @@ static int parse_orig_list_netlink_cb_batadv_iv(struct nl_msg *msg, void *arg)
+ 	if (memcmp(mac, nla_data(attrs[BATADV_ATTR_NEIGH_ADDRESS]), 6) != 0)
+ 		return NL_OK;
+ 
+-	return add_neighbour(opts, attrs, mac, nla_get_u8(attrs[BATADV_ATTR_TQ]));
++	return add_neighbour(opts, attrs, mac, "tq",
++			json_object_new_int(nla_get_u8(attrs[BATADV_ATTR_TQ])));
+ }
+ 
+ static int parse_neigh_list_netlink_cb_batadv_v(struct nl_msg *msg, void *arg)
+@@ -162,8 +166,8 @@ static int parse_neigh_list_netlink_cb_batadv_v(struct nl_msg *msg, void *arg)
+ 
+ 	mac = nla_data(attrs[BATADV_ATTR_NEIGH_ADDRESS]);
+ 
+-	return add_neighbour(opts, attrs, mac,
+-			gluonutil_get_pseudo_tq(nla_get_u32(attrs[BATADV_ATTR_THROUGHPUT])));
++	return add_neighbour(opts, attrs, mac, "throughput",
++			json_object_new_int64(nla_get_u32(attrs[BATADV_ATTR_THROUGHPUT])));
+ }
+ 
+ static struct json_object * get_batadv(void) {
+-- 
+2.43.0
+

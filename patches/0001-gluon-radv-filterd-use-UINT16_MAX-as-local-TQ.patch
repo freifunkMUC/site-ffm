@@ -1,0 +1,56 @@
+From d36039abd022b2aa0f5beeb4dfdb051d1887dd69 Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Thu, 21 May 2026 22:21:24 +0200
+Subject: [PATCH 1/7] gluon-radv-filterd: use UINT16_MAX as local TQ
+
+Instead of re-using the hysteresis threshold, use UINT16_MAX as the
+synthetic local-router TQ since any value larger than 255 dominates.
+
+Replace the remaining use with BATMAN_IV_MAX_THRESHOLD as an upper bound
+to protect hysteresis threshold to be larger than 255.
+---
+ package/gluon-radv-filterd/src/gluon-radv-filterd.c | 13 +++++++------
+ 1 file changed, 7 insertions(+), 6 deletions(-)
+
+diff --git a/package/gluon-radv-filterd/src/gluon-radv-filterd.c b/package/gluon-radv-filterd/src/gluon-radv-filterd.c
+index 7a777752..29d126ac 100644
+--- a/package/gluon-radv-filterd/src/gluon-radv-filterd.c
++++ b/package/gluon-radv-filterd/src/gluon-radv-filterd.c
+@@ -52,8 +52,9 @@
+ // max execution time of a single ebtables call in nanoseconds
+ #define EBTABLES_TIMEOUT 500000000 // 500ms
+ 
+-// TQ value assigned to local routers
+-#define LOCAL_TQ 512
++// BATMAN IV TQ values are 0-255; reject larger thresholds since
++// it would silently prevent the gateway from switching.
++#define BATMAN_IV_MAX_THRESHOLD 255
+ 
+ #define BUFSIZE 1500
+ 
+@@ -267,8 +268,8 @@ static void parse_cmdline(int argc, char *argv[]) {
+ 				threshold = strtoul(optarg, &endptr, 10);
+ 				if (*endptr != '\0')
+ 					exit_errmsg("Threshold must be a number: %s", optarg);
+-				if (threshold >= LOCAL_TQ)
+-					exit_errmsg("Threshold too large: %ld (max is %d)", threshold, LOCAL_TQ);
++				if (threshold > BATMAN_IV_MAX_THRESHOLD)
++					exit_errmsg("Threshold too large: %ld (max is %d)", threshold, BATMAN_IV_MAX_THRESHOLD);
+ 				G.hysteresis_thresh = (uint16_t) threshold;
+ 				break;
+ 			case 'h':
+@@ -524,9 +525,9 @@ static int parse_tt_local(struct nl_msg *msg,
+ 	if (!router)
+ 		return NL_OK;
+ 
++	router->tq = UINT16_MAX;
+ 	DEBUG_MSG("Found router " F_MAC " in transtable_local, assigning TQ %d",
+-			F_MAC_VAR(router->src), LOCAL_TQ);
+-	router->tq = LOCAL_TQ;
++			F_MAC_VAR(router->src), router->tq);
+ 	if (router->tq > G.max_tq)
+ 		G.max_tq = router->tq;
+ 
+-- 
+2.43.0
+

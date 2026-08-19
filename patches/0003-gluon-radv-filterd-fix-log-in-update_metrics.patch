@@ -1,0 +1,27 @@
+From 0ed9341462b0a7977fb29220e1aa07b4fcb18ed9 Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Thu, 30 Apr 2026 17:39:26 +0200
+Subject: [PATCH 3/7] gluon-radv-filterd: fix log in update_metrics
+
+The error message is in the local translation table query, not the global
+one.
+---
+ package/gluon-radv-filterd/src/gluon-radv-filterd.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/package/gluon-radv-filterd/src/gluon-radv-filterd.c b/package/gluon-radv-filterd/src/gluon-radv-filterd.c
+index 55c974d5..4291f9eb 100644
+--- a/package/gluon-radv-filterd/src/gluon-radv-filterd.c
++++ b/package/gluon-radv-filterd/src/gluon-radv-filterd.c
+@@ -592,7 +592,7 @@ static void update_metrics(void) {
+ 					BATADV_CMD_GET_TRANSTABLE_LOCAL,
+ 					parse_tt_local, NLM_F_DUMP, &opts);
+ 		if (ret < 0)
+-			fprintf(stderr, "Parsing of global translation table failed\n");
++			fprintf(stderr, "Parsing of local translation table failed\n");
+ 	}
+ 
+ 	foreach(router, G.routers) {
+-- 
+2.43.0
+
