@@ -115,14 +115,10 @@ pkgs_pci = {
 
 
 -- we want TLS on all devices for the firmware downloader to use HTTPS
-include_tls = true
-
-if include_tls then
-    features({ 'tls' })
-    packages({
-        'openssh-sftp-server', -- for OpenSSH 9: https://www.openssh.com/txt/release-9.0
-    })
-end
+features({ 'tls' })
+packages({
+    'openssh-sftp-server', -- for OpenSSH 9: https://www.openssh.com/txt/release-9.0
+})
 
 include_usb = true
 
