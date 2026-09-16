@@ -1,0 +1,110 @@
+From 6909ff851558391c6a7026f6e263e9a2c42ffa60 Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Wed, 16 Sep 2026 19:01:18 +0200
+Subject: [PATCH] patches/openwrt: fix image headers truncated with uutils
+ coreutils
+
+Build/znet-header and Build/elx-header build a \xHH escape sequence with
+`fold -s2`, which depends on GNU fold's obsolete -WIDTH syntax. Ubuntu
+25.10 and later ship uutils coreutils instead of GNU coreutils, and
+uutils' fold rejects that invocation, prints usage to stderr and writes
+nothing. The surrounding command substitution then expands to the empty
+string, and `echo -ne "" | dd bs=N count=1 conv=sync` emits *zero* bytes
+rather than N, because conv=sync pads a partial block but never an empty
+one - so the field vanishes and every later field shifts down.
+
+The result is a silently malformed image: the build succeeds, the
+manifest checksum matches and sysupgrade accepts it, but the device's
+bootloader rejects it. Our CI moved to Ubuntu 26.04 in a76cf34d ("ci:
+build on Ubuntu 26.04 to get clang >= 20"), which is when zyxel-wsm20
+images started failing over to the second boot slot instead of booting.
+
+Carry the one-word fix (`fold -w2`) as an OpenWrt patch until it is
+upstream. Of the devices this site builds only zyxel-wsm20 is affected;
+Build/elx-header is fixed at the same time because it has the identical
+defect.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+---
+ ...aders-silently-truncated-with-uutils.patch | 69 +++++++++++++++++++
+ 1 file changed, 69 insertions(+)
+ create mode 100644 patches/openwrt/0022-build-fix-image-headers-silently-truncated-with-uutils.patch
+
+diff --git a/patches/openwrt/0022-build-fix-image-headers-silently-truncated-with-uutils.patch b/patches/openwrt/0022-build-fix-image-headers-silently-truncated-with-uutils.patch
+new file mode 100644
+index 0000000..ca80667
+--- /dev/null
++++ b/patches/openwrt/0022-build-fix-image-headers-silently-truncated-with-uutils.patch
+@@ -0,0 +1,69 @@
++From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
++From: Grische <github@grische.xyz>
++Date: Wed, 16 Sep 2026 17:30:00 +0000
++Subject: [PATCH] build: fix image headers silently truncated with uutils
++ coreutils
++
++Build/znet-header and Build/elx-header turn a hex string into \xHH escapes
++with `fold -s2`, which relies on GNU fold's obsolete -WIDTH syntax. uutils
++coreutils - the default coreutils on Ubuntu 25.10 and later - does not
++implement it and fails:
++
++  $ fold --version | head -1
++  fold (uutils coreutils) 0.8.0
++  $ printf '%08x' 3180188 | fold -s2
++  error: unexpected argument '-2' found
++    tip: to pass '-2' as a value, use '-- -2'
++
++fold then writes nothing, the command substitution expands to the empty
++string, and `echo -ne "" | dd bs=N count=1 conv=sync` emits *zero* bytes
++rather than N - conv=sync pads a partial block but never an empty one.
++The field disappears entirely and every later field shifts down, so the
++image is silently malformed: the build succeeds, manifest checksums match
++and sysupgrade accepts the image, but the bootloader rejects it.
++
++Observed on a ZyXEL WSM20 built on Ubuntu 26.04. The znet-header payload
++size word was missing, so the 0x12345678 magic sat at offset 0x0c instead
++of 0x10 and the payload started at 0x3fffc instead of 0x40000. The MSTC
++bootloader refused the image and fell back to the second boot slot; the
++flash write itself was byte-perfect. Re-inserting only those four bytes
++made the identical kernel and rootfs boot.
++
++Use `fold -w2`, the documented spelling, which behaves identically on GNU
++fold. -s (break at spaces) is a no-op on a hex string:
++
++  fold (GNU coreutils) 9.11      -s2 -> 4 bytes   -w2 -> 4 bytes
++  fold (uutils coreutils) 0.8.0  -s2 -> 0 bytes   -w2 -> 4 bytes
++
++Build/elx-header is affected the same way, losing its 8-byte size field
++and 58-byte md5 field; it is used by several ELECOM devices on ath79 and
++ramips.
++---
++--- a/include/image-commands.mk
+++++ b/include/image-commands.mk
++@@ -346,9 +346,9 @@
++ 		hw_id="$(hw_id)"; \
++ 		echo -ne "\x$${hw_id:0:2}\x$${hw_id:2:2}\x$${hw_id:4:2}\x$${hw_id:6:2}" | \
++ 			dd bs=20 count=1 conv=sync; \
++-		echo -ne "$$(printf '%08x' $$(stat -c%s $@) | fold -s2 | xargs -I {} echo \\x{} | tr -d '\n')" | \
+++		echo -ne "$$(printf '%08x' $$(stat -c%s $@) | fold -w2 | xargs -I {} echo \\x{} | tr -d '\n')" | \
++ 			dd bs=8 count=1 conv=sync; \
++-		echo -ne "$$($(MKHASH) md5 $@ | fold -s2 | xargs -I {} echo \\x{} | tr -d '\n')" | \
+++		echo -ne "$$($(MKHASH) md5 $@ | fold -w2 | xargs -I {} echo \\x{} | tr -d '\n')" | \
++ 			dd bs=58 count=1 conv=sync; \
++ 	) > $(KDIR)/tmp/$(DEVICE_NAME).header
++ 	-$(call Build/xor-image,-p $(xor_pattern) -x) \
++--- a/target/linux/ramips/image/mt7621.mk
+++++ b/target/linux/ramips/image/mt7621.mk
++@@ -182,7 +182,7 @@
++ 		payload_size_crc="$$(dd if=$@ ibs=1 count=$$payload_len 2>/dev/null | gzip -c | \
++ 			tail -c 8 | od -An -N4 -tx4 --endian big | tr -d ' \n')"; \
++ 		echo -ne "$(magic)" | dd bs=4 count=1 conv=sync 2>/dev/null; \
++-		echo -ne "$$(printf '%08x' $$(stat -c%s $@) | fold -s2 | xargs -I {} echo \\x{} | tac | tr -d '\n')" | \
+++		echo -ne "$$(printf '%08x' $$(stat -c%s $@) | fold -w2 | xargs -I {} echo \\x{} | tac | tr -d '\n')" | \
++ 			dd bs=4 count=1 conv=sync 2>/dev/null; \
++ 		echo -ne "$$(echo $$data_size_crc | sed 's/../\\x&/g')" | \
++ 			dd bs=4 count=1 conv=sync 2>/dev/null; \
++-- 
++2.51.0
++
+-- 
+2.54.0
+
