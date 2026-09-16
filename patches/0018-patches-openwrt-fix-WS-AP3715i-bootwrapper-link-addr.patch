@@ -1,0 +1,114 @@
+From 552cfa556b9e99aad66a207cbf098778e2a67bb5 Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Wed, 16 Sep 2026 17:00:00 +0000
+Subject: [PATCH] patches/openwrt: fix WS-AP3715i bootwrapper link address
+
+The Enterasys WS-AP3715i cannot boot any 24.10-based image: the board
+hangs with no output at all right after U-Boot prints "Uncompressing
+Kernel Image ... OK".
+
+p1010.mk pins KERNEL_LOADADDR to 0x1500000, but the simpleImage
+bootwrapper picks its own link address and ws-ap3715i was never added to
+the case in arch/powerpc/boot/wrapper that pins it to the same value.
+It therefore gets the 0x400000 default plus make_space=y, which rounds
+the link address up to the next MiB above the uncompressed kernel - so
+the link address follows the kernel size while the uImage header does
+not, and the position-dependent wrapper is entered at the wrong address.
+
+This is what made it look like a squashfs-only bug: on 24.10 the
+initramfs kernel happens to round to exactly 0x1500000 and boots, while
+the squashfs kernel rounds to 0x1100000 and hangs.
+
+Upstream fixed this for 6.12/6.18 in 9836f7ca132b; kernel 6.6 has no
+backport, so carry it here until Parker moves off 24.10.
+
+Fixes: https://github.com/openwrt/openwrt/issues/23112
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+---
+ ...-WS-AP3715i-bootwrapper-link-address.patch | 73 +++++++++++++++++++
+ 1 file changed, 73 insertions(+)
+ create mode 100644 patches/openwrt/0021-mpc85xx-fix-WS-AP3715i-bootwrapper-link-address.patch
+
+diff --git a/patches/openwrt/0021-mpc85xx-fix-WS-AP3715i-bootwrapper-link-address.patch b/patches/openwrt/0021-mpc85xx-fix-WS-AP3715i-bootwrapper-link-address.patch
+new file mode 100644
+index 0000000..9200770
+--- /dev/null
++++ b/patches/openwrt/0021-mpc85xx-fix-WS-AP3715i-bootwrapper-link-address.patch
+@@ -0,0 +1,73 @@
++From 3368b202272bc4413f8f87810ba9f910a0e3e3eb Mon Sep 17 00:00:00 2001
++From: Grische <github@grische.xyz>
++Date: Wed, 16 Sep 2026 17:00:00 +0000
++Subject: [PATCH] mpc85xx: fix WS-AP3715i bootwrapper link address
++
++p1010.mk pins KERNEL_ENTRY/KERNEL_LOADADDR to 0x1500000 for the
++Enterasys WS-AP3715i, but the device boots a simpleImage and
++arch/powerpc/boot/wrapper chooses the wrapper's *link* address itself.
++Every other mpc85xx simpleImage device is listed in the case that sets
++link_address='0x1500000'; 109-powerpc-85xx-ws-ap3715i-support.patch adds
++the board and its simpleImage target but never touches boot/wrapper, so
++ws-ap3715i falls through to simpleboot-*, keeps the 0x400000 default and
++gets make_space=y, which rewrites the link address to
++
++  round_size=$(((strip_size + 0xfffff) & 0xfff00000))
++
++i.e. the uncompressed kernel size rounded up to the next MiB. The link
++address therefore tracks the kernel size while the uImage header stays
++constant, and whenever the two disagree U-Boot enters the
++position-dependent wrapper at the wrong address and the board dies
++before the bootwrapper can print anything. On this board the wrapper
++console never registers at all - not even on a successful boot - so the
++failure looks like a dead CPU right after "Uncompressing Kernel Image
++... OK".
++
++That is why it looked like a squashfs-vs-initramfs problem on 24.10:
++the initramfs kernel happened to round to exactly 0x1500000, while the
++squashfs kernel rounds to 0x1100000 and hangs. Measured on real images:
++
++  24.10.3 initramfs   vmlinux.strip 0x14ce094 -> 0x1500000   boots
++  24.10.3 sysupgrade  vmlinux.strip 0x10e8094 -> 0x1100000   hangs
++  25.12.5 initramfs   vmlinux.strip 0x1520894 -> 0x1600000   hangs
++  25.12.5 sysupgrade  vmlinux.strip 0x10f0894 -> 0x1100000   hangs
++
++Verified on hardware: taking the stock 25.12.5 sysupgrade image and
++changing only the uImage load/entry field from 0x1500000 to 0x1100000
++boots Linux 6.12.94 to userspace, and an OpenWrt snapshot build (which
++already carries the fix) boots unmodified.
++
++Add ws-ap3715i to the existing list rather than backporting upstream's
++larger refactor, so no other device's link address changes.
++
++Upstream fixes this in 9836f7ca132b ("mpc85xx: unify wrapper address of
++simple image devices") for 6.12/6.18 only; 24.10 / kernel 6.6 has no
++backport.
++
++Fixes: https://github.com/openwrt/openwrt/issues/23112
++
++Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
++---
++ ...-85xx-ws-ap3715i-fix-bootwrapper-link-address.patch | 10 ++++++++++
++ 1 file changed, 10 insertions(+)
++ create mode 100644 target/linux/mpc85xx/patches-6.6/111-powerpc-85xx-ws-ap3715i-fix-bootwrapper-link-address.patch
++
++diff --git a/target/linux/mpc85xx/patches-6.6/111-powerpc-85xx-ws-ap3715i-fix-bootwrapper-link-address.patch b/target/linux/mpc85xx/patches-6.6/111-powerpc-85xx-ws-ap3715i-fix-bootwrapper-link-address.patch
++new file mode 100644
++index 0000000..663f5d5
++--- /dev/null
+++++ b/target/linux/mpc85xx/patches-6.6/111-powerpc-85xx-ws-ap3715i-fix-bootwrapper-link-address.patch
++@@ -0,0 +1,10 @@
+++--- a/arch/powerpc/boot/wrapper
++++++ b/arch/powerpc/boot/wrapper
+++@@ -352,6 +352,7 @@ adder875-redboot)
+++ simpleboot-hiveap-330|\
+++ simpleboot-tl-wdr4900-v1|\
+++ simpleboot-ws-ap3710i|\
++++simpleboot-ws-ap3715i|\
+++ simpleboot-ws-ap3825i)
+++     platformo="$object/fixed-head.o $object/simpleboot.o"
+++     link_address='0x1500000'
++-- 
++2.54.0
++
+-- 
+2.54.0
+
