@@ -1,0 +1,972 @@
+From ed4bf60344237c77d78bff64d4bcc30ed342ee3b Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Thu, 17 Sep 2026 10:47:39 +0200
+Subject: [PATCH] patches/openwrt: fix powerpc32 eBPF JIT miscompilations
+
+The powerpc32 eBPF JIT used by mpc85xx and apm821xx miscompiles two
+kinds of programs.
+
+Since 19daf0aef84f ("powerpc/bpf/32: perform three operands ALU
+operations") in 6.3, a MOV X is merged into the following ALU operation
+on the same register and its own code is dropped - also when that
+operation doesn't read the MOV source (the verifier's zero-extension,
+self moves, BPF_END, source equal to destination), when an immediate
+case reads the old destination, or when a branch lands on the second
+instruction. Clang chains bpf_csum_diff() calls through such a pair, so
+on a WS-AP3715i CLAT sent packets with bad L4 checksums as soon as
+bpf_jit_enable was 1.
+
+In BPF-to-BPF calls, the callee gets the upper half of BPF_REG_1 as its
+first argument and returns only the lower half of BPF_REG_0 (both since
+51c66ad849a7), and it doesn't receive BPF_REG_5 (since 7dd0e2848764).
+
+Carry the fixes and new test_bpf cases as pending kernel patches until
+they are upstream.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+---
+ ...x-powerpc32-eBPF-JIT-miscompilations.patch | 932 ++++++++++++++++++
+ 1 file changed, 932 insertions(+)
+ create mode 100644 patches/openwrt/0023-kernel-fix-powerpc32-eBPF-JIT-miscompilations.patch
+
+diff --git a/patches/openwrt/0023-kernel-fix-powerpc32-eBPF-JIT-miscompilations.patch b/patches/openwrt/0023-kernel-fix-powerpc32-eBPF-JIT-miscompilations.patch
+new file mode 100644
+index 00000000..5a1e464b
+--- /dev/null
++++ b/patches/openwrt/0023-kernel-fix-powerpc32-eBPF-JIT-miscompilations.patch
+@@ -0,0 +1,932 @@
++From fb35489cf5a8e1b17b6b3367a899ac15608373e0 Mon Sep 17 00:00:00 2001
++From: Grische <github@grische.xyz>
++Date: Thu, 17 Sep 2026 10:47:06 +0200
++Subject: [PATCH] kernel: fix powerpc32 eBPF JIT miscompilations
++
++The powerpc32 eBPF JIT, used by mpc85xx and apm821xx, generates wrong
++code in two areas.
++
++A MOV X followed by an ALU operation on the same register is emitted as
++one three-operand operation, and the code for the MOV is dropped. Since
++19daf0aef84f ("powerpc/bpf/32: perform three operands ALU operations")
++in 6.3 this also happens when the second instruction does not read the
++MOV source: the verifier's zero-extension, a self move, BPF_END, or an
++operation whose source is the destination register. A few immediate
++cases also read the old destination register, and a branch to the
++second instruction skips the move altogether. Clang passes the result
++of one bpf_csum_diff() to the next with "w5 = w0", which the verifier
++follows with a zero-extension, so on a WS-AP3715i every chained call
++got seed 0 and CLAT sent packets with bad L4 checksums as soon as
++bpf_jit_enable was 1.
++
++BPF-to-BPF calls pass their arguments like helper calls, but the callee
++used the prologue and epilogue of a main program: it treated r3 as a
++32-bit context pointer, so it got the upper half of BPF_REG_1 as its
++first argument, and it returned only the lower half of BPF_REG_0, where
++the caller expects the upper half. Both date back to 51c66ad849a7
++("powerpc/bpf: Implement extended BPF on PPC32"). Since 7dd0e2848764
++("powerpc/bpf/32: BPF prog is never called with more than one arg") the
++callee also doesn't load BPF_REG_5 from the caller's parameter area.
++
++Add the fixes and the matching test_bpf cases as pending patches. They
++are backported from a series that is not upstream yet.
++
++Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
++---
++ ...nly-fuse-a-MOV-into-operations-readi.patch | 119 +++++++
++ ...ake-both-halves-from-the-fused-MOV-s.patch | 115 +++++++
++ ...on-t-fuse-a-MOV-into-a-branch-target.patch | 152 +++++++++
++ ...ix-BPF_REG_1-and-BPF_REG_0-in-BPF-to.patch |  95 ++++++
++ ...32-Pass-BPF_REG_5-to-BPF-subprograms.patch |  72 +++++
++ ...tests-for-operations-following-a-MOV.patch | 291 ++++++++++++++++++
++ 6 files changed, 844 insertions(+)
++ create mode 100644 target/linux/generic/pending-6.6/343-powerpc-bpf-32-Only-fuse-a-MOV-into-operations-readi.patch
++ create mode 100644 target/linux/generic/pending-6.6/344-powerpc-bpf-32-Take-both-halves-from-the-fused-MOV-s.patch
++ create mode 100644 target/linux/generic/pending-6.6/345-powerpc-bpf-32-Don-t-fuse-a-MOV-into-a-branch-target.patch
++ create mode 100644 target/linux/generic/pending-6.6/346-powerpc-bpf-32-Fix-BPF_REG_1-and-BPF_REG_0-in-BPF-to.patch
++ create mode 100644 target/linux/generic/pending-6.6/347-powerpc-bpf-32-Pass-BPF_REG_5-to-BPF-subprograms.patch
++ create mode 100644 target/linux/generic/pending-6.6/348-bpf-tests-Add-tests-for-operations-following-a-MOV.patch
++
++diff --git a/target/linux/generic/pending-6.6/343-powerpc-bpf-32-Only-fuse-a-MOV-into-operations-readi.patch b/target/linux/generic/pending-6.6/343-powerpc-bpf-32-Only-fuse-a-MOV-into-operations-readi.patch
++new file mode 100644
++index 00000000000..3c4ccf5a7f4
++--- /dev/null
+++++ b/target/linux/generic/pending-6.6/343-powerpc-bpf-32-Only-fuse-a-MOV-into-operations-readi.patch
++@@ -0,0 +1,119 @@
+++From 75db8693d76b69cab6501ae83ff92f29e29528ec Mon Sep 17 00:00:00 2001
+++From: Grische <github@grische.xyz>
+++Date: Thu, 17 Sep 2026 06:21:25 +0200
+++Subject: [PATCH 1/6] powerpc/bpf/32: Only fuse a MOV into operations reading
+++ src2_reg
+++
+++A MOV X followed by an ALU operation on the same register is emitted as
+++a single operation that takes the MOV source (src2_reg) as its first
+++operand, and the code already emitted for the MOV is discarded.
+++
+++That loses the move whenever the second instruction does not take its
+++input from src2_reg:
+++
+++- The zero-extension the verifier inserts after a 32-bit MOV
+++  (BPF_ZEXT_REG, imm == 1) only clears the upper half, so
+++  "w5 = w0; w5 = w5" never sets the lower half of r5.
+++- Other MOVs read src_reg (self moves, in-place sign extensions) or
+++  nothing at all.
+++- BPF_END works on dst_reg: FROM_BE 32/64 emits nothing on big-endian
+++  and FROM_LE 16 inserts into the old dst_reg.
+++- An operation whose source is the destination register reads the value
+++  from before the move: "r5 = r0; r5 += r5" computes r0 + old r5.
+++- Without verifier zero-extension (classic BPF, test_bpf) the upper half
+++  is zero after a 32-bit MOV, but a fused 64-bit operation takes it from
+++  src2_reg_h.
+++
+++The first case breaks real programs. Clang passes the result of one
+++bpf_csum_diff() as the seed of the next with "w5 = w0", so on a
+++WS-AP3715i (e500v2) every chained call of a CLAT program got seed 0 and
+++the translated packets had bad L4 checksums. JIT output for
+++"r0 = 0xaabbccdd11223344; r5 = 7; w5 = w0; w5 = w5; r0 = r5", where r5
+++was reallocated to r3:r4:
+++
+++  1c:	li      r4,7
+++  20:	li      r3,0
+++  24:	li      r3,0
+++  28:	mr      r12,r4
+++
+++BPF_PROG_TEST_RUN returns 7 instead of 0x11223344.
+++
+++Classic BPF is affected as well: DIV/MOD X is converted to "w7 = w7"
+++followed by the division, so after "tax" the division uses the old X.
+++
+++Only fuse the MOV into operations that take their input from src2_reg,
+++and not a 32-bit MOV into a 64-bit operation.
+++
+++Fixes: 19daf0aef84f ("powerpc/bpf/32: perform three operands ALU operations")
+++Assisted-by: Claude:claude-opus-5
+++---
+++ arch/powerpc/net/bpf_jit_comp32.c | 44 +++++++++++++++++++++++++++----
+++ 1 file changed, 39 insertions(+), 5 deletions(-)
+++
+++--- a/arch/powerpc/net/bpf_jit_comp32.c
++++++ b/arch/powerpc/net/bpf_jit_comp32.c
+++@@ -277,6 +277,44 @@ static int bpf_jit_emit_tail_call(u32 *i
+++ 	return 0;
+++ }
+++ 
++++/*
++++ * Tell whether insn[i] can use the source of the preceding MOV as its first
++++ * operand (src2_reg) so that the MOV itself doesn't have to be emitted.
++++ */
++++static bool bpf_jit_fuse_with_mov(const struct bpf_insn *insn, int i)
++++{
++++	const struct bpf_insn *mov = &insn[i - 1];
++++	u8 code = insn[i].code;
++++
++++	if (BPF_CLASS(code) != BPF_ALU && BPF_CLASS(code) != BPF_ALU64)
++++		return false;
++++
++++	if (mov->code != (BPF_ALU64 | BPF_MOV | BPF_X) &&
++++	    mov->code != (BPF_ALU | BPF_MOV | BPF_X))
++++		return false;
++++
++++	/* The verifier's zero-extension is not a move */
++++	if (mov->imm == 1)
++++		return false;
++++
++++	if (mov->dst_reg != insn[i].dst_reg)
++++		return false;
++++
++++	/* A 32-bit MOV clears the upper half, src2_reg_h doesn't */
++++	if (BPF_CLASS(code) == BPF_ALU64 && BPF_CLASS(mov->code) == BPF_ALU)
++++		return false;
++++
++++	/* These don't take their input from src2_reg */
++++	if (BPF_OP(code) == BPF_MOV || BPF_OP(code) == BPF_END)
++++		return false;
++++
++++	/* The source register holds the moved value too */
++++	if (BPF_SRC(code) == BPF_X && insn[i].src_reg == insn[i].dst_reg)
++++		return false;
++++
++++	return true;
++++}
++++
+++ /* Assemble the body code between the prologue & epilogue */
+++ int bpf_jit_build_body(struct bpf_prog *fp, u32 *image, struct codegen_context *ctx,
+++ 		       u32 *addrs, int pass, bool extra_pass)
+++@@ -290,7 +328,6 @@ int bpf_jit_build_body(struct bpf_prog *
+++ 
+++ 	for (i = 0; i < flen; i++) {
+++ 		u32 code = insn[i].code;
+++-		u32 prevcode = i ? insn[i - 1].code : 0;
+++ 		u32 dst_reg = bpf_to_ppc(insn[i].dst_reg);
+++ 		u32 dst_reg_h = dst_reg - 1;
+++ 		u32 src_reg = bpf_to_ppc(insn[i].src_reg);
+++@@ -309,10 +346,7 @@ int bpf_jit_build_body(struct bpf_prog *
+++ 		u32 tmp_idx;
+++ 		int j;
+++ 
+++-		if (i && (BPF_CLASS(code) == BPF_ALU64 || BPF_CLASS(code) == BPF_ALU) &&
+++-		    (BPF_CLASS(prevcode) == BPF_ALU64 || BPF_CLASS(prevcode) == BPF_ALU) &&
+++-		    BPF_OP(prevcode) == BPF_MOV && BPF_SRC(prevcode) == BPF_X &&
+++-		    insn[i - 1].dst_reg == insn[i].dst_reg && insn[i - 1].imm != 1) {
++++		if (i && bpf_jit_fuse_with_mov(insn, i)) {
+++ 			src2_reg = bpf_to_ppc(insn[i - 1].src_reg);
+++ 			src2_reg_h = src2_reg - 1;
+++ 			ctx->idx = addrs[i - 1] / 4;
++diff --git a/target/linux/generic/pending-6.6/344-powerpc-bpf-32-Take-both-halves-from-the-fused-MOV-s.patch b/target/linux/generic/pending-6.6/344-powerpc-bpf-32-Take-both-halves-from-the-fused-MOV-s.patch
++new file mode 100644
++index 00000000000..4bb952d5492
++--- /dev/null
+++++ b/target/linux/generic/pending-6.6/344-powerpc-bpf-32-Take-both-halves-from-the-fused-MOV-s.patch
++@@ -0,0 +1,115 @@
+++From 1848cf9bbf28b0df046818e712ceae65e9a091e7 Mon Sep 17 00:00:00 2001
+++From: Grische <github@grische.xyz>
+++Date: Thu, 17 Sep 2026 06:22:17 +0200
+++Subject: [PATCH 2/6] powerpc/bpf/32: Take both halves from the fused MOV
+++ source
+++
+++When a MOV is fused into the following ALU operation, the operation has
+++to take all of its input from src2_reg/src2_reg_h. A few cases still use
+++the destination register, or don't write a half they are supposed to
+++copy:
+++
+++- OR/XOR K with imm == 0 emit nothing.
+++- ALU64 OR/XOR K with imm >= 0 and AND K with imm < 0 don't set the
+++  upper half.
+++- ALU64 LSH K with imm == 0 only copies the lower half.
+++- ALU64 MUL K with a power of two takes the bits shifted into the upper
+++  half from dst_reg.
+++- ALU64 DIV K with imm < 0 negates into dst_reg but still reads the
+++  upper half from src2_reg_h afterwards.
+++- ALU64 RSH X by 32 or more reads the upper half from dst_reg_h.
+++
+++As a result, "r5 = r0; r5 |= 0x100" leaves the old upper half in r5 and
+++"r5 = r0; r5 >>= r4" with r4 >= 32 returns bits of the old r5.
+++
+++Use src2_reg/src2_reg_h in all of them. When nothing is fused both are
+++the destination register, so the extra moves are only emitted for fused
+++instructions.
+++
+++Fixes: 19daf0aef84f ("powerpc/bpf/32: perform three operands ALU operations")
+++Assisted-by: Claude:claude-opus-5
+++---
+++ arch/powerpc/net/bpf_jit_comp32.c | 16 ++++++++++++++--
+++ 1 file changed, 14 insertions(+), 2 deletions(-)
+++
+++--- a/arch/powerpc/net/bpf_jit_comp32.c
++++++ b/arch/powerpc/net/bpf_jit_comp32.c
+++@@ -469,7 +469,7 @@ int bpf_jit_build_body(struct bpf_prog *
+++ 			} else if (imm > 0 && is_power_of_2(imm)) {
+++ 				imm = ilog2(imm);
+++ 				EMIT(PPC_RAW_RLWINM(dst_reg_h, src2_reg_h, imm, 0, 31 - imm));
+++-				EMIT(PPC_RAW_RLWIMI(dst_reg_h, dst_reg, imm, 32 - imm, 31));
++++				EMIT(PPC_RAW_RLWIMI(dst_reg_h, src2_reg, imm, 32 - imm, 31));
+++ 				EMIT(PPC_RAW_SLWI(dst_reg, src2_reg, imm));
+++ 			} else {
+++ 				bpf_set_seen_register(ctx, tmp_reg);
+++@@ -547,6 +547,7 @@ int bpf_jit_build_body(struct bpf_prog *
+++ 				EMIT(PPC_RAW_SUBFZE(dst_reg_h, src2_reg_h));
+++ 				imm = -imm;
+++ 				src2_reg = dst_reg;
++++				src2_reg_h = dst_reg_h;
+++ 			}
+++ 			if (imm == 1) {
+++ 				EMIT(PPC_RAW_MR(dst_reg, src2_reg));
+++@@ -579,6 +580,8 @@ int bpf_jit_build_body(struct bpf_prog *
+++ 		case BPF_ALU64 | BPF_AND | BPF_K: /* dst = dst & imm */
+++ 			if (imm >= 0)
+++ 				EMIT(PPC_RAW_LI(dst_reg_h, 0));
++++			else if (src2_reg_h != dst_reg_h)
++++				EMIT(PPC_RAW_MR(dst_reg_h, src2_reg_h));
+++ 			fallthrough;
+++ 		case BPF_ALU | BPF_AND | BPF_K: /* (u32) dst = dst & imm */
+++ 			if (!IMM_H(imm)) {
+++@@ -604,6 +607,8 @@ int bpf_jit_build_body(struct bpf_prog *
+++ 			/* Sign-extended */
+++ 			if (imm < 0)
+++ 				EMIT(PPC_RAW_LI(dst_reg_h, -1));
++++			else if (src2_reg_h != dst_reg_h)
++++				EMIT(PPC_RAW_MR(dst_reg_h, src2_reg_h));
+++ 			fallthrough;
+++ 		case BPF_ALU | BPF_OR | BPF_K:/* dst = (u32) dst | (u32) imm */
+++ 			if (IMM_L(imm)) {
+++@@ -612,6 +617,8 @@ int bpf_jit_build_body(struct bpf_prog *
+++ 			}
+++ 			if (IMM_H(imm))
+++ 				EMIT(PPC_RAW_ORIS(dst_reg, src2_reg, IMM_H(imm)));
++++			else if (src2_reg != dst_reg)
++++				EMIT(PPC_RAW_MR(dst_reg, src2_reg));
+++ 			break;
+++ 		case BPF_ALU64 | BPF_XOR | BPF_X: /* dst ^= src */
+++ 			if (dst_reg == src_reg) {
+++@@ -631,6 +638,8 @@ int bpf_jit_build_body(struct bpf_prog *
+++ 		case BPF_ALU64 | BPF_XOR | BPF_K: /* dst ^= imm */
+++ 			if (imm < 0)
+++ 				EMIT(PPC_RAW_NOR(dst_reg_h, src2_reg_h, src2_reg_h));
++++			else if (src2_reg_h != dst_reg_h)
++++				EMIT(PPC_RAW_MR(dst_reg_h, src2_reg_h));
+++ 			fallthrough;
+++ 		case BPF_ALU | BPF_XOR | BPF_K: /* (u32) dst ^= (u32) imm */
+++ 			if (IMM_L(imm)) {
+++@@ -639,6 +648,8 @@ int bpf_jit_build_body(struct bpf_prog *
+++ 			}
+++ 			if (IMM_H(imm))
+++ 				EMIT(PPC_RAW_XORIS(dst_reg, src2_reg, IMM_H(imm)));
++++			else if (src2_reg != dst_reg)
++++				EMIT(PPC_RAW_MR(dst_reg, src2_reg));
+++ 			break;
+++ 		case BPF_ALU | BPF_LSH | BPF_X: /* (u32) dst <<= (u32) src */
+++ 			EMIT(PPC_RAW_SLW(dst_reg, src2_reg, src_reg));
+++@@ -665,6 +676,7 @@ int bpf_jit_build_body(struct bpf_prog *
+++ 				return -EINVAL;
+++ 			if (!imm) {
+++ 				EMIT(PPC_RAW_MR(dst_reg, src2_reg));
++++				EMIT(PPC_RAW_MR(dst_reg_h, src2_reg_h));
+++ 			} else if (imm < 32) {
+++ 				EMIT(PPC_RAW_RLWINM(dst_reg_h, src2_reg_h, imm, 0, 31 - imm));
+++ 				EMIT(PPC_RAW_RLWIMI(dst_reg_h, src2_reg, imm, 32 - imm, 31));
+++@@ -686,7 +698,7 @@ int bpf_jit_build_body(struct bpf_prog *
+++ 			EMIT(PPC_RAW_SRW(dst_reg, src2_reg, src_reg));
+++ 			EMIT(PPC_RAW_ADDI(tmp_reg, src_reg, 32));
+++ 			EMIT(PPC_RAW_SLW(_R0, src2_reg_h, _R0));
+++-			EMIT(PPC_RAW_SRW(tmp_reg, dst_reg_h, tmp_reg));
++++			EMIT(PPC_RAW_SRW(tmp_reg, src2_reg_h, tmp_reg));
+++ 			EMIT(PPC_RAW_OR(dst_reg, dst_reg, _R0));
+++ 			EMIT(PPC_RAW_SRW(dst_reg_h, src2_reg_h, src_reg));
+++ 			EMIT(PPC_RAW_OR(dst_reg, dst_reg, tmp_reg));
++diff --git a/target/linux/generic/pending-6.6/345-powerpc-bpf-32-Don-t-fuse-a-MOV-into-a-branch-target.patch b/target/linux/generic/pending-6.6/345-powerpc-bpf-32-Don-t-fuse-a-MOV-into-a-branch-target.patch
++new file mode 100644
++index 00000000000..09a0206c6d8
++--- /dev/null
+++++ b/target/linux/generic/pending-6.6/345-powerpc-bpf-32-Don-t-fuse-a-MOV-into-a-branch-target.patch
++@@ -0,0 +1,152 @@
+++From c8d108cf0f5c8ae8bff500e47d81e00107a8f4c3 Mon Sep 17 00:00:00 2001
+++From: Grische <github@grische.xyz>
+++Date: Thu, 17 Sep 2026 06:23:05 +0200
+++Subject: [PATCH 3/6] powerpc/bpf/32: Don't fuse a MOV into a branch target
+++
+++When a MOV is fused into the following ALU operation, the address of the
+++ALU operation becomes the address of the MOV, and the emitted code
+++computes the result from the MOV source. A branch to the ALU operation
+++then also lands there, although the MOV was not executed on that path:
+++
+++	r5 = 7
+++	if w2 > 1 goto l0
+++	r5 = r0
+++  l0:	r5 += 1
+++
+++JITs to
+++
+++	li      r8,7
+++	li      r7,0
+++	cmplwi  r6,1
+++	bgt     l0
+++	nop
+++  l0:	addic   r8,r12,1
+++	addze   r7,r11
+++
+++so the taken branch computes r0 + 1 instead of 8. Classic BPF programs
+++get there with a jump over "txa".
+++
+++Record which instructions are branch targets before generating code and
+++don't fuse into them.
+++
+++[ Backport to 6.6: bpf_jit_build_body() has no fimage argument. The 6.6
+++  JIT doesn't implement BPF_JMP32 | BPF_JA and rejects such programs, the
+++  imm case in bpf_jit_find_jmp_targets() is kept as it is harmless. ]
+++
+++Fixes: 19daf0aef84f ("powerpc/bpf/32: perform three operands ALU operations")
+++Assisted-by: Claude:claude-opus-5
+++---
+++ arch/powerpc/net/bpf_jit_comp32.c | 66 ++++++++++++++++++++++++++++---
+++ 1 file changed, 61 insertions(+), 5 deletions(-)
+++
+++--- a/arch/powerpc/net/bpf_jit_comp32.c
++++++ b/arch/powerpc/net/bpf_jit_comp32.c
+++@@ -7,6 +7,7 @@
+++  *
+++  * Based on PPC64 eBPF JIT compiler by Naveen N. Rao
+++  */
++++#include <linux/bitmap.h>
+++ #include <linux/moduleloader.h>
+++ #include <asm/cacheflush.h>
+++ #include <asm/asm-compat.h>
+++@@ -277,11 +278,44 @@ static int bpf_jit_emit_tail_call(u32 *i
+++ 	return 0;
+++ }
+++ 
++++static unsigned long *bpf_jit_find_jmp_targets(const struct bpf_prog *fp)
++++{
++++	const struct bpf_insn *insn = fp->insnsi;
++++	unsigned long *targets;
++++	int i;
++++
++++	targets = bitmap_zalloc(fp->len, GFP_KERNEL);
++++	if (!targets)
++++		return NULL;
++++
++++	for (i = 0; i < fp->len; i++) {
++++		u8 class = BPF_CLASS(insn[i].code);
++++		u8 op = BPF_OP(insn[i].code);
++++		int target;
++++
++++		if (class != BPF_JMP && class != BPF_JMP32)
++++			continue;
++++		if (op == BPF_CALL || op == BPF_EXIT || op == BPF_TAIL_CALL)
++++			continue;
++++
++++		if (class == BPF_JMP32 && op == BPF_JA)
++++			target = i + 1 + insn[i].imm;
++++		else
++++			target = i + 1 + insn[i].off;
++++
++++		if (target >= 0 && target < fp->len)
++++			__set_bit(target, targets);
++++	}
++++
++++	return targets;
++++}
++++
+++ /*
+++  * Tell whether insn[i] can use the source of the preceding MOV as its first
+++  * operand (src2_reg) so that the MOV itself doesn't have to be emitted.
+++  */
+++-static bool bpf_jit_fuse_with_mov(const struct bpf_insn *insn, int i)
++++static bool bpf_jit_fuse_with_mov(const struct bpf_insn *insn, int i,
++++				  const unsigned long *jmp_targets)
+++ {
+++ 	const struct bpf_insn *mov = &insn[i - 1];
+++ 	u8 code = insn[i].code;
+++@@ -289,6 +323,10 @@ static bool bpf_jit_fuse_with_mov(const
+++ 	if (BPF_CLASS(code) != BPF_ALU && BPF_CLASS(code) != BPF_ALU64)
+++ 		return false;
+++ 
++++	/* A branch to insn[i] doesn't execute the MOV */
++++	if (test_bit(i, jmp_targets))
++++		return false;
++++
+++ 	if (mov->code != (BPF_ALU64 | BPF_MOV | BPF_X) &&
+++ 	    mov->code != (BPF_ALU | BPF_MOV | BPF_X))
+++ 		return false;
+++@@ -315,9 +353,9 @@ static bool bpf_jit_fuse_with_mov(const
+++ 	return true;
+++ }
+++ 
+++-/* Assemble the body code between the prologue & epilogue */
+++-int bpf_jit_build_body(struct bpf_prog *fp, u32 *image, struct codegen_context *ctx,
+++-		       u32 *addrs, int pass, bool extra_pass)
++++static int __bpf_jit_build_body(struct bpf_prog *fp, u32 *image,
++++				struct codegen_context *ctx, u32 *addrs, int pass,
++++				bool extra_pass, const unsigned long *jmp_targets)
+++ {
+++ 	const struct bpf_insn *insn = fp->insnsi;
+++ 	int flen = fp->len;
+++@@ -346,7 +384,7 @@ int bpf_jit_build_body(struct bpf_prog *
+++ 		u32 tmp_idx;
+++ 		int j;
+++ 
+++-		if (i && bpf_jit_fuse_with_mov(insn, i)) {
++++		if (i && bpf_jit_fuse_with_mov(insn, i, jmp_targets)) {
+++ 			src2_reg = bpf_to_ppc(insn[i - 1].src_reg);
+++ 			src2_reg_h = src2_reg - 1;
+++ 			ctx->idx = addrs[i - 1] / 4;
+++@@ -1357,3 +1395,21 @@ cond_branch:
+++ 
+++ 	return 0;
+++ }
++++
++++/* Assemble the body code between the prologue & epilogue */
++++int bpf_jit_build_body(struct bpf_prog *fp, u32 *image, struct codegen_context *ctx,
++++		       u32 *addrs, int pass, bool extra_pass)
++++{
++++	unsigned long *jmp_targets;
++++	int ret;
++++
++++	jmp_targets = bpf_jit_find_jmp_targets(fp);
++++	if (!jmp_targets)
++++		return -ENOMEM;
++++
++++	ret = __bpf_jit_build_body(fp, image, ctx, addrs, pass, extra_pass,
++++				   jmp_targets);
++++	bitmap_free(jmp_targets);
++++
++++	return ret;
++++}
++diff --git a/target/linux/generic/pending-6.6/346-powerpc-bpf-32-Fix-BPF_REG_1-and-BPF_REG_0-in-BPF-to.patch b/target/linux/generic/pending-6.6/346-powerpc-bpf-32-Fix-BPF_REG_1-and-BPF_REG_0-in-BPF-to.patch
++new file mode 100644
++index 00000000000..cc9a7b4e5c8
++--- /dev/null
+++++ b/target/linux/generic/pending-6.6/346-powerpc-bpf-32-Fix-BPF_REG_1-and-BPF_REG_0-in-BPF-to.patch
++@@ -0,0 +1,95 @@
+++From 65109f40e6e427c93e02e5cba087d54ce9361699 Mon Sep 17 00:00:00 2001
+++From: Grische <github@grische.xyz>
+++Date: Thu, 17 Sep 2026 06:23:43 +0200
+++Subject: [PATCH 4/6] powerpc/bpf/32: Fix BPF_REG_1 and BPF_REG_0 in BPF-to-BPF
+++ calls
+++
+++A BPF-to-BPF call is emitted like a helper call: BPF_REG_1 to
+++BPF_REG_4 are already in r3:r4 to r9:r10 as 64-bit values, and on
+++return BPF_REG_0 is taken from r3:r4. The callee however uses the same
+++prologue and epilogue as a main program:
+++
+++- The prologue treats r3 as a 32-bit context pointer and sets BPF_REG_1
+++  to (0:r3), so the callee gets the upper half of its first argument as
+++  the lower half, and a subprogram that dereferences its context reads
+++  from NULL.
+++- The epilogue only returns the lower half of BPF_REG_0, in r3, so the
+++  caller gets it as the upper half and whatever the callee left in r4
+++  as the lower half.
+++
+++For example "call f; exit" with f doing "r0 = 0xa1a2a3a4b1b2b3b4; exit"
+++returns 0 instead of 0xb1b2b3b4 on a WS-AP3715i (e500v2), and "r0 >>= 32"
+++after the call gives 0xb1b2b3b4.
+++
+++Make subprograms follow the helper convention: skip the context pointer
+++conversion in the prologue and return BPF_REG_0 in r3:r4. Subprograms
+++are only entered through such calls, bpf_arch_text_poke() is not
+++supported on PPC32.
+++
+++[ Backport to 6.6: there is no ctx->is_subprog yet. Add it to struct
+++  codegen_context and set it from fp->aux->func_idx in
+++  bpf_int_jit_compile(), the extra pass restores it from jit_data->ctx. ]
+++
+++Fixes: 51c66ad849a7 ("powerpc/bpf: Implement extended BPF on PPC32")
+++Assisted-by: Claude:claude-opus-5
+++---
+++ arch/powerpc/net/bpf_jit.h        |  1 +
+++ arch/powerpc/net/bpf_jit_comp.c   |  1 +
+++ arch/powerpc/net/bpf_jit_comp32.c | 19 +++++++++++++++----
+++ 3 files changed, 17 insertions(+), 4 deletions(-)
+++
+++--- a/arch/powerpc/net/bpf_jit.h
++++++ b/arch/powerpc/net/bpf_jit.h
+++@@ -137,6 +137,7 @@ struct codegen_context {
+++ 	int b2p[MAX_BPF_JIT_REG + 2];
+++ 	unsigned int exentry_idx;
+++ 	unsigned int alt_exit_addr;
++++	bool is_subprog;
+++ };
+++ 
+++ #define bpf_to_ppc(r)	(ctx->b2p[r])
+++--- a/arch/powerpc/net/bpf_jit_comp.c
++++++ b/arch/powerpc/net/bpf_jit_comp.c
+++@@ -117,6 +117,7 @@ struct bpf_prog *bpf_int_jit_compile(str
+++ 
+++ 	/* Make sure that the stack is quadword aligned. */
+++ 	cgctx.stack_size = round_up(fp->aux->stack_depth, 16);
++++	cgctx.is_subprog = fp->aux->func_idx != 0;
+++ 
+++ 	/* Scouting faux-generate pass 0 */
+++ 	if (bpf_jit_build_body(fp, 0, &cgctx, addrs, 0, false)) {
+++--- a/arch/powerpc/net/bpf_jit_comp32.c
++++++ b/arch/powerpc/net/bpf_jit_comp32.c
+++@@ -142,9 +142,14 @@ void bpf_jit_build_prologue(u32 *image,
+++ 	if (ctx->seen & SEEN_TAILCALL)
+++ 		EMIT(PPC_RAW_STW(_R4, _R1, bpf_jit_stack_offsetof(ctx, BPF_PPC_TC)));
+++ 
+++-	/* First arg comes in as a 32 bits pointer. */
+++-	EMIT(PPC_RAW_MR(bpf_to_ppc(BPF_REG_1), _R3));
+++-	EMIT(PPC_RAW_LI(bpf_to_ppc(BPF_REG_1) - 1, 0));
++++	/*
++++	 * First arg comes in as a 32 bits pointer. Subprogs are called like
++++	 * helpers and get BPF_REG_1 in r3:r4 already.
++++	 */
++++	if (!ctx->is_subprog) {
++++		EMIT(PPC_RAW_MR(bpf_to_ppc(BPF_REG_1), _R3));
++++		EMIT(PPC_RAW_LI(bpf_to_ppc(BPF_REG_1) - 1, 0));
++++	}
+++ 
+++ 	/*
+++ 	 * We need a stack frame, but we don't necessarily need to
+++@@ -194,7 +199,13 @@ static void bpf_jit_emit_common_epilogue
+++ 
+++ void bpf_jit_build_epilogue(u32 *image, struct codegen_context *ctx)
+++ {
+++-	EMIT(PPC_RAW_MR(_R3, bpf_to_ppc(BPF_REG_0)));
++++	/* Subprogs return all of BPF_REG_0 in r3:r4, like helpers */
++++	if (ctx->is_subprog) {
++++		EMIT(PPC_RAW_MR(_R3, bpf_to_ppc(BPF_REG_0) - 1));
++++		EMIT(PPC_RAW_MR(_R4, bpf_to_ppc(BPF_REG_0)));
++++	} else {
++++		EMIT(PPC_RAW_MR(_R3, bpf_to_ppc(BPF_REG_0)));
++++	}
+++ 
+++ 	bpf_jit_emit_common_epilogue(image, ctx);
+++ 
++diff --git a/target/linux/generic/pending-6.6/347-powerpc-bpf-32-Pass-BPF_REG_5-to-BPF-subprograms.patch b/target/linux/generic/pending-6.6/347-powerpc-bpf-32-Pass-BPF_REG_5-to-BPF-subprograms.patch
++new file mode 100644
++index 00000000000..95b302d85b7
++--- /dev/null
+++++ b/target/linux/generic/pending-6.6/347-powerpc-bpf-32-Pass-BPF_REG_5-to-BPF-subprograms.patch
++@@ -0,0 +1,72 @@
+++From f1bfd5a41b99aa3cd2f2105ff834e657883598e0 Mon Sep 17 00:00:00 2001
+++From: Grische <github@grische.xyz>
+++Date: Thu, 17 Sep 2026 06:25:24 +0200
+++Subject: [PATCH 5/6] powerpc/bpf/32: Pass BPF_REG_5 to BPF subprograms
+++
+++The caller of a BPF-to-BPF call stores BPF_REG_5 in its parameter area
+++at 8(r1)/12(r1), like for a helper, but since commit 7dd0e2848764
+++("powerpc/bpf/32: BPF prog is never called with more than one arg") the
+++callee no longer loads it from there. The callee only sees the right
+++value if both sides happen to keep BPF_REG_5 in r21:r22, which
+++bpf_jit_realloc_regs() often changes: in
+++
+++	r5 = 0x55
+++	call f
+++	exit
+++  f:	r0 = r5
+++	exit
+++
+++the caller moves BPF_REG_5 to r5:r6 and the callee to r3:r4, so f
+++returns the caller's BPF_REG_1 instead of 0x55.
+++
+++Load BPF_REG_5 from the caller's parameter area in the prologue of
+++subprograms.
+++
+++A subprogram can also pass its own arguments to another one without
+++using them. BPF_REG_5 is then neither loaded nor stored, and
+++bpf_jit_realloc_regs() may move BPF_REG_5, BPF_REG_AX or TMP_REG into
+++the registers still holding BPF_REG_1 to BPF_REG_4. Mark all argument
+++registers as used in subprograms that call other subprograms.
+++
+++Fixes: 7dd0e2848764 ("powerpc/bpf/32: BPF prog is never called with more than one arg")
+++Fixes: 40272035e1d0 ("powerpc/bpf: Reallocate BPF registers to volatile registers when possible on PPC32")
+++Assisted-by: Claude:claude-opus-5
+++---
+++ arch/powerpc/net/bpf_jit_comp32.c | 19 +++++++++++++++++++
+++ 1 file changed, 19 insertions(+)
+++
+++--- a/arch/powerpc/net/bpf_jit_comp32.c
++++++ b/arch/powerpc/net/bpf_jit_comp32.c
+++@@ -165,6 +165,14 @@ void bpf_jit_build_prologue(u32 *image,
+++ 		if (bpf_is_seen_register(ctx, i))
+++ 			EMIT(PPC_RAW_STW(i, _R1, bpf_jit_stack_offsetof(ctx, i)));
+++ 
++++	/* Subprogs get BPF_REG_5 in the caller's parameter area, like helpers */
++++	if (ctx->is_subprog && bpf_is_seen_register(ctx, bpf_to_ppc(BPF_REG_5))) {
++++		int off = bpf_has_stack_frame(ctx) ? BPF_PPC_STACKFRAME(ctx) : 0;
++++
++++		EMIT(PPC_RAW_LWZ(bpf_to_ppc(BPF_REG_5) - 1, _R1, off + 8));
++++		EMIT(PPC_RAW_LWZ(bpf_to_ppc(BPF_REG_5), _R1, off + 12));
++++	}
++++
+++ 	/* Setup frame pointer to point to the bpf stack area */
+++ 	if (bpf_is_seen_register(ctx, bpf_to_ppc(BPF_REG_FP))) {
+++ 		EMIT(PPC_RAW_LI(bpf_to_ppc(BPF_REG_FP) - 1, 0));
+++@@ -1150,6 +1158,17 @@ static int __bpf_jit_build_body(struct b
+++ 		case BPF_JMP | BPF_CALL:
+++ 			ctx->seen |= SEEN_FUNC;
+++ 
++++			/*
++++			 * A subprog may pass its own arguments on without using
++++			 * them: keep them where they are and load BPF_REG_5.
++++			 */
++++			if (ctx->is_subprog && insn[i].src_reg == BPF_PSEUDO_CALL) {
++++				for (int r = BPF_REG_1; r <= BPF_REG_5; r++) {
++++					bpf_set_seen_register(ctx, bpf_to_ppc(r));
++++					bpf_set_seen_register(ctx, bpf_to_ppc(r) - 1);
++++				}
++++			}
++++
+++ 			ret = bpf_jit_get_func_addr(fp, &insn[i], extra_pass,
+++ 						    &func_addr, &func_addr_fixed);
+++ 			if (ret < 0)
++diff --git a/target/linux/generic/pending-6.6/348-bpf-tests-Add-tests-for-operations-following-a-MOV.patch b/target/linux/generic/pending-6.6/348-bpf-tests-Add-tests-for-operations-following-a-MOV.patch
++new file mode 100644
++index 00000000000..048818c635f
++--- /dev/null
+++++ b/target/linux/generic/pending-6.6/348-bpf-tests-Add-tests-for-operations-following-a-MOV.patch
++@@ -0,0 +1,291 @@
+++From 1e0fb9ff5886c8d69b733c65ed7b03390dc9c0fe Mon Sep 17 00:00:00 2001
+++From: Grische <github@grische.xyz>
+++Date: Thu, 17 Sep 2026 06:28:33 +0200
+++Subject: [PATCH 6/6] bpf/tests: Add tests for operations following a MOV
+++
+++The powerpc32 JIT merges a MOV X with the following operation on the
+++same register and got several cases wrong: the verifier's zero
+++extension, self moves, BPF_END, operations whose source is the
+++destination, 64-bit operations after a 32-bit MOV, sign-extending MOVs,
+++immediates that need both halves of the source, and jumps to the second
+++instruction.
+++
+++Add tests that compute each such pair once directly and once with a
+++jump in between, which prevents the merge, and compare the results.
+++Add the verifier's zero extension, a jump to the second instruction and
+++the classic BPF cases "tax; div x" and a jump over "txa" separately.
+++
+++[ Backport to 6.6: drop the MOVSX and BSWAP cases. 6.6 has neither
+++  BPF_MOVSX*_REG() nor BPF_BSWAP(), and its powerpc32 JIT implements
+++  neither sign-extending MOVs nor BPF_ALU64 | BPF_END. ]
+++
+++Assisted-by: Claude:claude-opus-5
+++---
+++ lib/test_bpf.c | 256 +++++++++++++++++++++++++++++++++++++++++++++++++
+++ 1 file changed, 256 insertions(+)
+++
+++--- a/lib/test_bpf.c
++++++ b/lib/test_bpf.c
+++@@ -11884,6 +11884,262 @@ static struct bpf_test tests[] = {
+++ 	BPF_JMP32_REG_ZEXT(JSLT),
+++ 	BPF_JMP32_REG_ZEXT(JSLE),
+++ #undef BPF_JMP2_REG_ZEXT
++++	/*
++++	 * Checking that a MOV followed by an operation on the same register
++++	 * gives the same result as when a jump separates the two
++++	 */
++++#define BPF_TEST_AFTER_MOV(name, ref_mov, ref_op, mov, op)	\
++++	{							\
++++		name,						\
++++		.u.insns_int = {				\
++++			BPF_LD_IMM64(R0, 0xfedcba9876543210ULL),\
++++			BPF_LD_IMM64(R1, 0x0123456789abcdefULL),\
++++			BPF_ALU64_IMM(BPF_MOV, R3, 36),		\
++++			BPF_ALU64_IMM(BPF_MOV, R4, 4),		\
++++			ref_mov,				\
++++			BPF_JMP_A(0), /* Nop */			\
++++			ref_op,					\
++++			mov,					\
++++			op,					\
++++			BPF_ALU64_REG(BPF_SUB, R0, R2),		\
++++			BPF_ALU64_REG(BPF_MOV, R1, R0),		\
++++			BPF_ALU64_IMM(BPF_RSH, R1, 32),		\
++++			BPF_ALU64_REG(BPF_OR, R0, R1),		\
++++			BPF_EXIT_INSN(),			\
++++		},						\
++++		INTERNAL,					\
++++		{ },						\
++++		{ { 0, 0 } },					\
++++	}
++++#define BPF_ALU64_IMM_AFTER_MOV(op, imm)				\
++++	BPF_TEST_AFTER_MOV("ALU64_" #op "_K: " #imm " after MOV",	\
++++			   BPF_ALU64_REG(BPF_MOV, R2, R1),		\
++++			   BPF_ALU64_IMM(BPF_##op, R2, imm),		\
++++			   BPF_ALU64_REG(BPF_MOV, R0, R1),		\
++++			   BPF_ALU64_IMM(BPF_##op, R0, imm))
++++#define BPF_ALU32_IMM_AFTER_MOV(op, imm)				\
++++	BPF_TEST_AFTER_MOV("ALU_" #op "_K: " #imm " after MOV",	\
++++			   BPF_ALU32_REG(BPF_MOV, R2, R1),		\
++++			   BPF_ALU32_IMM(BPF_##op, R2, imm),		\
++++			   BPF_ALU32_REG(BPF_MOV, R0, R1),		\
++++			   BPF_ALU32_IMM(BPF_##op, R0, imm))
++++#define BPF_ALU64_REG_AFTER_MOV(op)					\
++++	BPF_TEST_AFTER_MOV("ALU64_" #op "_X: after MOV",		\
++++			   BPF_ALU64_REG(BPF_MOV, R2, R1),		\
++++			   BPF_ALU64_REG(BPF_##op, R2, R3),		\
++++			   BPF_ALU64_REG(BPF_MOV, R0, R1),		\
++++			   BPF_ALU64_REG(BPF_##op, R0, R3))
++++#define BPF_ALU32_REG_AFTER_MOV(op)					\
++++	BPF_TEST_AFTER_MOV("ALU_" #op "_X: after MOV",		\
++++			   BPF_ALU32_REG(BPF_MOV, R2, R1),		\
++++			   BPF_ALU32_REG(BPF_##op, R2, R4),		\
++++			   BPF_ALU32_REG(BPF_MOV, R0, R1),		\
++++			   BPF_ALU32_REG(BPF_##op, R0, R4))
++++#define BPF_ALU64_SELF_AFTER_MOV(op)					\
++++	BPF_TEST_AFTER_MOV("ALU64_" #op "_X: dst = dst after MOV",	\
++++			   BPF_ALU64_REG(BPF_MOV, R2, R1),		\
++++			   BPF_ALU64_REG(BPF_##op, R2, R2),		\
++++			   BPF_ALU64_REG(BPF_MOV, R0, R1),		\
++++			   BPF_ALU64_REG(BPF_##op, R0, R0))
++++#define BPF_ALU32_SELF_AFTER_MOV(op)					\
++++	BPF_TEST_AFTER_MOV("ALU_" #op "_X: dst = dst after MOV",	\
++++			   BPF_ALU32_REG(BPF_MOV, R2, R1),		\
++++			   BPF_ALU32_REG(BPF_##op, R2, R2),		\
++++			   BPF_ALU32_REG(BPF_MOV, R0, R1),		\
++++			   BPF_ALU32_REG(BPF_##op, R0, R0))
++++#define BPF_ENDIAN_AFTER_MOV(type, len)				\
++++	BPF_TEST_AFTER_MOV("ALU_END_" #type ": " #len " after MOV",	\
++++			   BPF_ALU64_REG(BPF_MOV, R2, R1),		\
++++			   BPF_ENDIAN(BPF_##type, R2, len),		\
++++			   BPF_ALU64_REG(BPF_MOV, R0, R1),		\
++++			   BPF_ENDIAN(BPF_##type, R0, len))
++++	BPF_ALU64_IMM_AFTER_MOV(ADD, 0),
++++	BPF_ALU64_IMM_AFTER_MOV(ADD, 1),
++++	BPF_ALU64_IMM_AFTER_MOV(ADD, -1),
++++	BPF_ALU64_IMM_AFTER_MOV(SUB, 0x12345678),
++++	BPF_ALU64_IMM_AFTER_MOV(MUL, 0),
++++	BPF_ALU64_IMM_AFTER_MOV(MUL, 1),
++++	BPF_ALU64_IMM_AFTER_MOV(MUL, -1),
++++	BPF_ALU64_IMM_AFTER_MOV(MUL, 8),
++++	BPF_ALU64_IMM_AFTER_MOV(MUL, 3),
++++	BPF_ALU64_IMM_AFTER_MOV(MUL, -3),
++++	BPF_ALU64_IMM_AFTER_MOV(DIV, 1),
++++	BPF_ALU64_IMM_AFTER_MOV(DIV, 8),
++++	BPF_ALU64_IMM_AFTER_MOV(DIV, -1),
++++	BPF_ALU64_IMM_AFTER_MOV(DIV, -8),
++++	BPF_ALU64_IMM_AFTER_MOV(MOD, 1),
++++	BPF_ALU64_IMM_AFTER_MOV(MOD, 8),
++++	BPF_ALU64_IMM_AFTER_MOV(AND, 0),
++++	BPF_ALU64_IMM_AFTER_MOV(AND, 0xff00),
++++	BPF_ALU64_IMM_AFTER_MOV(AND, 0x0ff00000),
++++	BPF_ALU64_IMM_AFTER_MOV(AND, 0x00ffff00),
++++	BPF_ALU64_IMM_AFTER_MOV(AND, -2),
++++	BPF_ALU64_IMM_AFTER_MOV(OR, 0),
++++	BPF_ALU64_IMM_AFTER_MOV(OR, 0x100),
++++	BPF_ALU64_IMM_AFTER_MOV(OR, 0x01000000),
++++	BPF_ALU64_IMM_AFTER_MOV(OR, -2),
++++	BPF_ALU64_IMM_AFTER_MOV(XOR, 0),
++++	BPF_ALU64_IMM_AFTER_MOV(XOR, 0x100),
++++	BPF_ALU64_IMM_AFTER_MOV(XOR, 0x01000000),
++++	BPF_ALU64_IMM_AFTER_MOV(XOR, -2),
++++	BPF_ALU64_IMM_AFTER_MOV(LSH, 0),
++++	BPF_ALU64_IMM_AFTER_MOV(LSH, 4),
++++	BPF_ALU64_IMM_AFTER_MOV(LSH, 36),
++++	BPF_ALU64_IMM_AFTER_MOV(RSH, 0),
++++	BPF_ALU64_IMM_AFTER_MOV(RSH, 4),
++++	BPF_ALU64_IMM_AFTER_MOV(RSH, 36),
++++	BPF_ALU64_IMM_AFTER_MOV(ARSH, 0),
++++	BPF_ALU64_IMM_AFTER_MOV(ARSH, 4),
++++	BPF_ALU64_IMM_AFTER_MOV(ARSH, 36),
++++	BPF_ALU64_IMM_AFTER_MOV(NEG, 0),
++++	BPF_ALU32_IMM_AFTER_MOV(ADD, 0),
++++	BPF_ALU32_IMM_AFTER_MOV(ADD, 1),
++++	BPF_ALU32_IMM_AFTER_MOV(ADD, 0x12345678),
++++	BPF_ALU32_IMM_AFTER_MOV(SUB, 0x12345678),
++++	BPF_ALU32_IMM_AFTER_MOV(MUL, 1),
++++	BPF_ALU32_IMM_AFTER_MOV(MUL, 8),
++++	BPF_ALU32_IMM_AFTER_MOV(MUL, 3),
++++	BPF_ALU32_IMM_AFTER_MOV(DIV, 1),
++++	BPF_ALU32_IMM_AFTER_MOV(DIV, 8),
++++	BPF_ALU32_IMM_AFTER_MOV(DIV, 3),
++++	BPF_ALU32_IMM_AFTER_MOV(MOD, 1),
++++	BPF_ALU32_IMM_AFTER_MOV(MOD, 8),
++++	BPF_ALU32_IMM_AFTER_MOV(MOD, 3),
++++	BPF_ALU32_IMM_AFTER_MOV(AND, 0),
++++	BPF_ALU32_IMM_AFTER_MOV(AND, 0xff00),
++++	BPF_ALU32_IMM_AFTER_MOV(AND, 0x0ff00000),
++++	BPF_ALU32_IMM_AFTER_MOV(AND, 0x00ffff00),
++++	BPF_ALU32_IMM_AFTER_MOV(OR, 0),
++++	BPF_ALU32_IMM_AFTER_MOV(OR, 0x100),
++++	BPF_ALU32_IMM_AFTER_MOV(OR, 0x01000000),
++++	BPF_ALU32_IMM_AFTER_MOV(XOR, 0),
++++	BPF_ALU32_IMM_AFTER_MOV(XOR, 0x100),
++++	BPF_ALU32_IMM_AFTER_MOV(XOR, 0x01000000),
++++	BPF_ALU32_IMM_AFTER_MOV(LSH, 0),
++++	BPF_ALU32_IMM_AFTER_MOV(LSH, 4),
++++	BPF_ALU32_IMM_AFTER_MOV(RSH, 0),
++++	BPF_ALU32_IMM_AFTER_MOV(RSH, 4),
++++	BPF_ALU32_IMM_AFTER_MOV(ARSH, 0),
++++	BPF_ALU32_IMM_AFTER_MOV(ARSH, 4),
++++	BPF_ALU32_IMM_AFTER_MOV(NEG, 0),
++++	BPF_ALU64_REG_AFTER_MOV(ADD),
++++	BPF_ALU64_REG_AFTER_MOV(SUB),
++++	BPF_ALU64_REG_AFTER_MOV(MUL),
++++	BPF_ALU64_REG_AFTER_MOV(AND),
++++	BPF_ALU64_REG_AFTER_MOV(OR),
++++	BPF_ALU64_REG_AFTER_MOV(XOR),
++++	BPF_ALU64_REG_AFTER_MOV(LSH),
++++	BPF_ALU64_REG_AFTER_MOV(RSH),
++++	BPF_ALU64_REG_AFTER_MOV(ARSH),
++++	BPF_ALU32_REG_AFTER_MOV(ADD),
++++	BPF_ALU32_REG_AFTER_MOV(SUB),
++++	BPF_ALU32_REG_AFTER_MOV(MUL),
++++	BPF_ALU32_REG_AFTER_MOV(DIV),
++++	BPF_ALU32_REG_AFTER_MOV(MOD),
++++	BPF_ALU32_REG_AFTER_MOV(AND),
++++	BPF_ALU32_REG_AFTER_MOV(OR),
++++	BPF_ALU32_REG_AFTER_MOV(XOR),
++++	BPF_ALU32_REG_AFTER_MOV(LSH),
++++	BPF_ALU32_REG_AFTER_MOV(RSH),
++++	BPF_ALU32_REG_AFTER_MOV(ARSH),
++++	BPF_ALU64_SELF_AFTER_MOV(MOV),
++++	BPF_ALU64_SELF_AFTER_MOV(ADD),
++++	BPF_ALU64_SELF_AFTER_MOV(SUB),
++++	BPF_ALU64_SELF_AFTER_MOV(MUL),
++++	BPF_ALU64_SELF_AFTER_MOV(AND),
++++	BPF_ALU64_SELF_AFTER_MOV(OR),
++++	BPF_ALU64_SELF_AFTER_MOV(XOR),
++++	BPF_ALU32_SELF_AFTER_MOV(MOV),
++++	BPF_ALU32_SELF_AFTER_MOV(ADD),
++++	BPF_ALU32_SELF_AFTER_MOV(SUB),
++++	BPF_ALU32_SELF_AFTER_MOV(MUL),
++++	BPF_ALU32_SELF_AFTER_MOV(DIV),
++++	BPF_ALU32_SELF_AFTER_MOV(MOD),
++++	BPF_ALU32_SELF_AFTER_MOV(AND),
++++	BPF_ALU32_SELF_AFTER_MOV(OR),
++++	BPF_ALU32_SELF_AFTER_MOV(XOR),
++++	BPF_ENDIAN_AFTER_MOV(TO_LE, 16),
++++	BPF_ENDIAN_AFTER_MOV(TO_LE, 32),
++++	BPF_ENDIAN_AFTER_MOV(TO_LE, 64),
++++	BPF_ENDIAN_AFTER_MOV(TO_BE, 16),
++++	BPF_ENDIAN_AFTER_MOV(TO_BE, 32),
++++	BPF_ENDIAN_AFTER_MOV(TO_BE, 64),
++++	BPF_TEST_AFTER_MOV("ALU64_ADD_K: 1 after 32-bit MOV",
++++			   BPF_ALU32_REG(BPF_MOV, R2, R1),
++++			   BPF_ALU64_IMM(BPF_ADD, R2, 1),
++++			   BPF_ALU32_REG(BPF_MOV, R0, R1),
++++			   BPF_ALU64_IMM(BPF_ADD, R0, 1)),
++++	BPF_TEST_AFTER_MOV("ALU64_OR_X: after 32-bit MOV",
++++			   BPF_ALU32_REG(BPF_MOV, R2, R1),
++++			   BPF_ALU64_REG(BPF_OR, R2, R3),
++++			   BPF_ALU32_REG(BPF_MOV, R0, R1),
++++			   BPF_ALU64_REG(BPF_OR, R0, R3)),
++++#undef BPF_ENDIAN_AFTER_MOV
++++#undef BPF_ALU32_SELF_AFTER_MOV
++++#undef BPF_ALU64_SELF_AFTER_MOV
++++#undef BPF_ALU32_REG_AFTER_MOV
++++#undef BPF_ALU64_REG_AFTER_MOV
++++#undef BPF_ALU32_IMM_AFTER_MOV
++++#undef BPF_ALU64_IMM_AFTER_MOV
++++#undef BPF_TEST_AFTER_MOV
++++	{
++++		"ALU_MOV_X: zero extension after MOV",
++++		.u.insns_int = {
++++			BPF_LD_IMM64(R0, 0xfedcba9876543210ULL),
++++			BPF_LD_IMM64(R1, 0x0123456789abcdefULL),
++++			BPF_ALU32_REG(BPF_MOV, R0, R1),
++++			BPF_ZEXT_REG(R0),
++++			BPF_LD_IMM64(R2, 0x89abcdefULL),
++++			BPF_ALU64_REG(BPF_SUB, R0, R2),
++++			BPF_ALU64_REG(BPF_MOV, R1, R0),
++++			BPF_ALU64_IMM(BPF_RSH, R1, 32),
++++			BPF_ALU64_REG(BPF_OR, R0, R1),
++++			BPF_EXIT_INSN(),
++++		},
++++		INTERNAL | FLAG_VERIFIER_ZEXT,
++++		{ },
++++		{ { 0, 0 } },
++++	},
++++	{
++++		"ALU64_ADD_K: jump target after MOV",
++++		.u.insns_int = {
++++			BPF_ALU64_IMM(BPF_MOV, R0, 7),
++++			BPF_ALU64_IMM(BPF_MOV, R1, 0x1000),
++++			BPF_JMP_IMM(BPF_JNE, R0, 0, 1),
++++			BPF_ALU64_REG(BPF_MOV, R0, R1),
++++			BPF_ALU64_IMM(BPF_ADD, R0, 1),
++++			BPF_EXIT_INSN(),
++++		},
++++		INTERNAL,
++++		{ },
++++		{ { 0, 8 } },
++++	},
++++	{
++++		"JMP_JA: jump over TXA",
++++		.u.insns = {
++++			BPF_STMT(BPF_LD | BPF_IMM, 7),
++++			BPF_STMT(BPF_LDX | BPF_IMM, 0x1000),
++++			BPF_JUMP(BPF_JMP | BPF_JA, 1, 0, 0),
++++			BPF_STMT(BPF_MISC | BPF_TXA, 0),
++++			BPF_STMT(BPF_ALU | BPF_ADD | BPF_K, 1),
++++			BPF_STMT(BPF_RET | BPF_A, 0)
++++		},
++++		CLASSIC | FLAG_NO_DATA,
++++		{ },
++++		{ { 0, 8 } },
++++	},
++++	{
++++		"DIV_X: A / X after TAX",
++++		.u.insns = {
++++			BPF_STMT(BPF_LD | BPF_IMM, 20),
++++			BPF_STMT(BPF_MISC | BPF_TAX, 0),
++++			BPF_STMT(BPF_ALU | BPF_DIV | BPF_X, 0),
++++			BPF_STMT(BPF_RET | BPF_A, 0)
++++		},
++++		CLASSIC | FLAG_NO_DATA,
++++		{ },
++++		{ { 0, 1 } },
++++	},
+++ 	/* ALU64 K register combinations */
+++ 	{
+++ 		"ALU64_MOV_K: registers",
++-- 
++2.54.0
++
+-- 
+2.54.0
+
