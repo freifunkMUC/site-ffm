@@ -1,0 +1,155 @@
+From fa5a728c37b465110664d86cb4c7e2dbefe964f7 Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Sat, 19 Sep 2026 10:31:13 +0200
+Subject: [PATCH] targets: add intel-mips-xrx500
+
+AVM FRITZ!Box 7560 (GRX350), 7580 and 7590 (GRX550), the three devices of
+OpenWrt's intel-mips/xrx500 subtarget. The kernel image is the same for
+all three and each device's image carries its own device tree appended,
+so they are ordinary sibling devices of one subtarget.
+
+factory = false on all three, because OpenWrt builds no factory image for
+them. Device/NAND also emits -eva-kernel.bin and -eva-filesystem.bin for
+the first installation. They are not listed in extra_images, so they
+stay in openwrt/bin/targets/.
+
+-eva-kernel.bin is not an initramfs, and Gluon builds none
+(targets/generic sets TARGET_ROOTFS_INITRAMFS false). A RAM-bootable
+image is the -initramfs-kernel.bin of an OpenWrt build with
+TARGET_ROOTFS_INITRAMFS enabled.
+
+DEFAULT := n on the OpenWrt device recipes does not get in the way.
+scripts/target-metadata.pl emits each TARGET_DEVICE_* symbol regardless
+and only its default value changes, and include/image.mk honours DEFAULT
+only under IB=1. It does keep the devices out of PROFILE_NAMES, so the
+ImageBuilder lists no profile for this target, which Gluon does not use.
+
+The package list adds ethtool and ip-bridge to what the OpenWrt recipe
+installs. Busybox provides neither, so without them the switch of a
+deployed node shows no hardware MIB counters and no forwarding database.
+pciutils goes the other way. The recipe's DEVICE_PACKAGES adds it for
+bring-up, and negating it here makes merge_packages() drop it from the
+image.
+
+kmod-v4l2loopback and the xtables-addons packages come from the OpenWrt
+packages feed at Gluon's pin, which does not build them on kernel 6.18.
+v4l2loopback calls v4l2_fh_add() and v4l2_fh_del() with their pre-6.18
+signatures, and xtables-addons stops at a missing compat_xtables.h.
+Nothing on these boards uses either, and they are only built because
+targets/generic sets ALL_NONSHARED. The iptables-mod-* halves are
+disabled too, because each selects its kmod.
+
+Assisted-by: Claude:claude-opus-5
+Assisted-by: Claude:claude-fable-5
+Signed-off-by: Grische <github@grische.xyz>
+---
+ targets/intel-mips-xrx500 | 84 +++++++++++++++++++++++++++++++++++++++
+ targets/targets.mk        |  1 +
+ 2 files changed, 85 insertions(+)
+ create mode 100644 targets/intel-mips-xrx500
+
+diff --git a/targets/intel-mips-xrx500 b/targets/intel-mips-xrx500
+new file mode 100644
+index 00000000..37f47f24
+--- /dev/null
++++ b/targets/intel-mips-xrx500
+@@ -0,0 +1,84 @@
++-- AVM FRITZ!Box 7560 (GRX350), 7580 and 7590 (GRX550). One kernel serves all
++-- three, with each board's device tree appended to its own image.
++
++packages {
++	-- Switch inspection on a deployed node. ethtool -S reads the hardware MIB
++	-- counters and bridge fdb the forwarding database, and busybox carries
++	-- neither tool.
++	'ethtool',
++	'ip-bridge',
++
++	-- Bring-up tool from the OpenWrt device recipes, not needed in the image.
++	'-pciutils',
++}
++
++-- Packages of the OpenWrt packages feed, at Gluon's pin, that do not build on
++-- kernel 6.18. Nothing on these boards uses them, but ALL_NONSHARED builds
++-- every kmod. The iptables-mod-* halves of xtables-addons go too, because each
++-- selects its kmod.
++try_config('PACKAGE_kmod-v4l2loopback', false)
++try_config('PACKAGE_iptables-mod-account', false)
++try_config('PACKAGE_iptables-mod-asn', false)
++try_config('PACKAGE_iptables-mod-chaos', false)
++try_config('PACKAGE_iptables-mod-condition', false)
++try_config('PACKAGE_iptables-mod-delude', false)
++try_config('PACKAGE_iptables-mod-dhcpmac', false)
++try_config('PACKAGE_iptables-mod-dnetmap', false)
++try_config('PACKAGE_iptables-mod-fuzzy', false)
++try_config('PACKAGE_iptables-mod-geoip', false)
++try_config('PACKAGE_iptables-mod-iface', false)
++try_config('PACKAGE_iptables-mod-ipmark', false)
++try_config('PACKAGE_iptables-mod-ipp2p', false)
++try_config('PACKAGE_iptables-mod-ipv4options', false)
++try_config('PACKAGE_iptables-mod-length2', false)
++try_config('PACKAGE_iptables-mod-logmark', false)
++try_config('PACKAGE_iptables-mod-lscan', false)
++try_config('PACKAGE_iptables-mod-lua', false)
++try_config('PACKAGE_iptables-mod-proto', false)
++try_config('PACKAGE_iptables-mod-psd', false)
++try_config('PACKAGE_iptables-mod-quota2', false)
++try_config('PACKAGE_iptables-mod-sysrq', false)
++try_config('PACKAGE_iptables-mod-tarpit', false)
++try_config('PACKAGE_iptaccount', false)
++try_config('PACKAGE_iptasn', false)
++try_config('PACKAGE_iptgeoip', false)
++try_config('PACKAGE_kmod-ipt-account', false)
++try_config('PACKAGE_kmod-ipt-asn', false)
++try_config('PACKAGE_kmod-ipt-chaos', false)
++try_config('PACKAGE_kmod-ipt-compat-xtables', false)
++try_config('PACKAGE_kmod-ipt-condition', false)
++try_config('PACKAGE_kmod-ipt-delude', false)
++try_config('PACKAGE_kmod-ipt-dhcpmac', false)
++try_config('PACKAGE_kmod-ipt-dnetmap', false)
++try_config('PACKAGE_kmod-ipt-fuzzy', false)
++try_config('PACKAGE_kmod-ipt-geoip', false)
++try_config('PACKAGE_kmod-ipt-iface', false)
++try_config('PACKAGE_kmod-ipt-ipmark', false)
++try_config('PACKAGE_kmod-ipt-ipp2p', false)
++try_config('PACKAGE_kmod-ipt-ipv4options', false)
++try_config('PACKAGE_kmod-ipt-length2', false)
++try_config('PACKAGE_kmod-ipt-logmark', false)
++try_config('PACKAGE_kmod-ipt-lscan', false)
++try_config('PACKAGE_kmod-ipt-lua', false)
++try_config('PACKAGE_kmod-ipt-proto', false)
++try_config('PACKAGE_kmod-ipt-psd', false)
++try_config('PACKAGE_kmod-ipt-quota2', false)
++try_config('PACKAGE_kmod-ipt-sysrq', false)
++try_config('PACKAGE_kmod-ipt-tarpit', false)
++try_config('PACKAGE_kmod-nf-nathelper-rtsp', false)
++
++-- No factory image. Device/NAND also builds -eva-kernel.bin and
++-- -eva-filesystem.bin for the first installation. Gluon ships neither, so they
++-- stay in openwrt/bin/targets/.
++
++device('avm-fritz-box-7560', 'avm_fritz7560', {
++	factory = false,
++})
++
++device('avm-fritz-box-7580', 'avm_fritz7580', {
++	factory = false,
++})
++
++device('avm-fritz-box-7590', 'avm_fritz7590', {
++	factory = false,
++})
+diff --git a/targets/targets.mk b/targets/targets.mk
+index 285137d3..6b9e85d2 100644
+--- a/targets/targets.mk
++++ b/targets/targets.mk
+@@ -5,6 +5,7 @@ $(eval $(call GluonTarget,ath79,nand))
+ $(eval $(call GluonTarget,ath79,mikrotik))
+ $(eval $(call GluonTarget,bcm27xx,bcm2708))
+ $(eval $(call GluonTarget,bcm27xx,bcm2709))
++$(eval $(call GluonTarget,intel-mips,xrx500))
+ $(eval $(call GluonTarget,ipq40xx,generic))
+ $(eval $(call GluonTarget,ipq40xx,mikrotik))
+ $(eval $(call GluonTarget,ipq806x,generic))
+-- 
+2.54.0
+
