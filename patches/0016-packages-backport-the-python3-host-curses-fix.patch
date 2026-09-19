@@ -1,0 +1,143 @@
+From 223cc35d1ab8fe5b9360a40131fded51c5cbbdeb Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Sat, 19 Sep 2026 20:11:46 +0200
+Subject: [PATCH] packages: backport the python3 host curses fix
+
+OpenWrt main builds host ncurses 6.6, which has wide-character support,
+so pkg-config reports ncursesw to the host python3 build. The python3
+of the packages feed at Gluon's openwrt-25.12 pin still forces the
+ncursesw header checks to "no", and _cursesmodule.c is then compiled
+without any curses header.
+
+  ./Include/py_curses.h:80:5: error: unknown type name 'WINDOW'
+
+openwrt/packages master fixed this in 6c1baacc1 ("python3: stop forcing
+the ncursesw/{ncurses,panel}.h checks to "no""). Carry that commit on
+the packages feed. The only conflict was PKG_RELEASE, which goes from
+the openwrt-25.12 value to one above it.
+
+Assisted-by: Claude:claude-opus-5
+Signed-off-by: Grische <github@grische.xyz>
+---
+ ...ursesw-ncurses-panel-.h-checks-to-no.patch | 109 ++++++++++++++++++
+ 1 file changed, 109 insertions(+)
+ create mode 100644 patches/packages/packages/0001-python3-stop-forcing-the-ncursesw-ncurses-panel-.h-checks-to-no.patch
+
+diff --git a/patches/packages/packages/0001-python3-stop-forcing-the-ncursesw-ncurses-panel-.h-checks-to-no.patch b/patches/packages/packages/0001-python3-stop-forcing-the-ncursesw-ncurses-panel-.h-checks-to-no.patch
+new file mode 100644
+index 00000000..5cf55ac7
+--- /dev/null
++++ b/patches/packages/packages/0001-python3-stop-forcing-the-ncursesw-ncurses-panel-.h-checks-to-no.patch
+@@ -0,0 +1,109 @@
++From: Daniel Golle <daniel@makrotopia.org>
++Date: Thu, 20 Aug 2026 21:30:13 +0100
++Subject: python3: stop forcing the ncursesw/{ncurses,panel}.h checks to "no"
++
++d883c02a4106 ("python3: pin host curses to the SDK's narrow ncurses",
++2026-05-28) forced every curses header check Python's configure.ac
++runs to "no", specifically to keep host ncurses's (then narrow-only)
++build from being shadowed by whatever curses headers the build host's
++own distro happened to ship under /usr/include.
++
++That assumption broke when openwrt/openwrt@18725c45a33a ("ncurses:
++bump to 6.6.20260801") switched host ncurses to track ncurses' git
++snapshots rather than the old 6.4 tarball: ncurses 6.6+ defaults to
++building wide-character support for ABI 6 (cf_dft_widec, gated on
++cf_cv_abi_default which is just the major version - this is a policy
++change accumulated in ncurses' own git history since 6.4 was tagged,
++not something OpenWrt or ncurses deliberately changed for wide-char
++specifically). Host ncurses now produces ncursesw.pc/panelw.pc, which
++Python 3.14's configure.ac finds independently via its own
++PKG_CHECK_MODULES(CURSES, ncursesw)-style pkg-config probe ("checking
++for ncursesw... yes") - a check that was never gated by these ac_cv_*
++overrides in the first place. That flips on the wide-character code
++paths in Modules/_cursesmodule.c, while the ac_cv_header_ncursesw_*=no
++overrides still force the *header* checks to fail, so the actual
++#include falls through to the stale narrow ncurses/ncurses.h. The
++result is a mismatch between what pkg-config says is available and
++what header actually got included, producing:
++
++  ./Modules/_cursesmodule.c: error: implicit declaration of function
++  'unget_wch'; did you mean 'ungetch'?
++
++(and similarly for wget_wch, wins_nwstr, mvwins_nwstr - every
++wide-character-only curses function).
++
++Fix this at the python3/ncurses integration boundary rather than by
++touching ncurses' own host build behaviour globally (see
++openwrt/openwrt#24811, which tried --disable-widec on host ncurses
++and had to be reverted: it also drops extended colors from host tic,
++shrinking MAX_ENTRY_SIZE 32768->4096 so tic can no longer process the
++xterm/xterm-256color terminfo entries needed to assemble the target
++terminfo package). Since host ncurses's own -I.../include/ncursesw
++already gets added via pkg-config's Cflags substitution regardless of
++these overrides, stop forcing ac_cv_header_ncursesw_{ncurses,panel}_h
++to "no" - configure now genuinely finds ncursesw/ncurses.h in
++staging_dir/hostpkg, consistent with what its own pkg-config check
++already reports, and both detection paths agree.
++
++ac_cv_header_ncursesw_curses_h stays forced, along with the bare
++(non-w) curses.h/ncurses.h/panel.h checks: host ncurses is configured
++with --without-curses-h, so staging_dir/hostpkg/include/ncursesw/ has
++no curses.h of its own to genuinely detect - a real "yes" here could
++only ever come from the build host's own /usr/include/ncursesw/
++curses.h (e.g. Fedora's ncurses-devel), the exact distro-shadowing
++this override block exists to prevent.
++
++Verified end to end: clean host python3 rebuild against unmodified
++current ncurses compiles Modules/_cursesmodule.c and
++Modules/_curses_panel.c without error, and the resulting
++staging_dir/hostpkg python3.14 successfully `import curses` with
++unget_wch present.
++
++Fixes: d883c02a4106 ("python3: pin host curses to the SDK's narrow ncurses")
++Signed-off-by: Daniel Golle <daniel@makrotopia.org>
++[Grische: PKG_RELEASE goes from 3 to 4, the openwrt-25.12 value plus one]
++(cherry picked from commit 6c1baacc1d4ef443b2ca762384d68982832abc4a)
++Signed-off-by: Grische <github@grische.xyz>
++
++diff --git a/lang/python/python3/Makefile b/lang/python/python3/Makefile
++index e3ac21625efdc7a574598a91b133c6689c470125..53473603a19c6495d6e2ca9067560dd3fbcc2f2a 100644
++--- a/lang/python/python3/Makefile
+++++ b/lang/python/python3/Makefile
++@@ -11,7 +11,7 @@ include $(TOPDIR)/rules.mk
++ include ../python3-version.mk
++ 
++ PKG_NAME:=python3
++-PKG_RELEASE:=3
+++PKG_RELEASE:=4
++ PKG_VERSION:=$(PYTHON3_VERSION).$(PYTHON3_VERSION_MICRO)
++ 
++ PKG_SOURCE:=Python-$(PKG_VERSION).tar.xz
++@@ -293,17 +293,23 @@ endif
++ # HOST_MAKE_VARS += \
++ # 	PYTHONSTRICTEXTENSIONBUILD=1
++ 
++-# Bypass configure test. Force every curses header check Python's
++-# configure.ac runs to "no" so the host distro's headers stay out.
+++# Bypass configure test. Force the curses header checks that can only
+++# ever resolve against the build host's own distro packages to "no" so
+++# those stay out; leave ac_cv_header_ncursesw_{ncurses,panel}_h alone so
+++# configure picks up the SDK's own wide-char ncurses consistently with
+++# what its pkg-config-based ncursesw/panelw detection already reports.
+++# ac_cv_header_ncursesw_curses_h stays forced: host ncurses is built
+++# with --without-curses-h, so staging_dir/hostpkg/include/ncursesw/
+++# deliberately has no curses.h of its own for this to genuinely resolve
+++# against - a real, non-forced "yes" here could only come from the
+++# build host's own /usr/include/ncursesw/curses.h.
++ HOST_CONFIGURE_VARS += \
++ 	py_cv_module__tkinter=n/a \
++ 	ac_cv_working_openssl_hashlib=yes \
++ 	ac_cv_header_curses_h=no \
++ 	ac_cv_header_ncurses_h=no \
++ 	ac_cv_header_panel_h=no \
++-	ac_cv_header_ncursesw_curses_h=no \
++-	ac_cv_header_ncursesw_ncurses_h=no \
++-	ac_cv_header_ncursesw_panel_h=no
+++	ac_cv_header_ncursesw_curses_h=no
++ 
++ ifeq ($(HOST_OS),Darwin)
++ HOST_CONFIGURE_VARS += \
+-- 
+2.54.0
+
