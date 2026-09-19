@@ -1,0 +1,82 @@
+From 67eac60ab7b258e0d3469e3399ec8c32a92ec569 Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Sat, 19 Sep 2026 10:30:16 +0200
+Subject: [PATCH] openwrt: refresh the mac80211 PS-flag patch for backports 7.2
+
+OpenWrt main builds mac80211 from backports 7.2, which adds
+IEEE80211_HW_SUPPORTS_NDP_BLOCKACK after IEEE80211_HW_STRICT. That is
+where "wifi: mac80211: add flag for driver-buffering of PS" anchors its
+enum and hw_flag_names hunks, so the patch no longer applies and the
+mac80211 package fails to prepare.
+
+  Hunk #2 FAILED at 2900.
+  1 out of 2 hunks FAILED -- saving rejects to file include/net/mac80211.h.rej
+  Hunk #1 FAILED at 510.
+  1 out of 1 hunk FAILED -- saving rejects to file net/mac80211/debugfs.c.rej
+
+The flag is not in 7.2, so this is a refresh rather than a drop. The new
+flag goes after SUPPORTS_NDP_BLOCKACK in the kernel-doc block, the enum
+and the debugfs name table alike. On a clean backports 7.2 tree the whole
+OpenWrt mac80211 series applies with this patch and without fuzz, 950-002
+and 950-003 included.
+
+Assisted-by: Claude:claude-opus-5
+Signed-off-by: Grische <github@grische.xyz>
+---
+ ...211-add-flag-for-driver-buffering-of-PS.patch | 16 ++++++++--------
+ 1 file changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/patches/openwrt/0009-wifi-mac80211-add-flag-for-driver-buffering-of-PS.patch b/patches/openwrt/0009-wifi-mac80211-add-flag-for-driver-buffering-of-PS.patch
+index 8bb5223f..5f0cf813 100644
+--- a/patches/openwrt/0009-wifi-mac80211-add-flag-for-driver-buffering-of-PS.patch
++++ b/patches/openwrt/0009-wifi-mac80211-add-flag-for-driver-buffering-of-PS.patch
+@@ -12,7 +12,7 @@ Signed-off-by: David Bauer <mail@david-bauer.net>
+ 
+ diff --git a/package/kernel/mac80211/patches/subsys/950-001-mac80211-add-flag-for-driver-buffering-of-PS.patch b/package/kernel/mac80211/patches/subsys/950-001-mac80211-add-flag-for-driver-buffering-of-PS.patch
+ new file mode 100644
+-index 0000000000000000000000000000000000000000..6e12fd28379ca3fd928c7963248666867efc2fc4
++index 0000000000000000000000000000000000000000..2aa7fedb934f608ff4ede2b785b31f6feb8e6e14
+ --- /dev/null
+ +++ b/package/kernel/mac80211/patches/subsys/950-001-mac80211-add-flag-for-driver-buffering-of-PS.patch
+ @@ -0,0 +1,48 @@
+@@ -35,9 +35,9 @@ index 0000000000000000000000000000000000000000..6e12fd28379ca3fd928c796324866686
+ +
+ +--- a/include/net/mac80211.h
+ ++++ b/include/net/mac80211.h
+-+@@ -2835,6 +2835,10 @@ struct ieee80211_txq {
+-+  *	HW flag so drivers can opt in according to their own control, e.g. in
+-+  *	testing.
+++@@ -3074,6 +3074,10 @@ struct ieee80211_txq {
+++  * @IEEE80211_HW_SUPPORTS_NDP_BLOCKACK: HW can transmit/receive S1G NDP
+++  *	BlockAck frames.
+ +  *
+ ++ * @IEEE80211_HW_STORES_PS_FRAMES: Hardware/driver stores frames for
+ ++ *	power-saving stations instead of returning them to mac80211 for
+@@ -46,20 +46,20 @@ index 0000000000000000000000000000000000000000..6e12fd28379ca3fd928c796324866686
+ +  * @NUM_IEEE80211_HW_FLAGS: number of hardware flags, used for sizing arrays
+ +  */
+ + enum ieee80211_hw_flags {
+-+@@ -2896,6 +2900,7 @@ enum ieee80211_hw_flags {
+-+ 	IEEE80211_HW_DISALLOW_PUNCTURING_5GHZ,
+++@@ -3135,6 +3139,7 @@ enum ieee80211_hw_flags {
+ + 	IEEE80211_HW_HANDLES_QUIET_CSA,
+ + 	IEEE80211_HW_STRICT,
+++ 	IEEE80211_HW_SUPPORTS_NDP_BLOCKACK,
+ ++	IEEE80211_HW_STORES_PS_FRAMES,
+ + 
+ + 	/* keep last, obviously */
+ + 	NUM_IEEE80211_HW_FLAGS
+ +--- a/net/mac80211/debugfs.c
+ ++++ b/net/mac80211/debugfs.c
+-+@@ -510,6 +510,7 @@ static const char *hw_flag_names[] = {
+-+ 	FLAG(DISALLOW_PUNCTURING_5GHZ),
+++@@ -483,6 +483,7 @@ static const char *hw_flag_names[] = {
+ + 	FLAG(HANDLES_QUIET_CSA),
+ + 	FLAG(STRICT),
+++ 	FLAG(SUPPORTS_NDP_BLOCKACK),
+ ++	FLAG(STORES_PS_FRAMES),
+ + #undef FLAG
+ + };
+-- 
+2.54.0
+

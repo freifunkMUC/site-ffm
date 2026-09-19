@@ -11,3 +11,44 @@ GLUON_SITE_FEEDS='community'
 PACKAGES_COMMUNITY_REPO=https://github.com/freifunk-gluon/community-packages.git
 PACKAGES_COMMUNITY_COMMIT=8cfbced053cbf20a5d053aae6bf68ff81a229007
 PACKAGES_COMMUNITY_BRANCH=main
+
+##	OpenWrt base
+#		The intel-mips target (AVM FRITZ!Box 7560, 7580 and 7590) needs
+#		kernel 6.18, which only OpenWrt main carries. Gluon next pins
+#		openwrt-25.12, so the target cannot be built from Gluon's own base.
+#
+#		The pin below is a branch of OpenWrt main that adds the intel-mips
+#		target, with its two switch macros driven by a DSA driver. Every
+#		target in ./targets builds on it, not only intel-mips.
+#
+#		scripts/modules.sh sources Gluon's modules file first and this one
+#		second, so these assignments override Gluon's own pin. Gluon has
+#		set OPENWRT_REPO and the others by then, which makes a
+#		${OPENWRT_REPO:-...} default a silent no-op. The escape hatch
+#		therefore uses names Gluon does not set itself.
+OPENWRT_REPO=${SITE_OPENWRT_REPO:-https://github.com/grische/openwrt.git}
+OPENWRT_BRANCH=${SITE_OPENWRT_BRANCH:-intel-mips-xrx500-dsa}
+OPENWRT_COMMIT=${SITE_OPENWRT_COMMIT:-d36c53ca930cbca073aea30b54acf3fdf5fe9ef4}
+
+##	Routing feed
+#		Gluon next pins openwrt/routing at openwrt-25.12, whose batman-adv
+#		2025.4 does not build on kernel 6.18, for two reasons:
+#
+#		  * It depends unconditionally on kmod-lib-crc32c, which OpenWrt
+#		    main declares "@LINUX_6_12" because libcrc32c was folded into
+#		    the kernel after 6.12. package-metadata.pl passes the
+#		    unsatisfiable dependency on to every package that selects it,
+#		    so kmod-batman-adv, and through it every Gluon batman package,
+#		    cannot be enabled.
+#		  * Its EXTRA_CFLAGS are dropped by the 6.18 kbuild, so it would
+#		    compile its feature sources against structures built without
+#		    those features.
+#
+#		The feed fixed both after moving to batman-adv 2026.x and then
+#		moved the package to openwrt/packages. e76fbe6 is the last routing
+#		commit that carries it, batman-adv 2026.2 with "fix build against
+#		Linux 6.18" and the 6.18.33+ kmalloc_obj fix. Gluon's three routing
+#		patches apply to it unchanged.
+PACKAGES_ROUTING_REPO=${SITE_PACKAGES_ROUTING_REPO:-https://github.com/openwrt/routing.git}
+PACKAGES_ROUTING_BRANCH=${SITE_PACKAGES_ROUTING_BRANCH:-master}
+PACKAGES_ROUTING_COMMIT=${SITE_PACKAGES_ROUTING_COMMIT:-e76fbe6fb11b5dda37e3832582a4ee0f64176ad1}

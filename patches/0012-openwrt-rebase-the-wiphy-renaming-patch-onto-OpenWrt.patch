@@ -1,0 +1,44 @@
+From 0794e4be6dc99d909f9cafd2431b6aa21bc8507a Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Sat, 19 Sep 2026 10:30:15 +0200
+Subject: [PATCH] openwrt: rebase the wiphy-renaming patch onto OpenWrt main
+
+The site builds on OpenWrt main for the intel-mips target, which needs
+kernel 6.18. There ucidef_add_wlan() accepts several device paths and no
+longer begins with the `local path="$1"; shift` line this patch uses as
+trailing context, so the patch does not apply.
+
+The change is the same single line at the same position. Only the
+context and the index line are rebased.
+
+Assisted-by: Claude:claude-opus-5
+Signed-off-by: Grische <github@grische.xyz>
+---
+ .../openwrt/0011-base-files-disable-wiphy-renaming.patch    | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/patches/openwrt/0011-base-files-disable-wiphy-renaming.patch b/patches/openwrt/0011-base-files-disable-wiphy-renaming.patch
+index a6db1597..70971e16 100644
+--- a/patches/openwrt/0011-base-files-disable-wiphy-renaming.patch
++++ b/patches/openwrt/0011-base-files-disable-wiphy-renaming.patch
+@@ -10,7 +10,7 @@ Only needed for openwrt-24.10 branch as later releases will be able to handle re
+ Signed-off-by: Florian Maurer <f.maurer@outlook.de>
+ 
+ diff --git a/package/base-files/files/lib/functions/uci-defaults.sh b/package/base-files/files/lib/functions/uci-defaults.sh
+-index f77ce4ab27c970dd5e616a1db0dcb87686411b99..b1fbcb3bdcde9efdd200cd3a9feb01a8903c044b 100644
++index 43c630fc7cb000bccc9d57a49700afb8e23d764f..360126db1b1c164dafc18f8109b8631bd8505ecf 100644
+ --- a/package/base-files/files/lib/functions/uci-defaults.sh
+ +++ b/package/base-files/files/lib/functions/uci-defaults.sh
+ @@ -757,6 +757,7 @@ ucidef_set_poe() {
+@@ -18,6 +18,6 @@ index f77ce4ab27c970dd5e616a1db0dcb87686411b99..b1fbcb3bdcde9efdd200cd3a9feb01a8
+  
+  ucidef_add_wlan() {
+ +	return 0
+- 	local path="$1"; shift
+- 
+  	ucidef_wlan_idx=${ucidef_wlan_idx:-0}
++ 
++ 	json_select_object wlan
+-- 
+2.54.0
+

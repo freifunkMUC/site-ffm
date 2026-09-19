@@ -1,0 +1,85 @@
+From 4992d9cc5968ccf052276272a48cd577332720ae Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Sat, 19 Sep 2026 20:11:46 +0200
+Subject: [PATCH] openwrt: rebase the netifd multicast_wakeupcall bit onto
+ OpenWrt main
+
+The netifd patch inside Gluon's MLD querier wake-up patch gives
+DEV_OPT_MULTICAST_WAKEUPCALL bit 63, the far end of what used to be a
+hand-numbered enum. The netifd on OpenWrt main derives every DEV_OPT_
+flag as "1ULL << DEV_ATTR_<name>", and bit 63 now belongs to
+DEV_OPT_DEFAULT_MACADDR. The hunk no longer applies, and applied with
+fuzz it would alias the two flags.
+
+Derive the flag the same way as its neighbours. The DEV_ATTR_ hunk is
+unchanged and still puts DEV_ATTR_MULTICAST_WAKEUPCALL next to
+DEV_ATTR_MULTICAST_TO_UNICAST, among the options that need a teardown to
+be re-applied, which is where a bridge multicast option belongs.
+
+Assisted-by: Claude:claude-opus-5
+Signed-off-by: Grische <github@grische.xyz>
+---
+ ...wake-up-calls-Android-bug-workaround.patch | 24 ++++++++++---------
+ 1 file changed, 13 insertions(+), 11 deletions(-)
+
+diff --git a/patches/openwrt/0002-kernel-bridge-Implement-MLD-Querier-wake-up-calls-Android-bug-workaround.patch b/patches/openwrt/0002-kernel-bridge-Implement-MLD-Querier-wake-up-calls-Android-bug-workaround.patch
+index db17ed16..1f553353 100644
+--- a/patches/openwrt/0002-kernel-bridge-Implement-MLD-Querier-wake-up-calls-Android-bug-workaround.patch
++++ b/patches/openwrt/0002-kernel-bridge-Implement-MLD-Querier-wake-up-calls-Android-bug-workaround.patch
+@@ -27,10 +27,10 @@ Signed-off-by: Linus Lüssing <linus.luessing@c0d3.blue>
+ 
+ diff --git a/package/network/config/netifd/patches/0001-bridge-Add-multicast_wakeupcall-option.patch b/package/network/config/netifd/patches/0001-bridge-Add-multicast_wakeupcall-option.patch
+ new file mode 100644
+-index 0000000000000000000000000000000000000000..a302e2a4f0439400280e01ae82d06d565291ce5d
++index 0000000000000000000000000000000000000000..75e4510733a2a9019bd8a88f367bbb6182f5032a
+ --- /dev/null
+ +++ b/package/network/config/netifd/patches/0001-bridge-Add-multicast_wakeupcall-option.patch
+-@@ -0,0 +1,142 @@
++@@ -0,0 +1,144 @@
+ +From d23a49e6542dc068b12fbc7b6a4520f9fb3626f9 Mon Sep 17 00:00:00 2001
+ +From: =?UTF-8?q?Linus=20L=C3=BCssing?= <linus.luessing@c0d3.blue>
+ +Date: Sun, 5 Jul 2020 23:33:51 +0200
+@@ -64,6 +64,8 @@ index 0000000000000000000000000000000000000000..a302e2a4f0439400280e01ae82d06d56
+ +Link: https://github.com/freifunk-gluon/gluon/issues/1832
+ +
+ +Signed-off-by: Linus Lüssing <linus.luessing@c0d3.blue>
+++[Grische: derive DEV_OPT_MULTICAST_WAKEUPCALL from its DEV_ATTR_ bit, as netifd now does for every flag]
+++Signed-off-by: Grische <github@grische.xyz>
+ +---
+ + device.c       |  9 +++++++++
+ + device.h       |  3 +++
+@@ -119,14 +121,14 @@ index 0000000000000000000000000000000000000000..a302e2a4f0439400280e01ae82d06d56
+ + 	DEV_ATTR_MULTICAST_ROUTER,
+ + 	DEV_ATTR_MULTICAST_FAST_LEAVE,
+ + 	DEV_ATTR_MULTICAST,
+-+@@ -145,6 +146,7 @@ enum {
+-+ 	DEV_OPT_GRO			= (1ULL << 37),
+-+ 	DEV_OPT_MASTER			= (1ULL << 38),
+-+ 	DEV_OPT_EEE			= (1ULL << 39),
+-++	DEV_OPT_MULTICAST_WAKEUPCALL	= (1ULL << 63),
+-+ };
+-+ 
+-+ /* events broadcasted to all users of a device */
+++@@ -155,6 +156,7 @@ enum {
+++ 	DEV_OPT_MTU				= 1ULL << DEV_ATTR_MTU,
+++ 	DEV_OPT_MACADDR				= 1ULL << DEV_ATTR_MACADDR,
+++ 	DEV_OPT_MULTICAST_TO_UNICAST		= 1ULL << DEV_ATTR_MULTICAST_TO_UNICAST,
++++	DEV_OPT_MULTICAST_WAKEUPCALL		= 1ULL << DEV_ATTR_MULTICAST_WAKEUPCALL,
+++ 	DEV_OPT_MULTICAST_ROUTER		= 1ULL << DEV_ATTR_MULTICAST_ROUTER,
+++ 	DEV_OPT_MULTICAST_FAST_LEAVE		= 1ULL << DEV_ATTR_MULTICAST_FAST_LEAVE,
+++ 	DEV_OPT_LEARNING			= 1ULL << DEV_ATTR_LEARNING,
+ +@@ -206,6 +208,7 @@ struct device_settings {
+ + 	int neigh4locktime;
+ + 	unsigned int dadtransmits;
+@@ -174,7 +176,7 @@ index 0000000000000000000000000000000000000000..a302e2a4f0439400280e01ae82d06d56
+ + 
+ + int system_bridge_addif(struct device *bridge, struct device *dev)
+ diff --git a/target/linux/generic/config-6.12 b/target/linux/generic/config-6.12
+-index d7096422db5be8c28e3423753bab40f836b9fbf6..c71bf7742238d5491bea6485cc48afdab036fa95 100644
++index b9f4d2fda9373b95c88a6941e5c8d6f07705131e..108adb85c682164039883734f8e8ad133411fcea 100644
+ --- a/target/linux/generic/config-6.12
+ +++ b/target/linux/generic/config-6.12
+ @@ -748,6 +748,7 @@ CONFIG_BRIDGE=y
+-- 
+2.54.0
+
