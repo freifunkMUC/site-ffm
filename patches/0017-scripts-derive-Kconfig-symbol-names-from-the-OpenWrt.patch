@@ -1,0 +1,133 @@
+From 3a245e10670e68b8d95f9c1a27330b67a74d7ed6 Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Sun, 30 Aug 2026 15:28:47 +0200
+Subject: [PATCH] scripts: derive Kconfig symbol names from the OpenWrt target
+ name
+
+OpenWrt spells a target two different ways. Paths, image file names and
+.targetinfo keep the separators; Kconfig symbol names fold '/', '-' and
+'.' to '_' (target_conf in include/target.mk, confstr() in
+scripts/metadata.pm). For every board Gluon supports today the two
+spellings are the same string, so Gluon only ever kept one and used it
+for both jobs.
+
+That conflation breaks as soon as a board name contains a separator.
+Building a new OpenWrt target named intel-mips, targets/generic emitted
+
+  CONFIG_TARGET_intel-mips=y
+  CONFIG_TARGET_intel-mips_xrx500=y
+
+while OpenWrt defines TARGET_intel_mips and TARGET_intel_mips_xrx500.
+Neither of the emitted symbols exists, so defconfig dropped both lines
+without complaint and the build carried on against whatever target the
+resulting defconfig picked instead; every later package and device
+selection then applied to the wrong target. The same string also spells
+the per-device symbols TARGET_DEVICE_<target>_DEVICE_<device>, so those
+were dead as well.
+
+Folding the single existing variable is not enough on its own, because
+get_default_pkgs() recovers the .targetinfo spelling from it by turning
+the first '_' back into a '/'. That round trip only holds while the board
+name itself has no separator. For a folded "intel_mips_xrx500" it looks
+up "intel/mips_xrx500" and exits with "unable to get default packages".
+
+So carry both spellings. openwrt_target is the on-disk/.targetinfo form,
+built straight from BOARD and SUBTARGET; openwrt_config_target is the
+Kconfig form, produced by the new lib.target_conf(), which mirrors
+OpenWrt's own definition.
+
+No existing target changes behaviour. target_conf() is the identity on
+every entry in targets/targets.mk, and openwrt_target reproduces exactly
+what the old gsub() produced for them.
+
+Assisted-by: Claude:claude-opus-5
+Signed-off-by: Grische <github@grische.xyz>
+---
+ .luacheckrc                   |  1 +
+ scripts/target_config_lib.lua | 11 ++++++++---
+ scripts/target_lib.lua        |  8 ++++++++
+ targets/generic               |  4 ++--
+ 4 files changed, 19 insertions(+), 5 deletions(-)
+
+diff --git a/.luacheckrc b/.luacheckrc
+index 96390972..a1c0d755 100644
+--- a/.luacheckrc
++++ b/.luacheckrc
+@@ -106,6 +106,7 @@ files["targets/*"] = {
+ 		"no_opkg",
+ 		"packages",
+ 		"sysupgrade_image",
++		"target_conf",
+ 		"try_config",
+ 	},
+ }
+diff --git a/scripts/target_config_lib.lua b/scripts/target_config_lib.lua
+index deb1928c..4e026da6 100644
+--- a/scripts/target_config_lib.lua
++++ b/scripts/target_config_lib.lua
+@@ -9,11 +9,16 @@ assert(target)
+ assert(env.BOARD)
+ assert(env.SUBTARGET)
+ 
++-- openwrt_target is the spelling OpenWrt uses on disk and in .targetinfo,
++-- openwrt_config_target the same target as a Kconfig symbol fragment.
++local openwrt_target
+ local openwrt_config_target
+ if env.SUBTARGET ~= '' then
+-	openwrt_config_target = env.BOARD .. '_' .. env.SUBTARGET
++	openwrt_target = env.BOARD .. '/' .. env.SUBTARGET
++	openwrt_config_target = lib.target_conf(env.BOARD .. '_' .. env.SUBTARGET)
+ else
+-	openwrt_config_target = env.BOARD
++	openwrt_target = env.BOARD
++	openwrt_config_target = lib.target_conf(env.BOARD)
+ end
+ 
+ -- Initialize image-customization
+@@ -150,7 +155,7 @@ local function handle_target_pkgs(pkgs)
+ end
+ 
+ local function get_default_pkgs()
+-	local targetinfo_target = string.gsub(openwrt_config_target, '_', '/', 1)
++	local targetinfo_target = openwrt_target
+ 	local target_matches = false
+ 	for line in io.lines('openwrt/tmp/.targetinfo') do
+ 		local target_match = string.match(line, '^Target: (.+)$')
+diff --git a/scripts/target_lib.lua b/scripts/target_lib.lua
+index c4e499d2..a6590089 100644
+--- a/scripts/target_lib.lua
++++ b/scripts/target_lib.lua
+@@ -59,6 +59,14 @@ function F.istrue(v)
+ 	return (tonumber(v) or 0) > 0
+ end
+ 
++-- OpenWrt spells a target two ways. Paths, image names and .targetinfo keep
++-- the separators, and Kconfig symbol names fold '/', '-' and '.' to '_'. This
++-- returns the second form; it mirrors target_conf in OpenWrt's
++-- include/target.mk.
++function F.target_conf(s)
++	return (string.gsub(s, '[/.-]', '_'))
++end
++
+ local function device_broken(device_info, overrides)
+ 	if F.istrue(env.BROKEN) then
+ 		return false
+diff --git a/targets/generic b/targets/generic
+index 874e61d3..1be9b48b 100644
+--- a/targets/generic
++++ b/targets/generic
+@@ -13,9 +13,9 @@ for lang in string.gmatch(env.GLUON_LANGS, '%S+') do
+ 	try_config('GLUON_WEB_LANG_' .. lang, true)
+ end
+ 
+-config('TARGET_' .. env.BOARD, true)
++config('TARGET_' .. target_conf(env.BOARD), true)
+ if env.SUBTARGET ~= '' then
+-	config(string.format('TARGET_%s_%s', env.BOARD, env.SUBTARGET), true)
++	config('TARGET_' .. target_conf(env.BOARD .. '_' .. env.SUBTARGET), true)
+ end
+ 
+ -- Disable non-default feeds in distfeeds.list
+-- 
+2.54.0
+
