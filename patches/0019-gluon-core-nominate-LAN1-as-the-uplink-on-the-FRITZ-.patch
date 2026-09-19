@@ -1,0 +1,58 @@
+From 2dbf8e6714d099d7058f463028b98a0f13d45222 Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Sat, 19 Sep 2026 10:31:56 +0200
+Subject: [PATCH] gluon-core: nominate LAN1 as the uplink on the FRITZ!Box 7560
+
+The FRITZ!Box 7560 has no WAN jack, so OpenWrt's board.d declares all
+four front-panel sockets as LAN and board.json carries no wan role.
+020-interfaces then leaves wan_ifname nil, all four ports become
+single_ifname, and 021-interface-roles gives that single interface the
+WAN roles. The node comes up with every socket in br-wan and no Ethernet
+port in br-client.
+
+Gluon already handles avm,fritz7430 and avm,fritzbox-7530 by nominating
+LAN1, so do the same here. lan1 is the socket marked LAN 1. Each DSA
+port carries the label of the socket it reaches, whatever the internal
+port numbering.
+
+The result is one uplink port and three client ports, in two
+gluon.interface sections whose roles can be changed independently in
+config mode. The two bridges stay apart. Every user port carries an
+ingress rule that puts it in its bridge's forwarding domain, and the
+switch forwards known unicast only within that domain. It hands every
+other frame to the processor, whose software bridge keeps it inside
+br-wan or br-client. A port in neither bridge is fenced from both.
+
+This does not re-role a deployed node. When 021-interface-roles migrates
+iface_single, it copies that section's role onto both new sections, so a
+node already in the field keeps all four ports as uplink until the roles
+are set in config mode.
+
+The FRITZ!Box 7580 and 7590 need no entry. Both have a WAN jack, board.d
+gives it the wan role, and 020-interfaces finds both names on its own.
+
+Assisted-by: Claude:claude-opus-5
+Assisted-by: Claude:claude-fable-5
+Signed-off-by: Grische <github@grische.xyz>
+---
+ package/gluon-core/luasrc/lib/gluon/upgrade/020-interfaces | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/package/gluon-core/luasrc/lib/gluon/upgrade/020-interfaces b/package/gluon-core/luasrc/lib/gluon/upgrade/020-interfaces
+index 6a2568b9..e4b33c1a 100755
+--- a/package/gluon-core/luasrc/lib/gluon/upgrade/020-interfaces
++++ b/package/gluon-core/luasrc/lib/gluon/upgrade/020-interfaces
+@@ -88,6 +88,10 @@ elseif platform.match('lantiq', 'xrx200', {
+ 	'avm,fritz7430',
+ }) then
+ 	lan_ifname, wan_ifname = 'lan2 lan3 lan4', 'lan1'
++elseif platform.match('intel-mips', 'xrx500', {
++	'avm,fritz7560',
++}) then
++	lan_ifname, wan_ifname = 'lan2 lan3 lan4', 'lan1'
+ elseif platform.match('lantiq', 'xrx200', {
+ 	'arcadyan,vgv7510kw22-nor',
+ }) then
+-- 
+2.54.0
+
