@@ -1,0 +1,356 @@
+From 99f9a26673e6a0f28a0a72b1372f71716811af41 Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Sat, 26 Sep 2026 11:45:41 +0200
+Subject: [PATCH] openwrt: fix the ath10k push-pull tx queue state
+
+Carry three ath10k fixes, submitted to ath-next, as mac80211 package
+patches.
+
+ath10k leaves the push-pull queue state of a removed station or vif
+set, and it carries the queue state and the push-pull mode over a
+firmware restart. Neither depends on the host byte order. After a
+restart in push-pull mode a QCA9984 sent no data frame until the new
+firmware reported its mode 2.2 s later. The first fix stores the peer
+bitmap as little endian. It changes only big-endian hosts and is
+carried because the second builds on it.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ ...10k-fix-the-push-pull-tx-queue-state.patch | 325 ++++++++++++++++++
+ 1 file changed, 325 insertions(+)
+ create mode 100644 patches/openwrt/0019-mac80211-ath10k-fix-the-push-pull-tx-queue-state.patch
+
+diff --git a/patches/openwrt/0019-mac80211-ath10k-fix-the-push-pull-tx-queue-state.patch b/patches/openwrt/0019-mac80211-ath10k-fix-the-push-pull-tx-queue-state.patch
+new file mode 100644
+index 00000000..4ff53cdc
+--- /dev/null
++++ b/patches/openwrt/0019-mac80211-ath10k-fix-the-push-pull-tx-queue-state.patch
+@@ -0,0 +1,325 @@
++From cba4c7b264a17691b80b1979fa36d561ecfb894c Mon Sep 17 00:00:00 2001
++From: Grische <github@grische.xyz>
++Date: Sat, 26 Sep 2026 11:45:31 +0200
++Subject: [PATCH] mac80211: ath10k: fix the push-pull tx queue state
++
++Backport three fixes for the queue state that ath10k shares with 10.4
++firmware in push-pull mode. They are submitted to ath-next.
++
++The first stores the per TID peer bitmap in htt_q_state as little
++endian. It changes nothing on a little-endian host and is carried
++because the second builds on it.
++
++The second clears the queue state of a station or vif when it is
++removed, so a peer that leaves with frames queued does not keep its
++entries set for the rest of the firmware run.
++
++The third returns the queue state and the push-pull mode to their
++initial state when the firmware starts. A firmware restart in push-pull
++mode used to leave the host in push-pull while the new firmware started
++in push mode. On a QCA9984 no data frame then left the radio until the
++new firmware reported its mode, 2.2 s after the restart had completed.
++
++Assisted-by: Claude:claude-opus-5-5
++---
++ ...-tx-queue-state-map-as-little-endian.patch |  76 ++++++++++++
++ ...htt-tx-queue-state-of-a-removed-peer.patch | 111 ++++++++++++++++++
++ ...queue-state-when-the-firmware-starts.patch |  85 ++++++++++++++
++ 3 files changed, 272 insertions(+)
++ create mode 100644 package/kernel/mac80211/patches/ath10k/992-ath10k-store-the-htt-tx-queue-state-map-as-little-endian.patch
++ create mode 100644 package/kernel/mac80211/patches/ath10k/993-ath10k-clear-the-htt-tx-queue-state-of-a-removed-peer.patch
++ create mode 100644 package/kernel/mac80211/patches/ath10k/994-ath10k-reset-the-htt-tx-queue-state-when-the-firmware-starts.patch
++
++diff --git a/package/kernel/mac80211/patches/ath10k/992-ath10k-store-the-htt-tx-queue-state-map-as-little-endian.patch b/package/kernel/mac80211/patches/ath10k/992-ath10k-store-the-htt-tx-queue-state-map-as-little-endian.patch
++new file mode 100644
++index 00000000000..48087cf350b
++--- /dev/null
+++++ b/package/kernel/mac80211/patches/ath10k/992-ath10k-store-the-htt-tx-queue-state-map-as-little-endian.patch
++@@ -0,0 +1,76 @@
+++From 5b38ce2713218ba4456f924a933fa621924d2107 Mon Sep 17 00:00:00 2001
+++From: Grische <opensource@grische.xyz>
+++Date: Fri, 25 Sep 2026 20:21:10 +0200
+++Subject: [PATCH ath-next 1/3] wifi: ath10k: store the HTT tx queue state map
+++ as little endian
+++
+++The host exposes its queue state to the firmware through struct
+++htt_q_state, a buffer the firmware fetches by DMA in push-pull mode.
+++Every field in it is either a byte or __le32, except the per TID peer
+++bitmap, which is a native u32 updated with plain bit operations. On a
+++big-endian host the firmware therefore sees each map word byte-swapped
+++and looks up the wrong peers when it decides which host queues to fetch.
+++
+++Within each 32-bit word host peer n lands on firmware bit
+++(3 - n % 32 / 8) * 8 + n % 8, so peers 0-7 swap with 24-31 and 8-15
+++with 16-23. Once the firmware switches a radio to push-pull, a station
+++is only fetched while its swap partner has frames queued. On a QCA9984
+++in a big-endian MIPS router this stalled unicast to most clients and
+++mesh peers on the affected radio, while broadcast and multicast kept
+++working through the vdev peers. Clients still associated and got a DHCP
+++lease, but reached nothing.
+++
+++Declare the map as __le32 and convert the bit with cpu_to_le32() before
+++setting or clearing it.
+++
+++Tested-on: QCA9984 hw1.0 PCI 10.4-3.9.0.2-00157
+++
+++Fixes: c1a43d9720d8 ("ath10k: implement updating shared htt txq state")
+++Assisted-by: LLM sparse
+++Signed-off-by: Grische <opensource@grische.xyz>
+++---
+++ drivers/net/wireless/ath/ath10k/htt.h    | 5 +++--
+++ drivers/net/wireless/ath/ath10k/htt_tx.c | 4 ++--
+++ 2 files changed, 5 insertions(+), 4 deletions(-)
+++
+++diff --git a/drivers/net/wireless/ath/ath10k/htt.h b/drivers/net/wireless/ath/ath10k/htt.h
+++index 25c6b2e2f81c..25da8e979522 100644
+++--- a/drivers/net/wireless/ath/ath10k/htt.h
++++++ b/drivers/net/wireless/ath/ath10k/htt.h
+++@@ -1536,7 +1536,8 @@ struct htt_frag_desc_bank_cfg64 {
+++  *	HTT_Q_DEPTH_TYPE_MSDUS the number of packets is scaled by 2 **
+++  *	record_multiplier (see htt_q_state_conf).
+++  * @map: Used by firmware to quickly check which host queues are not empty. It
+++- *	is a bitmap simply saying.
++++ *	is a bitmap simply saying. The firmware reads each word as little
++++ *	endian, so peer n is bit n % 32 of word n / 32 in that byte order.
+++  * @seq: Used by firmware to quickly check if the host queues were updated
+++  *	since it last checked.
+++  *
+++@@ -1544,7 +1545,7 @@ struct htt_frag_desc_bank_cfg64 {
+++  */
+++ struct htt_q_state {
+++ 	u8 count[HTT_TX_Q_STATE_NUM_TIDS][HTT_TX_Q_STATE_NUM_PEERS];
+++-	u32 map[HTT_TX_Q_STATE_NUM_TIDS][(HTT_TX_Q_STATE_NUM_PEERS + 31) / 32];
++++	__le32 map[HTT_TX_Q_STATE_NUM_TIDS][(HTT_TX_Q_STATE_NUM_PEERS + 31) / 32];
+++ 	__le32 seq;
+++ } __packed;
+++ 
+++diff --git a/drivers/net/wireless/ath/ath10k/htt_tx.c b/drivers/net/wireless/ath/ath10k/htt_tx.c
+++index e46f579d745d..bb91118de93a 100644
+++--- a/drivers/net/wireless/ath/ath10k/htt_tx.c
++++++ b/drivers/net/wireless/ath/ath10k/htt_tx.c
+++@@ -79,8 +79,8 @@ static void __ath10k_htt_tx_txq_recalc(struct ieee80211_hw *hw,
+++ 	}
+++ 
+++ 	ar->htt.tx_q_state.vaddr->count[tid][peer_id] = count;
+++-	ar->htt.tx_q_state.vaddr->map[tid][idx] &= ~bit;
+++-	ar->htt.tx_q_state.vaddr->map[tid][idx] |= count ? bit : 0;
++++	ar->htt.tx_q_state.vaddr->map[tid][idx] &= ~cpu_to_le32(bit);
++++	ar->htt.tx_q_state.vaddr->map[tid][idx] |= count ? cpu_to_le32(bit) : 0;
+++ 
+++ 	ath10k_dbg(ar, ATH10K_DBG_HTT, "htt tx txq state update peer_id %u tid %u count %u\n",
+++ 		   peer_id, tid, count);
+++-- 
+++2.54.0
+++
++diff --git a/package/kernel/mac80211/patches/ath10k/993-ath10k-clear-the-htt-tx-queue-state-of-a-removed-peer.patch b/package/kernel/mac80211/patches/ath10k/993-ath10k-clear-the-htt-tx-queue-state-of-a-removed-peer.patch
++new file mode 100644
++index 00000000000..df3ce4b45d2
++--- /dev/null
+++++ b/package/kernel/mac80211/patches/ath10k/993-ath10k-clear-the-htt-tx-queue-state-of-a-removed-peer.patch
++@@ -0,0 +1,111 @@
+++From 83702250e739db338b35eda485ef73a6cfc46a91 Mon Sep 17 00:00:00 2001
+++From: Grische <opensource@grische.xyz>
+++Date: Fri, 25 Sep 2026 20:21:11 +0200
+++Subject: [PATCH ath-next 2/3] wifi: ath10k: clear the HTT tx queue state of a
+++ removed peer
+++
+++In push-pull mode the firmware fetches a host queue whenever its peer
+++bit is set in htt_q_state.map. The only writer of a peer's count and map
+++bit is __ath10k_htt_tx_txq_recalc(), which runs for a live queue, so a
+++station or vif that goes away with frames queued leaves its entries set.
+++The firmware does not reuse peer ids while it runs, so the stale entry
+++stays set for the rest of the boot.
+++
+++This causes the firmware to see queued frames for a peer that no longer
+++exists. If it then fetches that peer, the host finds no queue for it
+++and skips the record with the log
+++  "failed to lookup txq for peer_id N tid T"
+++
+++On a big-endian host with the byte-swapped map, the firmware reads such
+++a stale bit as the bit of another peer.
+++
+++Which clients were starved depends on which stations had left before,
+++so the stall appeared to move randomly between clients.
+++
+++Zero the count and clear the map bit in every TID of the peer when the
+++station or the vif is removed, and publish the change with a new
+++sequence number.
+++
+++Tested-on: QCA9984 hw1.0 PCI 10.4-3.9.0.2-00157
+++
+++Fixes: c1a43d9720d8 ("ath10k: implement updating shared htt txq state")
+++Assisted-by: LLM sparse
+++Signed-off-by: Grische <opensource@grische.xyz>
+++---
+++ drivers/net/wireless/ath/ath10k/htt.h    |  1 +
+++ drivers/net/wireless/ath/ath10k/htt_tx.c | 25 ++++++++++++++++++++++++
+++ drivers/net/wireless/ath/ath10k/mac.c    |  3 +++
+++ 3 files changed, 29 insertions(+)
+++
+++diff --git a/drivers/net/wireless/ath/ath10k/htt.h b/drivers/net/wireless/ath/ath10k/htt.h
+++index 25da8e979522..d81b32a18d3b 100644
+++--- a/drivers/net/wireless/ath/ath10k/htt.h
++++++ b/drivers/net/wireless/ath/ath10k/htt.h
+++@@ -2448,6 +2448,7 @@ void ath10k_htt_tx_txq_update(struct ieee80211_hw *hw,
+++ void ath10k_htt_tx_txq_recalc(struct ieee80211_hw *hw,
+++ 			      struct ieee80211_txq *txq);
+++ void ath10k_htt_tx_txq_sync(struct ath10k *ar);
++++void ath10k_htt_tx_txq_clear_peer(struct ath10k *ar, u16 peer_id);
+++ void ath10k_htt_tx_dec_pending(struct ath10k_htt *htt);
+++ int ath10k_htt_tx_inc_pending(struct ath10k_htt *htt);
+++ void ath10k_htt_tx_mgmt_dec_pending(struct ath10k_htt *htt);
+++diff --git a/drivers/net/wireless/ath/ath10k/htt_tx.c b/drivers/net/wireless/ath/ath10k/htt_tx.c
+++index bb91118de93a..7c2982c12587 100644
+++--- a/drivers/net/wireless/ath/ath10k/htt_tx.c
++++++ b/drivers/net/wireless/ath/ath10k/htt_tx.c
+++@@ -141,6 +141,31 @@ void ath10k_htt_tx_txq_update(struct ieee80211_hw *hw,
+++ 	spin_unlock_bh(&ar->htt.tx_lock);
+++ }
+++ 
++++void ath10k_htt_tx_txq_clear_peer(struct ath10k *ar, u16 peer_id)
++++{
++++	__le32 bit = cpu_to_le32(BIT(peer_id % 32));
++++	int idx = peer_id / 32;
++++	u8 tid;
++++
++++	spin_lock_bh(&ar->htt.tx_lock);
++++
++++	if (!ar->htt.tx_q_state.enabled ||
++++	    peer_id >= ar->htt.tx_q_state.num_peers)
++++		goto unlock;
++++
++++	for (tid = 0; tid < ar->htt.tx_q_state.num_tids; tid++) {
++++		ar->htt.tx_q_state.vaddr->count[tid][peer_id] = 0;
++++		ar->htt.tx_q_state.vaddr->map[tid][idx] &= ~bit;
++++	}
++++
++++	ath10k_dbg(ar, ATH10K_DBG_HTT, "htt tx txq state clear peer_id %u\n",
++++		   peer_id);
++++
++++	__ath10k_htt_tx_txq_sync(ar);
++++unlock:
++++	spin_unlock_bh(&ar->htt.tx_lock);
++++}
++++
+++ void ath10k_htt_tx_dec_pending(struct ath10k_htt *htt)
+++ {
+++ 	lockdep_assert_held(&htt->tx_lock);
+++diff --git a/drivers/net/wireless/ath/ath10k/mac.c b/drivers/net/wireless/ath/ath10k/mac.c
+++index 8e604697d6c2..a58222414ca8 100644
+++--- a/drivers/net/wireless/ath/ath10k/mac.c
++++++ b/drivers/net/wireless/ath/ath10k/mac.c
+++@@ -6031,6 +6031,7 @@ static void ath10k_remove_interface(struct ieee80211_hw *hw,
+++ 	spin_unlock_bh(&ar->htt.tx_lock);
+++ 
+++ 	ath10k_mac_txq_unref(ar, vif->txq);
++++	ath10k_htt_tx_txq_clear_peer(ar, arvif->peer_id);
+++ 
+++ out:
+++ 	mutex_unlock(&ar->conf_mutex);
+++@@ -7679,6 +7680,8 @@ static int ath10k_sta_state(struct ieee80211_hw *hw,
+++ 		for (i = 0; i < ARRAY_SIZE(sta->txq); i++)
+++ 			ath10k_mac_txq_unref(ar, sta->txq[i]);
+++ 
++++		ath10k_htt_tx_txq_clear_peer(ar, arsta->peer_id);
++++
+++ 		if (!sta->tdls)
+++ 			goto exit;
+++ 
+++-- 
+++2.54.0
+++
++diff --git a/package/kernel/mac80211/patches/ath10k/994-ath10k-reset-the-htt-tx-queue-state-when-the-firmware-starts.patch b/package/kernel/mac80211/patches/ath10k/994-ath10k-reset-the-htt-tx-queue-state-when-the-firmware-starts.patch
++new file mode 100644
++index 00000000000..bce0e14479f
++--- /dev/null
+++++ b/package/kernel/mac80211/patches/ath10k/994-ath10k-reset-the-htt-tx-queue-state-when-the-firmware-starts.patch
++@@ -0,0 +1,85 @@
+++From 50fea7d51d5c6f9c77057f2a74b42afa649190b7 Mon Sep 17 00:00:00 2001
+++From: Grische <opensource@grische.xyz>
+++Date: Sat, 26 Sep 2026 10:07:01 +0200
+++Subject: [PATCH ath-next 3/3] wifi: ath10k: reset the HTT tx queue state when
+++ the firmware starts
+++
+++The host allocates struct htt_q_state at the first start of the device
+++and keeps it, together with the push-pull mode fields, until the driver
+++is removed. ath10k_htt_tx_start() returns early on every later start,
+++so a firmware booted by ath10k_core_restart() or by a later
+++ath10k_start() inherits the queue state and the mode of the previous
+++firmware.
+++
+++If the old firmware was in push-pull mode, the host stays in push-pull
+++after the restart. It pushes nothing and waits for fetch indications,
+++while a firmware with WMI_SERVICE_TX_MODE_DYNAMIC starts in push mode
+++and fetches nothing. No data frame leaves the radio until the new
+++firmware reports its mode. On a QCA9984 this took 2.2 s after the
+++restart had completed, and every frame queued in that time, unicast
+++and multicast alike, waited for it or was lost. The count and map
+++entries of the old peers stay set as well, although the new firmware
+++assigns its peer ids from scratch.
+++
+++Return the mode fields and the queue state buffer to their state at the
+++first start before the firmware is booted, and sync the buffer to the
+++device.
+++
+++Tested-on: QCA9984 hw1.0 PCI 10.4-3.9.0.2-00157
+++
+++Fixes: 426e10eaf76d ("ath10k: implement push-pull tx")
+++Assisted-by: LLM sparse
+++---
+++ drivers/net/wireless/ath/ath10k/htt_tx.c | 28 +++++++++++++++++++++++-
+++ 1 file changed, 27 insertions(+), 1 deletion(-)
+++
+++diff --git a/drivers/net/wireless/ath/ath10k/htt_tx.c b/drivers/net/wireless/ath/ath10k/htt_tx.c
+++index 7c2982c12587..55f4dd30f2c3 100644
+++--- a/drivers/net/wireless/ath/ath10k/htt_tx.c
++++++ b/drivers/net/wireless/ath/ath10k/htt_tx.c
+++@@ -440,6 +440,26 @@ static int ath10k_htt_tx_alloc_txq(struct ath10k_htt *htt)
+++ 	return 0;
+++ }
+++ 
++++static void ath10k_htt_tx_txq_reset(struct ath10k_htt *htt)
++++{
++++	struct ath10k *ar = htt->ar;
++++	size_t size = sizeof(*htt->tx_q_state.vaddr);
++++
++++	spin_lock_bh(&htt->tx_lock);
++++
++++	htt->tx_q_state.enabled = false;
++++	htt->tx_q_state.mode = HTT_TX_MODE_SWITCH_PUSH;
++++	htt->tx_q_state.num_push_allowed = 0;
++++
++++	if (htt->tx_q_state.vaddr) {
++++		memset(htt->tx_q_state.vaddr, 0, size);
++++		dma_sync_single_for_device(ar->dev, htt->tx_q_state.paddr,
++++					   size, DMA_TO_DEVICE);
++++	}
++++
++++	spin_unlock_bh(&htt->tx_lock);
++++}
++++
+++ static void ath10k_htt_tx_free_txdone_fifo(struct ath10k_htt *htt)
+++ {
+++ 	WARN_ON(!kfifo_is_empty(&htt->txdone_fifo));
+++@@ -510,8 +530,14 @@ int ath10k_htt_tx_start(struct ath10k_htt *htt)
+++ 	spin_lock_init(&htt->tx_lock);
+++ 	idr_init(&htt->pending_tx);
+++ 
+++-	if (htt->tx_mem_allocated)
++++	if (htt->tx_mem_allocated) {
++++		/* The queue state buffer and the push-pull mode outlive the
++++		 * firmware. Return them to their state at the first start,
++++		 * so a new firmware does not inherit those of the old one.
++++		 */
++++		ath10k_htt_tx_txq_reset(htt);
+++ 		return 0;
++++	}
+++ 
+++ 	if (ar->bus_param.dev_type == ATH10K_DEV_TYPE_HL)
+++ 		return 0;
+++-- 
+++2.54.0
+++
++-- 
++2.54.0
++
+-- 
+2.54.0
+
