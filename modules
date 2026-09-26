@@ -17,18 +17,14 @@ PACKAGES_COMMUNITY_BRANCH=main
 #		kernel 6.18, which only OpenWrt main carries. Gluon next pins
 #		openwrt-25.12, so the target cannot be built from Gluon's own base.
 #
-#		The pin below is a branch of OpenWrt main that adds the intel-mips
-#		target, with its two switch macros driven by a DSA driver. Every
-#		target in ./targets builds on it, not only intel-mips.
-#
 #		scripts/modules.sh sources Gluon's modules file first and this one
 #		second, so these assignments override Gluon's own pin. Gluon has
 #		set OPENWRT_REPO and the others by then, which makes a
 #		${OPENWRT_REPO:-...} default a silent no-op. The escape hatch
 #		therefore uses names Gluon does not set itself.
 OPENWRT_REPO=${SITE_OPENWRT_REPO:-https://github.com/grische/openwrt.git}
-OPENWRT_BRANCH=${SITE_OPENWRT_BRANCH:-intel-mips-xrx500-dsa}
-OPENWRT_COMMIT=${SITE_OPENWRT_COMMIT:-d36c53ca930cbca073aea30b54acf3fdf5fe9ef4}
+OPENWRT_BRANCH=${SITE_OPENWRT_BRANCH:-intel-mips-xrx500}
+OPENWRT_COMMIT=${SITE_OPENWRT_COMMIT:-3aee8972efe9da1dda31a3f7a6fa1888eca2148b}
 
 ##	Routing feed
 #		Gluon next pins openwrt/routing at openwrt-25.12, whose batman-adv
