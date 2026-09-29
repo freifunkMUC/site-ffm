@@ -34,6 +34,7 @@ jobs:
           auto_merge_enabled: true
           add_author_as_reviewer: true
           comment_style: summary
+          cherry_picking_merge_mode: whitespace_tolerant
           experimental: >
             {
               "conflict_resolution": "draft_commit_conflicts"
