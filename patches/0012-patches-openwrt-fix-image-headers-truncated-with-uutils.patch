@@ -1,0 +1,121 @@
+From 2e49fd3fd494a1fc12aa39bcefd053664eaca154 Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Sat, 26 Sep 2026 12:57:06 +0200
+Subject: [PATCH] patches/openwrt: fix image headers truncated with uutils
+ coreutils
+
+Build/znet-header and Build/elx-header build a \xHH escape sequence with
+`fold -s2`, which depends on GNU fold's obsolete -WIDTH syntax. Ubuntu
+25.10 and later ship uutils coreutils instead of GNU coreutils, and
+uutils' fold rejects that invocation, prints usage to stderr and writes
+nothing. The surrounding command substitution then expands to the empty
+string, and `echo -ne "" | dd bs=N count=1 conv=sync` emits *zero* bytes
+rather than N, because conv=sync pads a partial block but never an empty
+one - so the field vanishes and every later field shifts down.
+
+The result is a silently malformed image: the build succeeds, the
+manifest checksum matches and sysupgrade accepts it, but the device's
+bootloader rejects it. On zyxel-wsm20 this makes the bootloader fall
+back to the second boot slot instead of booting the new image.
+
+Our CI still builds on Ubuntu 24.04 and is not affected yet, but any
+build on a newer Ubuntu host produces broken zyxel-wsm20 images.
+
+Carry the upstream fix (openwrt/openwrt#25410, `fold -w2`) as an OpenWrt
+patch until it is merged and backported. Of the devices this site builds
+only zyxel-wsm20 is affected; Build/elx-header is fixed at the same time
+because it has the identical defect.
+
+Link: https://github.com/openwrt/openwrt/pull/25410
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ ...aders-silently-truncated-with-uutils.patch | 76 +++++++++++++++++++
+ 1 file changed, 76 insertions(+)
+ create mode 100644 patches/openwrt/0022-build-fix-image-headers-silently-truncated-with-uutils.patch
+
+diff --git a/patches/openwrt/0022-build-fix-image-headers-silently-truncated-with-uutils.patch b/patches/openwrt/0022-build-fix-image-headers-silently-truncated-with-uutils.patch
+new file mode 100644
+index 00000000..cc18552a
+--- /dev/null
++++ b/patches/openwrt/0022-build-fix-image-headers-silently-truncated-with-uutils.patch
+@@ -0,0 +1,76 @@
++From: Grische <github@grische.xyz>
++Date: Sat, 26 Sep 2026 12:24:48 +0200
++Subject: build: fix image headers silently truncated with uutils coreutils
++
++Build/elx-header and Build/znet-header convert a hex string into \xHH
++escape sequences using `fold -s2`. This relies on the obsolete -WIDTH
++option syntax of GNU fold, which parses "-s2" as "-s -2". uutils
++coreutils does not support this syntax and fails with:
++
++  error: unexpected argument '-2' found
++
++    tip: to pass '-2' as a value, use '-- -2'
++
++Since fold writes nothing to stdout in this case, the command
++substitution expands to an empty string. The following
++`dd bs=N count=1 conv=sync` then writes zero bytes, because conv=sync
++only pads partial input blocks and never pads empty input. The header
++field is dropped entirely, and all subsequent fields move to lower
++offsets.
++
++The build still succeeds, because the failure happens inside the
++subshell which is then handed to echo.
++The malformed images are only rejected when a device tries to
++boot them.
++
++For example, on the Zyxel WSM20, the missing payload size field in the
++znet-header moves the 0x12345678 magic and the payload to unexpected
++offsets. The bootloader then rejects the image, even though sysupgrade
++accepted it.
++
++This affects all builds on Ubuntu 25.10 and later, because these
++releases use uutils coreutils by default.
++
++Replace `fold -s2` with `fold -w2`, which is the documented way to set
++the line width and produces identical output with GNU fold.
++
++Affected devices:
++- Build/znet-header is used in all images of the Zyxel WSM20 and the
++  ELECOM WRC-X1800GS
++- Build/elx-header is used in the factory images of the ELECOM
++  WAB-I1750-PS, WAB-S1167-PS, WAB-S600-PS, WRC-2533GHBK-I and
++  WRC-2533GHBK2-T, the I-O DATA WN-AC1167GR, WN-AC733GR3 and WNPR2600G,
++  the Edimax RA21S and RG21S, and the D-Link DAP-X1860 A1
++
++Signed-off-by: Grische <github@grische.xyz>
++Assisted-by: Claude:claude-opus-5
++
++diff --git a/include/image-commands.mk b/include/image-commands.mk
++index 0833650adeb6046a46298fc8d9158af3cb683cdf..9852be37b2912012c3e9fb2dc851f27b7e3c956e 100644
++--- a/include/image-commands.mk
+++++ b/include/image-commands.mk
++@@ -346,9 +346,9 @@ define Build/elx-header
++ 		hw_id="$(hw_id)"; \
++ 		echo -ne "\x$${hw_id:0:2}\x$${hw_id:2:2}\x$${hw_id:4:2}\x$${hw_id:6:2}" | \
++ 			dd bs=20 count=1 conv=sync; \
++-		echo -ne "$$(printf '%08x' $$(stat -c%s $@) | fold -s2 | xargs -I {} echo \\x{} | tr -d '\n')" | \
+++		echo -ne "$$(printf '%08x' $$(stat -c%s $@) | fold -w2 | xargs -I {} echo \\x{} | tr -d '\n')" | \
++ 			dd bs=8 count=1 conv=sync; \
++-		echo -ne "$$($(MKHASH) md5 $@ | fold -s2 | xargs -I {} echo \\x{} | tr -d '\n')" | \
+++		echo -ne "$$($(MKHASH) md5 $@ | fold -w2 | xargs -I {} echo \\x{} | tr -d '\n')" | \
++ 			dd bs=58 count=1 conv=sync; \
++ 	) > $(KDIR)/tmp/$(DEVICE_NAME).header
++ 	-$(call Build/xor-image,-p $(xor_pattern) -x) \
++diff --git a/target/linux/ramips/image/mt7621.mk b/target/linux/ramips/image/mt7621.mk
++index 4184977b27e11acddb2b2f8a002b889f12f3c456..24c73543be2a87dbc581888ae024b60f4aeb7e48 100644
++--- a/target/linux/ramips/image/mt7621.mk
+++++ b/target/linux/ramips/image/mt7621.mk
++@@ -182,7 +182,7 @@ define Build/znet-header
++ 		payload_size_crc="$$(dd if=$@ ibs=1 count=$$payload_len 2>/dev/null | gzip -c | \
++ 			tail -c 8 | od -An -N4 -tx4 --endian big | tr -d ' \n')"; \
++ 		echo -ne "$(magic)" | dd bs=4 count=1 conv=sync 2>/dev/null; \
++-		echo -ne "$$(printf '%08x' $$(stat -c%s $@) | fold -s2 | xargs -I {} echo \\x{} | tac | tr -d '\n')" | \
+++		echo -ne "$$(printf '%08x' $$(stat -c%s $@) | fold -w2 | xargs -I {} echo \\x{} | tac | tr -d '\n')" | \
++ 			dd bs=4 count=1 conv=sync 2>/dev/null; \
++ 		echo -ne "$$(echo $$data_size_crc | sed 's/../\\x&/g')" | \
++ 			dd bs=4 count=1 conv=sync 2>/dev/null; \
+-- 
+2.54.0
+
