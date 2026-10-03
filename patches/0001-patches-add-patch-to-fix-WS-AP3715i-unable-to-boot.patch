@@ -1,0 +1,301 @@
+From 6ace9a58677cf05b214dcc78b67210954f661445 Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Sat, 3 Oct 2026 10:40:40 +0200
+Subject: [PATCH] patches: add patch to fix WS-AP3715i unable to boot
+
+Backport of https://github.com/openwrt/openwrt/pull/25541
+---
+ ...-relocate-AP3825i-simpleImage-loader.patch |  67 +++++++
+ .../0015-mpc85xx-refresh-kernel-patch.patch   |  35 ++++
+ ...apper-address-of-simple-image-device.patch | 163 ++++++++++++++++++
+ 3 files changed, 265 insertions(+)
+ create mode 100644 patches/openwrt/0014-mpc85xx-relocate-AP3825i-simpleImage-loader.patch
+ create mode 100644 patches/openwrt/0015-mpc85xx-refresh-kernel-patch.patch
+ create mode 100644 patches/openwrt/0016-mpc85xx-unify-wrapper-address-of-simple-image-device.patch
+
+diff --git a/patches/openwrt/0014-mpc85xx-relocate-AP3825i-simpleImage-loader.patch b/patches/openwrt/0014-mpc85xx-relocate-AP3825i-simpleImage-loader.patch
+new file mode 100644
+index 00000000..98db7a2e
+--- /dev/null
++++ b/patches/openwrt/0014-mpc85xx-relocate-AP3825i-simpleImage-loader.patch
+@@ -0,0 +1,67 @@
++From 32aaf85a3c5f4ae3255b3782d1d748d1b389bea5 Mon Sep 17 00:00:00 2001
++From: David Bauer <mail@david-bauer.net>
++Date: Wed, 12 Nov 2025 19:51:13 +0100
++Subject: [PATCH 14/16] mpc85xx: relocate AP3825i simpleImage loader
++
++The initramfs images beginning 24.10 do not boot on the AP3825i. The
++space available for decompression preceeding the compressed image is not
++enough, crashing the system.
++
++To make existing installation instructions continue to work, link the
++loader at an address following the loadaddress of the U-Boot image.
++
++Signed-off-by: David Bauer <mail@david-bauer.net>
++(cherry picked from commit 4afaacdd7f578d4e365d0cfac44b5a614650adb3)
++[apply the change to patches-6.6 instead of patches-6.12]
++
++Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
++Signed-off-by: Grische <github@grische.xyz>
++---
++ target/linux/mpc85xx/image/p1020.mk                |  4 ++--
++ .../107-powerpc-85xx-add-ws-ap3825i-support.patch  | 14 ++++++++------
++ 2 files changed, 10 insertions(+), 8 deletions(-)
++
++diff --git a/target/linux/mpc85xx/image/p1020.mk b/target/linux/mpc85xx/image/p1020.mk
++index c310b26c87d..a40e2620bd1 100644
++--- a/target/linux/mpc85xx/image/p1020.mk
+++++ b/target/linux/mpc85xx/image/p1020.mk
++@@ -83,8 +83,8 @@ define Device/extreme-networks_ws-ap3825i
++   DEVICE_PACKAGES := kmod-ath10k-ct ath10k-firmware-qca988x-ct
++   BLOCKSIZE := 128k
++   KERNEL_NAME := simpleImage.ws-ap3825i
++-  KERNEL_ENTRY := 0x1500000
++-  KERNEL_LOADADDR := 0x1500000
+++  KERNEL_ENTRY := 0x3000000
+++  KERNEL_LOADADDR := 0x3000000
++   KERNEL = kernel-bin | fit none $(KDIR)/image-$$(DEVICE_DTS).dtb
++   IMAGES := sysupgrade.bin
++   IMAGE/sysupgrade.bin := append-kernel | append-rootfs | pad-rootfs | append-metadata
++diff --git a/target/linux/mpc85xx/patches-6.6/107-powerpc-85xx-add-ws-ap3825i-support.patch b/target/linux/mpc85xx/patches-6.6/107-powerpc-85xx-add-ws-ap3825i-support.patch
++index 9d96081c9df..622c1e0f9bf 100644
++--- a/target/linux/mpc85xx/patches-6.6/107-powerpc-85xx-add-ws-ap3825i-support.patch
+++++ b/target/linux/mpc85xx/patches-6.6/107-powerpc-85xx-add-ws-ap3825i-support.patch
++@@ -55,13 +55,15 @@ WS-AP3825i AP.
++  
++ --- a/arch/powerpc/boot/wrapper
++ +++ b/arch/powerpc/boot/wrapper
++-@@ -350,7 +350,8 @@ adder875-redboot)
+++@@ -355,6 +355,11 @@ simpleboot-ws-ap3710i)
+++     link_address='0x1500000'
+++     binary=y
++      ;;
++- simpleboot-hiveap-330|\
++- simpleboot-tl-wdr4900-v1|\
++--simpleboot-ws-ap3710i)
++-+simpleboot-ws-ap3710i|\
++ +simpleboot-ws-ap3825i)
++++    platformo="$object/fixed-head.o $object/simpleboot.o"
++++    link_address='0x3000000'
++++    binary=y
++++    ;;
+++ simpleboot-*)
++      platformo="$object/fixed-head.o $object/simpleboot.o"
++-     link_address='0x1500000'
++      binary=y
++-- 
++2.54.0
++
+diff --git a/patches/openwrt/0015-mpc85xx-refresh-kernel-patch.patch b/patches/openwrt/0015-mpc85xx-refresh-kernel-patch.patch
+new file mode 100644
+index 00000000..5a03c527
+--- /dev/null
++++ b/patches/openwrt/0015-mpc85xx-refresh-kernel-patch.patch
+@@ -0,0 +1,35 @@
++From e39b2548de278461d3d8e2d00e39d4d06f99a125 Mon Sep 17 00:00:00 2001
++From: =?UTF-8?q?=C3=81lvaro=20Fern=C3=A1ndez=20Rojas?= <noltari@gmail.com>
++Date: Thu, 20 Nov 2025 10:26:07 +0100
++Subject: [PATCH 15/16] mpc85xx: refresh kernel patch
++MIME-Version: 1.0
++Content-Type: text/plain; charset=UTF-8
++Content-Transfer-Encoding: 8bit
++
++Commit 4afaacdd7f57 changed 107-powerpc-85xx-add-ws-ap3825i-support.patch
++without refreshing the rest of the patches.
++
++4afaacdd7f57 mpc85xx: relocate AP3825i simpleImage loader
++Signed-off-by: Álvaro Fernández Rojas <noltari@gmail.com>
++(cherry picked from commit 15fb19cdb31c7ee33437b1182fea15d9848527a4)
++[apply the change to patches-6.6 instead of patches-6.12]
++
++Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
++Signed-off-by: Grische <github@grische.xyz>
++---
++ .../mpc85xx/patches-6.6/110-powerpc-85xx-br200-wp-support.patch | 2 +-
++ 1 file changed, 1 insertion(+), 1 deletion(-)
++
++diff --git a/target/linux/mpc85xx/patches-6.6/110-powerpc-85xx-br200-wp-support.patch b/target/linux/mpc85xx/patches-6.6/110-powerpc-85xx-br200-wp-support.patch
++index 5174e938f01..b6d399dcc71 100644
++--- a/target/linux/mpc85xx/patches-6.6/110-powerpc-85xx-br200-wp-support.patch
+++++ b/target/linux/mpc85xx/patches-6.6/110-powerpc-85xx-br200-wp-support.patch
++@@ -54,4 +54,4 @@
++ +simpleboot-br200-wp|\
++  simpleboot-hiveap-330|\
++  simpleboot-tl-wdr4900-v1|\
++- simpleboot-ws-ap3710i|\
+++ simpleboot-ws-ap3710i)
++-- 
++2.54.0
++
+diff --git a/patches/openwrt/0016-mpc85xx-unify-wrapper-address-of-simple-image-device.patch b/patches/openwrt/0016-mpc85xx-unify-wrapper-address-of-simple-image-device.patch
+new file mode 100644
+index 00000000..a16046ad
+--- /dev/null
++++ b/patches/openwrt/0016-mpc85xx-unify-wrapper-address-of-simple-image-device.patch
+@@ -0,0 +1,163 @@
++From af523ab12825c7b667ae9e3e773d3bf8b8f70ef5 Mon Sep 17 00:00:00 2001
++From: Edward Chow <equu@openmail.cc>
++Date: Mon, 27 Apr 2026 11:13:51 +0800
++Subject: [PATCH 16/16] mpc85xx: unify wrapper address of simple image devices
++
++The wrapper address of simple image devices should have been changed
++at commit 6a8b831 , but only TL-WDR4900 and BR200-WP are changed at
++that time, and now the wrapper address changes are split among patches
++for specific devices. More importantly, commit 6a8b831 forgot to
++change Enterasys WS-AP3715i, causing
++https://github.com/openwrt/openwrt/issues/23112 .
++
++This commit will gather the change of wrapper address of simple image
++devices into a dedicated patch file.
++
++Tested: Both WS-AP3715i and TL-WDR4900 v1 boot well.
++
++Fixes: https://github.com/openwrt/openwrt/issues/23112
++Signed-off-by: Edward Chow <equu@openmail.cc>
++Link: https://github.com/openwrt/openwrt/pull/23121
++Signed-off-by: Robert Marko <robimarko@gmail.com>
++(cherry picked from commit 9836f7ca132b705bb0593897a29f8ddab150ecc1)
++[apply the patches-6.12 changes to patches-6.6, drop the patches-6.18 changes]
++
++Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
++Signed-off-by: Grische <github@grische.xyz>
++---
++ ...rapper-address-of-simple-image-devices.patch | 10 ++++++++++
++ ...100-powerpc-85xx-tl-wdr4900-v1-support.patch | 17 +----------------
++ .../101-powerpc-85xx-hiveap-330-support.patch   | 10 ----------
++ .../106-powerpc-85xx-ws-ap3710i-support.patch   | 12 ------------
++ ...07-powerpc-85xx-add-ws-ap3825i-support.patch |  4 ++--
++ .../110-powerpc-85xx-br200-wp-support.patch     | 10 ----------
++ 6 files changed, 13 insertions(+), 50 deletions(-)
++ create mode 100644 target/linux/mpc85xx/patches-6.6/099-mpc85xx-p1010-change-wrapper-address-of-simple-image-devices.patch
++
++diff --git a/target/linux/mpc85xx/patches-6.6/099-mpc85xx-p1010-change-wrapper-address-of-simple-image-devices.patch b/target/linux/mpc85xx/patches-6.6/099-mpc85xx-p1010-change-wrapper-address-of-simple-image-devices.patch
++new file mode 100644
++index 00000000000..8888121e6d1
++--- /dev/null
+++++ b/target/linux/mpc85xx/patches-6.6/099-mpc85xx-p1010-change-wrapper-address-of-simple-image-devices.patch
++@@ -0,0 +1,10 @@
+++--- a/arch/powerpc/boot/wrapper
++++++ b/arch/powerpc/boot/wrapper
+++@@ -351,6 +351,7 @@ adder875-redboot)
+++ simpleboot-*)
+++     platformo="$object/fixed-head.o $object/simpleboot.o"
+++     binary=y
++++    link_address='0x1500000'
+++     ;;
+++ asp834x-redboot)
+++     platformo="$object/fixed-head.o $object/redboot-83xx.o"
++diff --git a/target/linux/mpc85xx/patches-6.6/100-powerpc-85xx-tl-wdr4900-v1-support.patch b/target/linux/mpc85xx/patches-6.6/100-powerpc-85xx-tl-wdr4900-v1-support.patch
++index 0dbe4d84947..a860971f708 100644
++--- a/target/linux/mpc85xx/patches-6.6/100-powerpc-85xx-tl-wdr4900-v1-support.patch
+++++ b/target/linux/mpc85xx/patches-6.6/100-powerpc-85xx-tl-wdr4900-v1-support.patch
++@@ -12,10 +12,9 @@ Signed-off-by: Gabor Juhos <juhosg@openwrt.org>
++ Signed-off-by: Pawel Dembicki <paweldembicki@gmail.com>
++ ---
++  arch/powerpc/boot/Makefile           |  3 ++-
++- arch/powerpc/boot/wrapper            |  5 +++++
++  arch/powerpc/platforms/85xx/Kconfig  | 12 ++++++++++++
++  arch/powerpc/platforms/85xx/Makefile |  1 +
++- 4 files changed, 20 insertions(+), 1 deletion(-)
+++ 4 files changed, 15 insertions(+), 1 deletion(-)
++ 
++ --- a/arch/powerpc/boot/Makefile
++ +++ b/arch/powerpc/boot/Makefile
++@@ -36,20 +35,6 @@ Signed-off-by: Pawel Dembicki <paweldembicki@gmail.com>
++  # Board ports in arch/powerpc/platform/86xx/Kconfig
++  image-$(CONFIG_MVME7100)                += dtbImage.mvme7100
++  
++---- a/arch/powerpc/boot/wrapper
++-+++ b/arch/powerpc/boot/wrapper
++-@@ -348,6 +348,11 @@ adder875-redboot)
++-     platformo="$object/fixed-head.o $object/redboot-8xx.o"
++-     binary=y
++-     ;;
++-+simpleboot-tl-wdr4900-v1)
++-+    platformo="$object/fixed-head.o $object/simpleboot.o"
++-+    link_address='0x1500000'
++-+    binary=y
++-+    ;;
++- simpleboot-*)
++-     platformo="$object/fixed-head.o $object/simpleboot.o"
++-     binary=y
++ --- a/arch/powerpc/platforms/85xx/Kconfig
++ +++ b/arch/powerpc/platforms/85xx/Kconfig
++ @@ -176,6 +176,18 @@ config STX_GP3
++diff --git a/target/linux/mpc85xx/patches-6.6/101-powerpc-85xx-hiveap-330-support.patch b/target/linux/mpc85xx/patches-6.6/101-powerpc-85xx-hiveap-330-support.patch
++index 1c6f7878a0f..f7bac50b7cc 100644
++--- a/target/linux/mpc85xx/patches-6.6/101-powerpc-85xx-hiveap-330-support.patch
+++++ b/target/linux/mpc85xx/patches-6.6/101-powerpc-85xx-hiveap-330-support.patch
++@@ -46,13 +46,3 @@
++  image-$(CONFIG_TL_WDR4900_V1)		+= simpleImage.tl-wdr4900-v1
++  # Board ports in arch/powerpc/platform/86xx/Kconfig
++  image-$(CONFIG_MVME7100)                += dtbImage.mvme7100
++---- a/arch/powerpc/boot/wrapper
++-+++ b/arch/powerpc/boot/wrapper
++-@@ -348,6 +348,7 @@ adder875-redboot)
++-     platformo="$object/fixed-head.o $object/redboot-8xx.o"
++-     binary=y
++-     ;;
++-+simpleboot-hiveap-330|\
++- simpleboot-tl-wdr4900-v1)
++-     platformo="$object/fixed-head.o $object/simpleboot.o"
++-     link_address='0x1500000'
++diff --git a/target/linux/mpc85xx/patches-6.6/106-powerpc-85xx-ws-ap3710i-support.patch b/target/linux/mpc85xx/patches-6.6/106-powerpc-85xx-ws-ap3710i-support.patch
++index 4276effed22..6197d429d8d 100644
++--- a/target/linux/mpc85xx/patches-6.6/106-powerpc-85xx-ws-ap3710i-support.patch
+++++ b/target/linux/mpc85xx/patches-6.6/106-powerpc-85xx-ws-ap3710i-support.patch
++@@ -46,15 +46,3 @@
++  # Board ports in arch/powerpc/platform/86xx/Kconfig
++  image-$(CONFIG_MVME7100)                += dtbImage.mvme7100
++  
++---- a/arch/powerpc/boot/wrapper
++-+++ b/arch/powerpc/boot/wrapper
++-@@ -349,7 +349,8 @@ adder875-redboot)
++-     binary=y
++-     ;;
++- simpleboot-hiveap-330|\
++--simpleboot-tl-wdr4900-v1)
++-+simpleboot-tl-wdr4900-v1|\
++-+simpleboot-ws-ap3710i)
++-     platformo="$object/fixed-head.o $object/simpleboot.o"
++-     link_address='0x1500000'
++-     binary=y
++diff --git a/target/linux/mpc85xx/patches-6.6/107-powerpc-85xx-add-ws-ap3825i-support.patch b/target/linux/mpc85xx/patches-6.6/107-powerpc-85xx-add-ws-ap3825i-support.patch
++index 622c1e0f9bf..380e74d7332 100644
++--- a/target/linux/mpc85xx/patches-6.6/107-powerpc-85xx-add-ws-ap3825i-support.patch
+++++ b/target/linux/mpc85xx/patches-6.6/107-powerpc-85xx-add-ws-ap3825i-support.patch
++@@ -55,8 +55,8 @@ WS-AP3825i AP.
++  
++ --- a/arch/powerpc/boot/wrapper
++ +++ b/arch/powerpc/boot/wrapper
++-@@ -355,6 +355,11 @@ simpleboot-ws-ap3710i)
++-     link_address='0x1500000'
+++@@ -348,6 +348,11 @@ adder875-redboot)
+++     platformo="$object/fixed-head.o $object/redboot-8xx.o"
++      binary=y
++      ;;
++ +simpleboot-ws-ap3825i)
++diff --git a/target/linux/mpc85xx/patches-6.6/110-powerpc-85xx-br200-wp-support.patch b/target/linux/mpc85xx/patches-6.6/110-powerpc-85xx-br200-wp-support.patch
++index b6d399dcc71..da1b29630d6 100644
++--- a/target/linux/mpc85xx/patches-6.6/110-powerpc-85xx-br200-wp-support.patch
+++++ b/target/linux/mpc85xx/patches-6.6/110-powerpc-85xx-br200-wp-support.patch
++@@ -45,13 +45,3 @@
++  image-$(CONFIG_HIVEAP_330)		+= simpleImage.hiveap-330
++  image-$(CONFIG_TL_WDR4900_V1)		+= simpleImage.tl-wdr4900-v1
++  image-$(CONFIG_WS_AP3710I)		+= simpleImage.ws-ap3710i
++---- a/arch/powerpc/boot/wrapper
++-+++ b/arch/powerpc/boot/wrapper
++-@@ -348,6 +348,7 @@ adder875-redboot)
++-     platformo="$object/fixed-head.o $object/redboot-8xx.o"
++-     binary=y
++-     ;;
++-+simpleboot-br200-wp|\
++- simpleboot-hiveap-330|\
++- simpleboot-tl-wdr4900-v1|\
++- simpleboot-ws-ap3710i)
++-- 
++2.54.0
++
+-- 
+2.54.0
+
