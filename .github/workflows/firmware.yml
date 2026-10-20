@@ -59,14 +59,26 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - name: Install build dependencies
+      - name: Pull build container
+        id: image
         run: |
-          sudo -E ./scripts/install_build_dependencies.sh
+          image=$(sed -n 's/^FROM //p' Dockerfile_build)
+          tag=${image#*:}; tag=${tag%%@*}
+          ref=$(sed -n 's/^GLUON_GIT_REF := //p' Makefile)
+          if [ "$tag" != "$ref" ]; then
+            echo "::error file=Dockerfile_build::gluon-build tag $tag does not match GLUON_GIT_REF $ref in the Makefile"
+            exit 1
+          fi
+          docker pull -q "$image"
+          echo "image=$image" >> "$GITHUB_OUTPUT"
       - name: build target ${{ matrix.target }}
         id: compile
+        env:
+          IMAGE: ${{ steps.image.outputs.image }}
         run: |
           git checkout -b patched ${{ github.event.pull_request.head.sha || github.sha }}
-          make BROKEN=1 GLUON_TARGETS=${{ matrix.target }} BUILD_NUMBER=${{ github.event.pull_request.number && format('pr{0}', github.event.pull_request.number) || github.run_id && format('run{0}', github.run_id) }} V=s
+          docker run --rm -v "$PWD:/site-ffm" -w /site-ffm --user "$(id -u):$(id -g)" -e HOME=/tmp "$IMAGE" \
+            make BROKEN=1 GLUON_TARGETS=${{ matrix.target }} BUILD_NUMBER=${{ github.event.pull_request.number && format('pr{0}', github.event.pull_request.number) || github.run_id && format('run{0}', github.run_id) }} V=s
           echo "status=success" >> $GITHUB_OUTPUT
       - name: Upload firmware ${{ matrix.target }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
