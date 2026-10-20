@@ -23,13 +23,13 @@ make
 
 ### Containerised building
 
-As the CI is using Ubuntu, only the Ubuntu dependencies are being tracked. To simplify building on other distros, containerised building is also possible:
+The CI builds inside the official Gluon build container ([gluon-build](https://github.com/freifunk-gluon/gluon/pkgs/container/gluon-build)), pinned in [Dockerfile_build](Dockerfile_build) to the Gluon release from the Makefile (on gluon-next, which pins a commit, to the `next` container). The same container can be used locally:
 
 ```sh
 docker build -t site-ffm-$(git rev-parse --abbrev-ref HEAD) -f Dockerfile_build .
 ```
 
-This will build the build Docker image. With the following export, the Makefile will then use the repo for building but will run inside an Ubuntu container.\
+With the following command, the Makefile will then use the repo for building but will run inside the container.\
 **Note**: If the working directory is a git worktree, add a volume mount for the main git folder.
 
 ```sh
