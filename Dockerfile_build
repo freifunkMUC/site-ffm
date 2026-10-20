@@ -1,6 +1,2 @@
-FROM ubuntu:24.04
-
-ADD ./scripts/install_build_dependencies.sh /
-RUN /install_build_dependencies.sh \
-    && apt-get clean \
-    && rm -r /var/lib/apt/lists/*
+# Official Gluon build container; the tag must match GLUON_GIT_REF in the Makefile (checked in CI)
+FROM ghcr.io/freifunk-gluon/gluon-build:v2025.1.3@sha256:bcdadee419a54aa34b39150297deb2a9d6b95580cff72e45b4647b2d294f6455
