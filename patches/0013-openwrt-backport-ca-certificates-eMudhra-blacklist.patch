@@ -1,0 +1,77 @@
+From 9f33bc8dbfb8fc903c7c6c8219c03107967ff2d0 Mon Sep 17 00:00:00 2001
+From: GoliathLabs <git@xdfr.de>
+Date: Wed, 21 Oct 2026 16:20:27 +0200
+Subject: [PATCH] openwrt: backport ca-certificates eMudhra blacklist from
+ openwrt main
+
+---
+ ...ates-blacklist-emSign-ECC-Root-CA-G3.patch | 57 +++++++++++++++++++
+ 1 file changed, 57 insertions(+)
+ create mode 100644 patches/openwrt/0099-ca-certificates-blacklist-emSign-ECC-Root-CA-G3.patch
+
+diff --git a/patches/openwrt/0099-ca-certificates-blacklist-emSign-ECC-Root-CA-G3.patch b/patches/openwrt/0099-ca-certificates-blacklist-emSign-ECC-Root-CA-G3.patch
+new file mode 100644
+index 00000000..39c7d186
+--- /dev/null
++++ b/patches/openwrt/0099-ca-certificates-blacklist-emSign-ECC-Root-CA-G3.patch
+@@ -0,0 +1,57 @@
++From: Hauke Mehrtens <hauke@hauke-m.de>
++Date: Wed, 21 Oct 2026 01:07:45 +0200
++Subject: ca-certificates: blacklist "emSign ECC Root CA - G3"
++
++This blacklists the "emSign ECC Root CA - G3" CA certificate which
++issued some intermediate CA certificates for eMudhra with 8 bit private
++keys between 0 and 255.
++
++"Comodo AAA Services root" is also blacklisted by Debian, but already
++removed in update 20260223.
++
++Link: https://github.com/openwrt/openwrt/pull/26066
++Signed-off-by: Hauke Mehrtens <hauke@hauke-m.de>
++
++diff --git a/package/system/ca-certificates/Makefile b/package/system/ca-certificates/Makefile
++index 587aa572df9ca4..a58281b40e80a7 100644
++--- a/package/system/ca-certificates/Makefile
+++++ b/package/system/ca-certificates/Makefile
++@@ -8,7 +8,7 @@ include $(TOPDIR)/rules.mk
++ 
++ PKG_NAME:=ca-certificates
++ PKG_VERSION:=20260816
++-PKG_RELEASE:=1
+++PKG_RELEASE:=2
++ PKG_MAINTAINER:=
++ 
++ PKG_LICENSE:=GPL-2.0-or-later MPL-2.0
++diff --git a/package/system/ca-certificates/patches/0002-blacklist-certs.patch b/package/system/ca-certificates/patches/0002-blacklist-certs.patch
++new file mode 100644
++index 00000000000000..74b34a6db80563
++--- /dev/null
+++++ b/package/system/ca-certificates/patches/0002-blacklist-certs.patch
++@@ -0,0 +1,24 @@
+++From 4a0203e5ce4ce1a064b97387f52ca6a00c97185c Mon Sep 17 00:00:00 2001
+++From: Salvatore Bonaccorso <carnil@debian.org>
+++Date: Tue, 20 Oct 2026 16:39:15 +0200
+++Subject: [PATCH] Blacklist "emSign ECC Root CA - G3" and "Comodo AAA Services
+++ root"
+++
+++Closes: #1151413
+++Source: https://salsa.debian.org/debian/ca-certificates/-/commit/4a0203e5ce4ce1a064b97387f52ca6a00c97185c
+++---
+++ mozilla/blacklist.txt | 5 +++++
+++ 1 file changed, 5 insertions(+)
+++
+++--- a/mozilla/blacklist.txt
++++++ b/mozilla/blacklist.txt
+++@@ -3,4 +3,9 @@
+++ # Blacklist explicitly distrusted certificates to explicitly ignore them and prevent build errors
+++ "Explicitly Distrust DigiNotar Root CA"
+++ 
++++# Blacklist "emSign ECC Root CA - G3" (cf. #1151413)
++++"emSign ECC Root CA - G3"
++++# Blacklist "Comodo AAA Services root" (cf. #1151413)
++++"Comodo AAA Services root"
++++
+++ # Expired CAs
+-- 
+2.43.0
+
