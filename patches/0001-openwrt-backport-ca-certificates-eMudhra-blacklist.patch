@@ -1,0 +1,64 @@
+From 73c646e7dc478dffee3d81b3850bd809369d24c5 Mon Sep 17 00:00:00 2001
+From: GoliathLabs <git@xdfr.de>
+Date: Wed, 21 Oct 2026 13:53:57 +0200
+Subject: [PATCH] openwrt: backport ca-certificates eMudhra blacklist
+
+---
+ ...t-CA-G3-and-Comodo-AAA-Services-root.patch | 48 +++++++++++++++++++
+ 1 file changed, 48 insertions(+)
+ create mode 100644 patches/openwrt/0099-ca-certificates-blacklist-emSign-ECC-Root-CA-G3-and-Comodo-AAA-Services-root.patch
+
+diff --git a/patches/openwrt/0099-ca-certificates-blacklist-emSign-ECC-Root-CA-G3-and-Comodo-AAA-Services-root.patch b/patches/openwrt/0099-ca-certificates-blacklist-emSign-ECC-Root-CA-G3-and-Comodo-AAA-Services-root.patch
+new file mode 100644
+index 00000000..7499e496
+--- /dev/null
++++ b/patches/openwrt/0099-ca-certificates-blacklist-emSign-ECC-Root-CA-G3-and-Comodo-AAA-Services-root.patch
+@@ -0,0 +1,48 @@
++From: GoliathLabs <git@xdfr.de>
++Date: Wed, 21 Oct 2026 13:53:25 +0200
++Subject: ca-certificates: blacklist "emSign ECC Root CA - G3" and "Comodo AAA Services root"
++
++Backport of openwrt/openwrt@63f702f1c0ce (Debian #1151413) to
++ca-certificates 20200601: blacklist "emSign ECC Root CA - G3", whose
++intermediates for eMudhra had recoverable private keys, and
++"Comodo AAA Services root", which is still trusted in this version.
++
++diff --git a/package/system/ca-certificates/Makefile b/package/system/ca-certificates/Makefile
++index 239b442ebd87974742c34f9930b9f6b3af1c2f76..4aaecf5ecf5facf0e65577eba1f27f69071f0cea 100644
++--- a/package/system/ca-certificates/Makefile
+++++ b/package/system/ca-certificates/Makefile
++@@ -8,7 +8,7 @@ include $(TOPDIR)/rules.mk
++ 
++ PKG_NAME:=ca-certificates
++ PKG_VERSION:=20200601
++-PKG_RELEASE:=1
+++PKG_RELEASE:=2
++ PKG_MAINTAINER:=
++ 
++ PKG_SOURCE:=$(PKG_NAME)_$(PKG_VERSION).tar.xz
++diff --git a/package/system/ca-certificates/patches/0001-blacklist-certs.patch b/package/system/ca-certificates/patches/0001-blacklist-certs.patch
++new file mode 100644
++index 0000000000000000000000000000000000000000..59d26506358b8ed1714483a8b3aded97fe8bc152
++--- /dev/null
+++++ b/package/system/ca-certificates/patches/0001-blacklist-certs.patch
++@@ -0,0 +1,20 @@
+++From: Salvatore Bonaccorso <carnil@debian.org>
+++Date: Tue, 20 Oct 2026 16:39:15 +0200
+++Subject: [PATCH] Blacklist "emSign ECC Root CA - G3" and "Comodo AAA Services
+++ root"
+++
+++Closes: #1151413
+++Source: https://salsa.debian.org/debian/ca-certificates/-/commit/4a0203e5ce4ce1a064b97387f52ca6a00c97185c
+++[rebased onto ca-certificates 20200601]
+++---
+++--- a/mozilla/blacklist.txt
++++++ b/mozilla/blacklist.txt
+++@@ -37,3 +37,8 @@
+++ # Blacklist expired certificate (Not After : May 30 10:48:38 2020 GMT)
+++ # See: https://bugs.debian.org/961907
+++ "AddTrust External Root"
++++
++++# Blacklist "emSign ECC Root CA - G3" (cf. #1151413)
++++"emSign ECC Root CA - G3"
++++# Blacklist "Comodo AAA Services root" (cf. #1151413)
++++"Comodo AAA Services root"
