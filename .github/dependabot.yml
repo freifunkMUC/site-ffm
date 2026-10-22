@@ -10,3 +10,8 @@ updates:
     schedule:
       # Check for updates to GitHub Actions once a week
       interval: "weekly"
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      # The gluon-build tag follows GLUON_GIT_REF; CI fails until both match
+      interval: "weekly"
