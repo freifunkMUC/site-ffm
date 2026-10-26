@@ -1,4 +1,6 @@
-![Build ffmuc firmware](https://github.com/freifunkMUC/site-ffm/workflows/Build%20ffmuc%20firmware/badge.svg)
+> [!WARNING]
+> **This branch is no longer maintained** (since August 2026) and will not receive any further updates or backports.
+> Please use [gluon-v2025.1.x](https://github.com/freifunkMUC/site-ffm/tree/gluon-v2025.1.x) or [gluon-v2023.1.x](https://github.com/freifunkMUC/site-ffm/tree/gluon-v2023.1.x) instead.
 
 ## Dependencies
 
