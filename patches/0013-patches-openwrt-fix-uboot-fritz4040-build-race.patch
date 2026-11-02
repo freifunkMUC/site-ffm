@@ -1,0 +1,111 @@
+From 10b9ebd4b91e5ab2f20458f41c5d56d83a27ca9b Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Fri, 7 Aug 2026 07:01:56 +0000
+Subject: [PATCH] patches/openwrt: fix uboot-fritz4040 build race
+
+The ipq40xx-generic CI job fails intermittently while building the
+uboot-fritz4040 fritz7520 variant:
+
+  include/configs/ipq40xx_cdp.h:108:37: error: 'GENERATED_GBL_DATA_SIZE' undeclared here (not in a function)
+  make[7]: *** [Makefile:652: arch/arm/cpu/armv7/qca/asm-offsets.s] Error 1
+
+The SoC asm-offsets pass reads include/generated/generic-asm-offsets.h but
+does not depend on it, and OpenWrt builds u-boot with PKG_BUILD_PARALLEL=1,
+so the two rules race. Carry the missing dependency as an OpenWrt package
+patch until it is upstream.
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+---
+ ...fix-intermittent-parallel-build-fail.patch | 83 +++++++++++++++++++
+ 1 file changed, 83 insertions(+)
+ create mode 100644 patches/openwrt/0020-uboot-fritz4040-fix-intermittent-parallel-build-fail.patch
+
+diff --git a/patches/openwrt/0020-uboot-fritz4040-fix-intermittent-parallel-build-fail.patch b/patches/openwrt/0020-uboot-fritz4040-fix-intermittent-parallel-build-fail.patch
+new file mode 100644
+index 00000000..37f76f20
+--- /dev/null
++++ b/patches/openwrt/0020-uboot-fritz4040-fix-intermittent-parallel-build-fail.patch
+@@ -0,0 +1,83 @@
++From 32f793da96f9f125ef009121028595920be5a800 Mon Sep 17 00:00:00 2001
++From: Grische <github@grische.xyz>
++Date: Fri, 7 Aug 2026 07:01:06 +0000
++Subject: [PATCH] uboot-fritz4040: fix intermittent parallel build failure
++
++include/configs/ipq40xx_cdp.h needs GENERATED_GBL_DATA_SIZE from
++include/generated/generic-asm-offsets.h while the SoC specific
++arch/arm/cpu/armv7/qca/asm-offsets.s is generated, but the u-boot Makefile
++does not declare that dependency. u-boot is built with PKG_BUILD_PARALLEL=1,
++so both rules can run at the same time and the SoC pass then reads a missing
++or half-written header:
++
++  include/configs/ipq40xx_cdp.h:108:37: error: 'GENERATED_GBL_DATA_SIZE' undeclared here (not in a function)
++  make[7]: *** [Makefile:652: arch/arm/cpu/armv7/qca/asm-offsets.s] Error 1
++
++It only triggers when at least two jobserver tokens are free at that moment,
++which is why the same tree builds fine most of the time.
++
++Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
++---
++ package/boot/uboot-fritz4040/Makefile         |  2 +-
++ ...e-generate-generic-asm-offsets-first.patch | 39 +++++++++++++++++++
++ 2 files changed, 40 insertions(+), 1 deletion(-)
++ create mode 100644 package/boot/uboot-fritz4040/patches/001-Makefile-generate-generic-asm-offsets-first.patch
++
++diff --git a/package/boot/uboot-fritz4040/Makefile b/package/boot/uboot-fritz4040/Makefile
++index 6fa4d14814a..ee0fc60d374 100644
++--- a/package/boot/uboot-fritz4040/Makefile
+++++ b/package/boot/uboot-fritz4040/Makefile
++@@ -14,7 +14,7 @@ PKG_SOURCE_VERSION:=9d89013f9cc963eca25856c61fa066091d35f8de
++ PKG_SOURCE_DATE:=2022-05-01
++ PKG_MIRROR_HASH:=4e8106a7877ae6aa8da44bf95401b860d11f7d51417cc5a61ce59a353d4ee866
++ 
++-PKG_RELEASE:=5
+++PKG_RELEASE:=6
++ 
++ include $(INCLUDE_DIR)/u-boot.mk
++ include $(INCLUDE_DIR)/package.mk
++diff --git a/package/boot/uboot-fritz4040/patches/001-Makefile-generate-generic-asm-offsets-first.patch b/package/boot/uboot-fritz4040/patches/001-Makefile-generate-generic-asm-offsets-first.patch
++new file mode 100644
++index 00000000000..ea5e39f47d4
++--- /dev/null
+++++ b/package/boot/uboot-fritz4040/patches/001-Makefile-generate-generic-asm-offsets-first.patch
++@@ -0,0 +1,39 @@
+++From: Grische <github@grische.xyz>
+++Date: Fri, 7 Aug 2026 07:00:00 +0000
+++Subject: [PATCH] Makefile: generate the generic asm-offsets before the SoC ones
+++
+++include/configs/ipq40xx_cdp.h pulls in <generated/generic-asm-offsets.h>
+++whenever DO_SOC_DEPS_ONLY is defined, which is exactly the case while the
+++SoC specific arch/arm/cpu/armv7/qca/asm-offsets.s is generated: the
+++qca_mem_reserve_t definition at ipq40xx_cdp.h:108 uses
+++GENERATED_GBL_DATA_SIZE from that header.
+++
+++The header is produced by an unrelated rule and both rules only share the
+++include/autoconf.mk.dep prerequisite, so under a parallel make (OpenWrt
+++builds u-boot with PKG_BUILD_PARALLEL=1) the SoC pass can run before or
+++while tools/scripts/make-asm-offsets writes the generic header:
+++
+++  include/configs/ipq40xx_cdp.h:108:37: error: 'GENERATED_GBL_DATA_SIZE' undeclared here (not in a function)
+++    108 |         uint8_t uboot[1024 * 1024 - GENERATED_GBL_DATA_SIZE];   /* ~1MB */
+++  make[7]: *** [Makefile:652: arch/arm/cpu/armv7/qca/asm-offsets.s] Error 1
+++
+++Whether it hits depends on how many jobserver tokens happen to be free, so
+++the failure is intermittent. Declare the missing dependency.
+++
+++Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+++---
+++ Makefile | 3 ++-
+++ 1 file changed, 2 insertions(+), 1 deletion(-)
+++
+++--- a/Makefile
++++++ b/Makefile
+++@@ -647,7 +647,8 @@ $(obj)include/generated/asm-offsets.h:	$
+++ 	@$(XECHO) Generating $@
+++ 	tools/scripts/make-asm-offsets $(obj)$(CPUDIR)/$(SOC)/asm-offsets.s $@
+++ 
+++-$(obj)$(CPUDIR)/$(SOC)/asm-offsets.s:	$(obj)include/autoconf.mk.dep
++++$(obj)$(CPUDIR)/$(SOC)/asm-offsets.s:	$(obj)include/autoconf.mk.dep \
++++	$(obj)include/generated/generic-asm-offsets.h
+++ 	@mkdir -p $(obj)$(CPUDIR)/$(SOC)
+++ 	if [ -f $(src)$(CPUDIR)/$(SOC)/asm-offsets.c ];then \
+++ 		$(CC) -DDO_DEPS_ONLY -DDO_SOC_DEPS_ONLY \
