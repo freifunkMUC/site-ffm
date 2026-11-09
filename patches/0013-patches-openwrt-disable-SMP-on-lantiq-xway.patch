@@ -1,0 +1,125 @@
+From 0b42305f28915db0a553180cad6dcb9ba86a0d43 Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Mon, 9 Nov 2026 01:45:30 +0100
+Subject: [PATCH] patches/openwrt: disable SMP on lantiq xway
+
+OpenWrt 23.05 reverted SMP on the xway subtarget, but OpenWrt 24.10 has
+it enabled again. A FRITZ!Box 7312 (AR9) on OpenWrt 24.10 reboots about
+1.6 times per hour, so disable SMP to test this as the cause.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ ...0023-lantiq-xway-disable-SMP-support.patch | 101 ++++++++++++++++++
+ 1 file changed, 101 insertions(+)
+ create mode 100644 patches/openwrt/0023-lantiq-xway-disable-SMP-support.patch
+
+diff --git a/patches/openwrt/0023-lantiq-xway-disable-SMP-support.patch b/patches/openwrt/0023-lantiq-xway-disable-SMP-support.patch
+new file mode 100644
+index 00000000..e77d8eab
+--- /dev/null
++++ b/patches/openwrt/0023-lantiq-xway-disable-SMP-support.patch
+@@ -0,0 +1,101 @@
++From: Grische <github@grische.xyz>
++Date: Mon, 9 Nov 2026 01:45:30 +0100
++Subject: lantiq: xway: disable SMP support
++
++OpenWrt 23.05 dropped SMP on the xway subtarget in commit 64d8c277cde0
++("Revert "lantiq: xway: kernel: enable SMP support""). That revert was
++never applied to main, so OpenWrt 24.10 has SMP enabled on xway again.
++
++An AVM FRITZ!Box 7312 (AR9) running kernel 6.6 with SMP enabled reboots
++about 1.6 times per hour. Other FRITZ!Box 7312 on OpenWrt 23.05 without
++SMP stay up for days to months. OpenWrt issue 11397 reports kernel oopses
++on other AR9 devices, which one reporter bisected to the commits enabling
++SMP on xway.
++
++Remove the SMP options from the subtarget config. The cause of the
++reboots is not confirmed yet, so this change also serves as the test.
++
++Assisted-by: Claude:claude-opus-5-5
++
++diff --git a/target/linux/lantiq/xway/config-6.6 b/target/linux/lantiq/xway/config-6.6
++index a51e0f9c2de3ddb4be07d54528bf229461cb13f3..2b6f0c7888c6c9fc5e45ae4a9e2d78a1ae1c1e55 100644
++--- a/target/linux/lantiq/xway/config-6.6
+++++ b/target/linux/lantiq/xway/config-6.6
++@@ -2,32 +2,21 @@ CONFIG_ADM6996_PHY=y
++ CONFIG_AR8216_PHY=y
++ CONFIG_AT803X_PHY=y
++ CONFIG_BLK_MQ_PCI=y
++-CONFIG_CONTEXT_TRACKING=y
++-CONFIG_CONTEXT_TRACKING_IDLE=y
++-CONFIG_CPU_MIPSR2_IRQ_EI=y
++-CONFIG_CPU_MIPSR2_IRQ_VI=y
++-CONFIG_CPU_RMAP=y
++ CONFIG_CRC16=y
++ CONFIG_CRYPTO_DEFLATE=y
++ CONFIG_CRYPTO_HASH_INFO=y
++ CONFIG_CRYPTO_LZO=y
++ CONFIG_CRYPTO_ZSTD=y
++ CONFIG_ETHERNET_PACKET_MANGLE=y
+++CONFIG_FORCE_NR_CPUS=y
++ CONFIG_GENERIC_ALLOCATOR=y
++-CONFIG_GENERIC_IRQ_EFFECTIVE_AFF_MASK=y
++ CONFIG_HW_RANDOM=y
++ CONFIG_INPUT=y
++ CONFIG_INPUT_EVDEV=y
++-CONFIG_IRQ_DOMAIN_HIERARCHY=y
++ # CONFIG_ISDN is not set
++ CONFIG_LANTIQ_ETOP=y
++ CONFIG_LZO_COMPRESS=y
++ CONFIG_LZO_DECOMPRESS=y
++-CONFIG_MIPS_MT=y
++-CONFIG_MIPS_MT_FPAFF=y
++-CONFIG_MIPS_MT_SMP=y
++-CONFIG_MIPS_NR_CPU_NR_MAP=2
++-CONFIG_MIPS_PERF_SHARED_TC_COUNTERS=y
++ CONFIG_MTD_NAND_CORE=y
++ CONFIG_MTD_NAND_ECC=y
++ CONFIG_MTD_NAND_ECC_SW_HAMMING=y
++@@ -37,43 +26,24 @@ CONFIG_MTD_UBI=y
++ CONFIG_MTD_UBI_BEB_LIMIT=20
++ CONFIG_MTD_UBI_BLOCK=y
++ CONFIG_MTD_UBI_WL_THRESHOLD=4096
++-CONFIG_NEED_SRCU_NMI_SAFE=y
++-CONFIG_NET_FLOW_LIMIT=y
++ CONFIG_NLS=y
++-CONFIG_NR_CPUS=2
++-CONFIG_PADATA=y
++ CONFIG_PCI=y
++ # CONFIG_PCIE_LANTIQ is not set
++ CONFIG_PCI_DOMAINS=y
++ CONFIG_PCI_LANTIQ=y
++ CONFIG_PSB6970_PHY=y
++ CONFIG_QCOM_NET_PHYLIB=y
++-CONFIG_QUEUED_RWLOCKS=y
++-CONFIG_QUEUED_SPINLOCKS=y
++ CONFIG_REGULATOR=y
++ CONFIG_REGULATOR_FIXED_VOLTAGE=y
++-CONFIG_RFS_ACCEL=y
++-CONFIG_RPS=y
++ CONFIG_RTL8306_PHY=y
++ CONFIG_RTL8366RB_PHY=y
++ CONFIG_RTL8366_SMI=y
++-# CONFIG_SCHED_CORE is not set
++-CONFIG_SCHED_SMT=y
++ CONFIG_SGL_ALLOC=y
++-CONFIG_SMP=y
++-CONFIG_SMP_UP=y
++-CONFIG_SOCK_RX_QUEUE_MAPPING=y
++ CONFIG_SWCONFIG=y
++-CONFIG_SYNC_R4K=y
++-CONFIG_SYS_SUPPORTS_SCHED_SMT=y
++-CONFIG_SYS_SUPPORTS_SMP=y
++-CONFIG_TREE_RCU=y
++-CONFIG_TREE_SRCU=y
++ CONFIG_UBIFS_FS=y
++ CONFIG_USB=y
++ CONFIG_USB_COMMON=y
++ CONFIG_USB_SUPPORT=y
++-CONFIG_XPS=y
++ CONFIG_XXHASH=y
++ CONFIG_ZLIB_DEFLATE=y
++ CONFIG_ZLIB_INFLATE=y
+-- 
+2.54.0
+
