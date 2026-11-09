@@ -23,7 +23,7 @@ make
 
 ### Containerised building
 
-The CI builds inside the official Gluon build container ([gluon-build](https://github.com/freifunk-gluon/gluon/pkgs/container/gluon-build)), pinned in [Dockerfile_build](Dockerfile_build) to the Gluon release from the Makefile. The same container can be used locally:
+The CI builds inside the official Gluon build container ([gluon-build](https://github.com/freifunk-gluon/gluon/pkgs/container/gluon-build)) from [Dockerfile_build](Dockerfile_build). The same container can be used locally:
 
 ```sh
 docker build -t site-ffm-$(git rev-parse --abbrev-ref HEAD) -f Dockerfile_build .

@@ -65,13 +65,26 @@ jobs:
         id: image
         run: |
           image=$(sed -n 's/^FROM //p' Dockerfile_build)
-          tag=${image#*:}; tag=${tag%%@*}
-          ref=$(sed -n 's/^GLUON_GIT_REF := //p' Makefile)
-          if [ "$tag" != "$ref" ]; then
-            echo "::error file=Dockerfile_build::gluon-build tag $tag does not match GLUON_GIT_REF $ref in the Makefile"
+          docker pull -q "$image"
+          # Require an image built from GLUON_GIT_REF's contrib/docker
+          url=$(sed -n 's/^GLUON_GIT_URL := \([^[:space:]#]*\).*/\1/p' Makefile)
+          ref=$(sed -n 's/^GLUON_GIT_REF := \([^[:space:]#]*\).*/\1/p' Makefile)
+          rev=$(docker inspect -f '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$image")
+          if [ -z "$rev" ]; then
+            echo "::error file=Dockerfile_build::$image has no org.opencontainers.image.revision label"
             exit 1
           fi
-          docker pull -q "$image"
+          git init -q "$RUNNER_TEMP/gluon"
+          git -C "$RUNNER_TEMP/gluon" fetch -q --depth=1 --filter=blob:none "$url" "$ref:refs/check/ref" "$rev:refs/check/image" || {
+            echo "::error file=Dockerfile_build::cannot fetch GLUON_GIT_REF $ref or image revision $rev from $url"
+            exit 1
+          }
+          want=$(git -C "$RUNNER_TEMP/gluon" rev-parse refs/check/ref:contrib/docker)
+          have=$(git -C "$RUNNER_TEMP/gluon" rev-parse refs/check/image:contrib/docker)
+          if [ "$want" != "$have" ]; then
+            echo "::error file=Dockerfile_build::gluon-build image was built from Gluon $rev, whose contrib/docker differs from GLUON_GIT_REF $ref in the Makefile"
+            exit 1
+          fi
           echo "image=$image" >> "$GITHUB_OUTPUT"
       - name: build target ${{ matrix.target }}
         id: compile
