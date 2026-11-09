@@ -73,7 +73,7 @@ pkgs_usb_storage = {
     'block-mount',
     'blkid',
     'kmod-fs-ext4',
-    'kmod-fs-ntfs',
+    'kmod-fs-ntfs3',
     'kmod-fs-vfat',
     'kmod-usb-storage',
     'kmod-usb-storage-extras',-- Card Readers
@@ -97,6 +97,7 @@ pkgs_usb_net = {
     'kmod-usb-net-asix-ax88179',
     'kmod-usb-net-cdc-eem',
     'kmod-usb-net-cdc-ether',
+    'kmod-usb-net-cdc-ncm',
     'kmod-usb-net-cdc-subset',
     'kmod-usb-net-dm9601-ether',
     'kmod-usb-net-hso',
