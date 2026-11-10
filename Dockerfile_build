@@ -1,2 +1,2 @@
 # Official Gluon build container for GLUON_GIT_REF
-FROM ghcr.io/freifunk-gluon/gluon-build:v2025.1.3@sha256:bcdadee419a54aa34b39150297deb2a9d6b95580cff72e45b4647b2d294f6455
+FROM ghcr.io/freifunk-gluon/gluon-build:v2026.1.x@sha256:0fce52de88ff69cc01e2a9825800ed0e1189e147b29552006ad7876059a3efb3
