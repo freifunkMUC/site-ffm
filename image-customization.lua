@@ -220,3 +220,18 @@ if device({
     }) then
     disable()
 end
+
+-- drop WPA3 so that the factory image fits
+-- drop private WiFi as well, because with a stored WPA3 setting hostapd-mini
+-- fails and takes down all APs of the radio
+if device({
+        'tp-link-cpe210-v1',
+        'tp-link-cpe510-v1',
+        'tp-link-cpe510-v2',
+        'tp-link-cpe510-v3',
+        'tp-link-wbs210-v1',
+        'tp-link-wbs210-v2',
+        'tp-link-wbs510-v1',
+    }) then
+    features {'-wireless-encryption-wpa3', '-web-private-wifi'}
+end
