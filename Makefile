@@ -92,3 +92,7 @@ clean: gluon-clean output-clean
 update-targets: gluon-update gluon-patch
 	ls -1 ${GLUON_BUILD_DIR}/targets/ | grep -v "\.inc" | grep -v "\.mk" | grep -v '^generic$$' > targets
 	git diff targets
+
+# Gluon's build container for GLUON_GIT_REF, used by CI and for local builds
+gluon-build-image:
+	@echo ghcr.io/freifunk-gluon/gluon-build:${GLUON_GIT_REF}
