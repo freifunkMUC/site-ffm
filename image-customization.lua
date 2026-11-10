@@ -30,14 +30,28 @@ packages{
     'respondd-module-airtime',
 }
 
+-- devices that Gluon does not classify as tiny, but that are too small for WPA3
+tiny_like = device({
+    'tp-link-cpe210-v1',
+    'tp-link-cpe210-v2',
+    'tp-link-cpe210-v3',
+    'tp-link-cpe220-v3',
+    'tp-link-cpe510-v1',
+    'tp-link-cpe510-v2',
+    'tp-link-cpe510-v3',
+    'ubiquiti-unifi-ap',
+})
+
 if not device_class('tiny') then
-    features{
-        'wireless-encryption-wpa3',
-    }
     packages{
         'ffmuc-custom-banner',
         'ffmuc-leds-off',
     }
+    if not tiny_like then
+        features{
+            'wireless-encryption-wpa3',
+        }
+    end
 end
 
 if device({
