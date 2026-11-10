@@ -177,8 +177,8 @@ if device({
     'tp-link-archer-c6-v2-eu-ru-jp',
     'tp-link-archer-c50-v1',
     'tp-link-archer-c60-v1',
-    'ubiquiti-edgerouter-x-sfp',
-    'ubiquiti-edgerouter-x',
+    'ubiquiti-edgerouter-x-sfp-ka',
+    'ubiquiti-edgerouter-x-ka',
     'ubiquiti-unifi-6-lr-v1',
     'zyxel-nwa55axe',
 }) then
