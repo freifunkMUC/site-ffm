@@ -23,10 +23,10 @@ make
 
 ### Containerised building
 
-The CI builds inside the official Gluon build container ([gluon-build](https://github.com/freifunk-gluon/gluon/pkgs/container/gluon-build)) from [Dockerfile_build](Dockerfile_build). The same container can be used locally:
+The CI builds inside Gluon's official build container ([gluon-build](https://github.com/freifunk-gluon/gluon/pkgs/container/gluon-build)) for `GLUON_GIT_REF` in the [Makefile](Makefile), so bumping Gluon there also updates the container. The same container can be used locally:
 
 ```sh
-docker build -t site-ffm-$(git rev-parse --abbrev-ref HEAD) -f Dockerfile_build .
+docker pull "$(make -s gluon-build-image)"
 ```
 
 With the following command, the Makefile will then use the repo for building but will run inside the container.\
@@ -34,7 +34,7 @@ With the following command, the Makefile will then use the repo for building but
 
 ```sh
 mkdir -p gluon-build output
-docker run --rm -v $(pwd):/site-ffm:ro -v $(pwd)/gluon-build:/site-ffm/gluon-build:rw -v $(pwd)/output:/site-ffm/output:rw -w /site-ffm -u $UID site-ffm-$(git rev-parse --abbrev-ref HEAD) make
+docker run --rm -v $(pwd):/site-ffm:ro -v $(pwd)/gluon-build:/site-ffm/gluon-build:rw -v $(pwd)/output:/site-ffm/output:rw -w /site-ffm -u $UID "$(make -s gluon-build-image)" make
 ```
 
 #### Example
@@ -43,7 +43,7 @@ Full command for a [lantiq-xrx200](https://github.com/freifunk-gluon/gluon/blob/
 
 ```sh
 mkdir -p logs gluon-build output
-docker run --rm -v $(pwd):/site-ffm:ro -v $(pwd)/gluon-build:/site-ffm/gluon-build:rw -v $(pwd)/output:/site-ffm/output:rw -w /site-ffm -u $UID site-ffm-$(git rev-parse --abbrev-ref HEAD) make V=s GLUON_TARGETS=lantiq-xrx200 |& tee logs/build_lantiq-xrx200_$(date --iso=s).log
+docker run --rm -v $(pwd):/site-ffm:ro -v $(pwd)/gluon-build:/site-ffm/gluon-build:rw -v $(pwd)/output:/site-ffm/output:rw -w /site-ffm -u $UID "$(make -s gluon-build-image)" make V=s GLUON_TARGETS=lantiq-xrx200 |& tee logs/build_lantiq-xrx200_$(date --iso=s).log
 ```
 
 ## Further Resources

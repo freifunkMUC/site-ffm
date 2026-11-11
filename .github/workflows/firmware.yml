@@ -45,8 +45,31 @@ jobs:
           echo "target={\"target\": $(echo $target_list)}" >> $GITHUB_OUTPUT
           echo "build_target={\"target\": $(echo $target_list)}" >> $GITHUB_OUTPUT
 
+  # The build container is Gluon's gluon-build image for GLUON_GIT_REF, resolved to one digest per run
+  resolve_image:
+    needs: [changed]
+    if: needs.changed.outputs.firmware_changed == 'true' || github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Resolve gluon-build image
+        id: image
+        run: |
+          image=$(make -s gluon-build-image)
+          digest=$(docker buildx imagetools inspect "$image" --format '{{json .Manifest}}' | jq -r .digest) && [[ $digest == sha256:* ]] || {
+            echo "::error file=Makefile::no image $image, GLUON_GIT_REF must be a ref that upstream Gluon publishes gluon-build for"
+            exit 1
+          }
+          echo "::notice title=gluon-build::$image@$digest"
+          echo "image=${image%:*}@$digest" >> "$GITHUB_OUTPUT"
+
   build_firmware:
-    needs: [changed, generate_target_matrix]
+    needs: [changed, generate_target_matrix, resolve_image]
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.generate_target_matrix.outputs.build_target_json) }}
@@ -61,35 +84,10 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - name: Pull build container
-        id: image
-        run: |
-          image=$(sed -n 's/^FROM //p' Dockerfile_build)
-          docker pull -q "$image"
-          # Require an image built from GLUON_GIT_REF's contrib/docker
-          url=$(sed -n 's/^GLUON_GIT_URL := \([^[:space:]#]*\).*/\1/p' Makefile)
-          ref=$(sed -n 's/^GLUON_GIT_REF := \([^[:space:]#]*\).*/\1/p' Makefile)
-          rev=$(docker inspect -f '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$image")
-          if [ -z "$rev" ]; then
-            echo "::error file=Dockerfile_build::$image has no org.opencontainers.image.revision label"
-            exit 1
-          fi
-          git init -q "$RUNNER_TEMP/gluon"
-          git -C "$RUNNER_TEMP/gluon" fetch -q --depth=1 --filter=blob:none "$url" "$ref:refs/check/ref" "$rev:refs/check/image" || {
-            echo "::error file=Dockerfile_build::cannot fetch GLUON_GIT_REF $ref or image revision $rev from $url"
-            exit 1
-          }
-          want=$(git -C "$RUNNER_TEMP/gluon" rev-parse refs/check/ref:contrib/docker)
-          have=$(git -C "$RUNNER_TEMP/gluon" rev-parse refs/check/image:contrib/docker)
-          if [ "$want" != "$have" ]; then
-            echo "::error file=Dockerfile_build::gluon-build image was built from Gluon $rev, whose contrib/docker differs from GLUON_GIT_REF $ref in the Makefile"
-            exit 1
-          fi
-          echo "image=$image" >> "$GITHUB_OUTPUT"
       - name: build target ${{ matrix.target }}
         id: compile
         env:
-          IMAGE: ${{ steps.image.outputs.image }}
+          IMAGE: ${{ needs.resolve_image.outputs.image }}
         run: |
           git checkout -b patched ${{ github.event.pull_request.head.sha || github.sha }}
           docker run --rm -v "$PWD:/site-ffm" -w /site-ffm --user "$(id -u):$(id -g)" -e HOME=/tmp "$IMAGE" \
@@ -107,12 +105,12 @@ jobs:
     name: All Targets Build
     runs-on: ubuntu-22.04
     if: ${{ !cancelled() }}
-    needs: [build_firmware]
+    needs: [changed, generate_target_matrix, resolve_image, build_firmware]
     steps:
       - name: Error out if there is a failure
-        if: needs.build_firmware.result != 'skipped' && needs.build_firmware.result != 'success'
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
         run: |
-          echo "::error title=X Test failed::Build Matrix Result: ${{ needs.build_firmware.result }}"
+          echo "::error title=X Test failed::image: ${{ needs.resolve_image.result }}, matrix: ${{ needs.generate_target_matrix.result }}, build: ${{ needs.build_firmware.result }}"
           exit 1
       - name: All firmware builds succeeded or skipped
         run: echo "::notice title=✓ Test passed or skipped::Build was successful or skipped due to no relevant changes."

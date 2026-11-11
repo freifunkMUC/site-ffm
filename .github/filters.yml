@@ -9,5 +9,4 @@ firmware:
   - 'modules'
   - 'site.conf'
   - 'site.mk'
-  - 'Dockerfile_build'
   - 'targets'
