@@ -1,0 +1,81 @@
+From 89412c9424a088fbdb67eb9fc67cc6b604adb65d Mon Sep 17 00:00:00 2001
+From: GoliathLabs <git@xdfr.de>
+Date: Tue, 10 Nov 2026 13:15:12 +0100
+Subject: [PATCH] ramips-mt7621: EdgeRouter X images as -ka
+
+Non-migrated ER-X on Gluon v2023.x no longer find a manifest line for the
+v2025.1 image (compat_version 2.0), so the autoupdater stops before the
+download instead of failing sysupgrade --test on every mirror each hour.
+No manifest_aliases on purpose.
+
+Based on Neanderfunk gluon-patches-hardware devices/erx-ka-imagename.sh.
+---
+ ...uter-X-append-KA-to-the-model-string.patch | 39 +++++++++++++++++++
+ targets/ramips-mt7621                         |  4 +-
+ 2 files changed, 41 insertions(+), 2 deletions(-)
+ create mode 100644 patches/openwrt/0023-ramips-EdgeRouter-X-append-KA-to-the-model-string.patch
+
+diff --git a/patches/openwrt/0023-ramips-EdgeRouter-X-append-KA-to-the-model-string.patch b/patches/openwrt/0023-ramips-EdgeRouter-X-append-KA-to-the-model-string.patch
+new file mode 100644
+index 0000000..5bb21fa
+--- /dev/null
++++ b/patches/openwrt/0023-ramips-EdgeRouter-X-append-KA-to-the-model-string.patch
+@@ -0,0 +1,39 @@
++From 68bebc51e0c60b142b6555bb974607510ed048ad Mon Sep 17 00:00:00 2001
++From: GoliathLabs <git@xdfr.de>
++Date: Tue, 10 Nov 2026 13:15:12 +0100
++Subject: [PATCH] ramips: EdgeRouter X: append KA to the model string
++
++Gluon derives the image name from the model, so ER-X and ER-X SFP on the new
++flash layout report ubiquiti-edgerouter-x(-sfp)-ka. compatible and
++SUPPORTED_DEVICES are unchanged.
++---
++ target/linux/ramips/dts/mt7621_ubnt_edgerouter-x-sfp.dts | 2 +-
++ target/linux/ramips/dts/mt7621_ubnt_edgerouter-x.dts     | 2 +-
++ 2 files changed, 2 insertions(+), 2 deletions(-)
++
++diff --git a/target/linux/ramips/dts/mt7621_ubnt_edgerouter-x-sfp.dts b/target/linux/ramips/dts/mt7621_ubnt_edgerouter-x-sfp.dts
++index 9f1e0a8..d9d2908 100644
++--- a/target/linux/ramips/dts/mt7621_ubnt_edgerouter-x-sfp.dts
+++++ b/target/linux/ramips/dts/mt7621_ubnt_edgerouter-x-sfp.dts
++@@ -1,7 +1,7 @@
++ #include "mt7621_ubnt_edgerouter-x.dtsi"
++ 
++ / {
++-	model = "Ubiquiti EdgeRouter X SFP";
+++	model = "Ubiquiti EdgeRouter X SFP KA";
++ 	compatible = "ubnt,edgerouter-x-sfp", "mediatek,mt7621-soc";
++ 
++ 	sfp_eth5: sfp_eth5 {
++diff --git a/target/linux/ramips/dts/mt7621_ubnt_edgerouter-x.dts b/target/linux/ramips/dts/mt7621_ubnt_edgerouter-x.dts
++index c0230e1..d9abe01 100644
++--- a/target/linux/ramips/dts/mt7621_ubnt_edgerouter-x.dts
+++++ b/target/linux/ramips/dts/mt7621_ubnt_edgerouter-x.dts
++@@ -1,7 +1,7 @@
++ #include "mt7621_ubnt_edgerouter-x.dtsi"
++ 
++ / {
++-	model = "Ubiquiti EdgeRouter X";
+++	model = "Ubiquiti EdgeRouter X KA";
++ 	compatible = "ubnt,edgerouter-x", "mediatek,mt7621-soc";
++ };
++ 
+diff --git a/targets/ramips-mt7621 b/targets/ramips-mt7621
+index 5b39dc1..130c594 100644
+--- a/targets/ramips-mt7621
++++ b/targets/ramips-mt7621
+@@ -205,12 +205,12 @@ device('zyxel-wsm20', 'zyxel_wsm20', {
+ 
+ -- Ubiquiti
+ 
+-device('ubiquiti-edgerouter-x', 'ubnt_edgerouter-x', {
++device('ubiquiti-edgerouter-x-ka', 'ubnt_edgerouter-x', {
+ 	factory = false,
+ 	packages = {'-hostapd-mini'},
+ })
+ 
+-device('ubiquiti-edgerouter-x-sfp', 'ubnt_edgerouter-x-sfp', {
++device('ubiquiti-edgerouter-x-sfp-ka', 'ubnt_edgerouter-x-sfp', {
+ 	factory = false,
+ 	packages = {'-hostapd-mini'},
+ })
