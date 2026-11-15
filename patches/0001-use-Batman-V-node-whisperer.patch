@@ -4,16 +4,16 @@ Date: Sun, 12 Jul 2026 11:04:30 +0200
 Subject: [PATCH] use ffmuc node-whisperer with Batman V support
 
 ---
- ...node-whisperer-with-Batman-V-support.patch | 29 +++++++++++++++++++
- 1 file changed, 29 insertions(+)
+ ...node-whisperer-with-Batman-V-support.patch | 28 ++++++++++++++++++++++++++++
+ 1 file changed, 28 insertions(+)
  create mode 100644 patches/packages/community/0001-use-ffmuc-node-whisperer-with-Batman-V-support.patch
 
 diff --git a/patches/packages/community/0001-use-ffmuc-node-whisperer-with-Batman-V-support.patch b/patches/packages/community/0001-use-ffmuc-node-whisperer-with-Batman-V-support.patch
 new file mode 100644
-index 00000000..b53e5836
+index 00000000..a5c27429
 --- /dev/null
 +++ b/patches/packages/community/0001-use-ffmuc-node-whisperer-with-Batman-V-support.patch
-@@ -0,0 +1,29 @@
+@@ -0,0 +1,28 @@
 +From 022e6e3942b6a93d19b75a5556962215d7d189c3 Mon Sep 17 00:00:00 2001
 +From: Grische <github@grische.xyz>
 +Date: Sun, 12 Jul 2026 11:03:14 +0200
@@ -24,20 +24,19 @@ index 00000000..b53e5836
 + 1 file changed, 3 insertions(+), 3 deletions(-)
 +
 +diff --git a/ffda-node-whisperer/Makefile b/ffda-node-whisperer/Makefile
-+index 347343c..dd9dfe0 100644
++index 4fedf18..a06e160 100644
 +--- a/ffda-node-whisperer/Makefile
 ++++ b/ffda-node-whisperer/Makefile
-+@@ -4,9 +4,9 @@ PKG_NAME:=ffda-node-whisperer
++@@ -4,8 +4,8 @@ PKG_NAME:=ffda-node-whisperer
 + PKG_RELEASE:=1
 + 
 + PKG_SOURCE_PROTO:=git
-+-PKG_SOURCE_URL=https://github.com/freifunk-darmstadt/node-whisperer.git
-+-PKG_SOURCE_DATE:=2026-07-26
-+-PKG_SOURCE_VERSION:=43d1a90e3ca93858820e26d423e770ede0803e10
++-PKG_SOURCE_URL=https://github.com/fnsh/node-whisperer.git
++-PKG_SOURCE_DATE:=2026-11-12
++-PKG_SOURCE_VERSION:=c2d410d5527e290d516d6c84e8b425c125d3bcd4
 ++PKG_SOURCE_URL=https://github.com/freifunkMUC/node-whisperer.git
-++PKG_SOURCE_DATE:=2026-09-26
-++PKG_SOURCE_VERSION:=4e9ff43015ec45ffe25ee4b3e2a357be9d973237
-+ 
+++PKG_SOURCE_DATE:=2026-11-13
+++PKG_SOURCE_VERSION:=b3ccce3e7743e2b7465129b12ee96872c53b81b5
 + PKG_MAINTAINER:=David Bauer <mail@david-bauer.net>
 + PKG_LICENSE:=GPL-2.0-or-later
 +-- 
