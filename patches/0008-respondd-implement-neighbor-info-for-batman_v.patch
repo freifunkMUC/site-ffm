@@ -1,0 +1,389 @@
+From 2c6190303d8e9a43eccb1f7239ee4debf661e541 Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Mon, 28 Oct 2024 13:12:21 +0100
+Subject: [PATCH 08/11] respondd: implement neighbor info for batman_v
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- add patches to fix BATMAN_V support (from ff chemnitz) for new segments
+- Update patches
+- Fix respondd patch
+- Update to gluon 2020.1.3
+- Adapted BATMAN V respondd patch
+  Due to changes in libgluonutil.c/h the patch was rejected.
+
+Co-Authored-By: Steffen Förster <nemesis@chemnitz.freifunk.net>
+Co-Authored-By: Krombel <krombel@krombel.de>
+Co-Authored-By: Annika Wickert <awlx@users.noreply.github.com>
+Co-Authored-By: Malte Wedel <ich@malte.de>
+---
+ .../src/respondd-neighbours.c                 | 35 ++++----
+ .../src/gluon-radv-filterd.c                  | 86 ++++++++++---------
+ package/libgluonutil/src/libgluonutil.c       | 12 +++
+ package/libgluonutil/src/libgluonutil.h       |  2 +
+ 4 files changed, 74 insertions(+), 61 deletions(-)
+
+diff --git a/package/gluon-mesh-batman-adv/src/respondd-neighbours.c b/package/gluon-mesh-batman-adv/src/respondd-neighbours.c
+index 261d6b27..2950d1ec 100644
+--- a/package/gluon-mesh-batman-adv/src/respondd-neighbours.c
++++ b/package/gluon-mesh-batman-adv/src/respondd-neighbours.c
+@@ -44,22 +44,21 @@ static struct json_object * ifnames2addrs(struct json_object *interfaces) {
+ 	return ret;
+ }
+ 
+-static const enum batadv_nl_attrs parse_orig_list_mandatory[] = {
+-	BATADV_ATTR_ORIG_ADDRESS,
++static const enum batadv_nl_attrs parse_neigh_list_mandatory[] = {
+ 	BATADV_ATTR_NEIGH_ADDRESS,
+-	BATADV_ATTR_TQ,
++	BATADV_ATTR_THROUGHPUT,
+ 	BATADV_ATTR_HARD_IFINDEX,
+ 	BATADV_ATTR_LAST_SEEN_MSECS,
+ };
+ 
+-static int parse_orig_list_netlink_cb(struct nl_msg *msg, void *arg)
++static int parse_neigh_list_netlink_cb(struct nl_msg *msg, void *arg)
+ {
+ 	struct nlattr *attrs[BATADV_ATTR_MAX+1];
+ 	struct nlmsghdr *nlh = nlmsg_hdr(msg);
+ 	struct batadv_nlquery_opts *query_opts = arg;
+ 	struct genlmsghdr *ghdr;
+-	uint8_t *orig;
+-	uint8_t *dest;
++	uint8_t *neigh;
++	uint32_t throughput;
+ 	uint8_t tq;
+ 	uint32_t hardif;
+ 	uint32_t lastseen;
+@@ -75,32 +74,28 @@ static int parse_orig_list_netlink_cb(struct nl_msg *msg, void *arg)
+ 
+ 	ghdr = nlmsg_data(nlh);
+ 
+-	if (ghdr->cmd != BATADV_CMD_GET_ORIGINATORS)
++	if (ghdr->cmd != BATADV_CMD_GET_NEIGHBORS)
+ 		return NL_OK;
+ 
+ 	if (nla_parse(attrs, BATADV_ATTR_MAX, genlmsg_attrdata(ghdr, 0),
+ 				genlmsg_len(ghdr), batadv_genl_policy))
+ 		return NL_OK;
+ 
+-	if (batadv_genl_missing_attrs(attrs, parse_orig_list_mandatory,
+-				BATADV_ARRAY_SIZE(parse_orig_list_mandatory)))
++	if (batadv_genl_missing_attrs(attrs, parse_neigh_list_mandatory,
++									BATADV_ARRAY_SIZE(parse_neigh_list_mandatory)))
+ 		return NL_OK;
+ 
+-	orig = nla_data(attrs[BATADV_ATTR_ORIG_ADDRESS]);
+-	dest = nla_data(attrs[BATADV_ATTR_NEIGH_ADDRESS]);
+-	tq = nla_get_u8(attrs[BATADV_ATTR_TQ]);
++	neigh = nla_data(attrs[BATADV_ATTR_NEIGH_ADDRESS]);
++	throughput = nla_get_u32(attrs[BATADV_ATTR_THROUGHPUT]);
+ 	hardif = nla_get_u32(attrs[BATADV_ATTR_HARD_IFINDEX]);
+ 	lastseen = nla_get_u32(attrs[BATADV_ATTR_LAST_SEEN_MSECS]);
+ 
+-	if (memcmp(orig, dest, 6) != 0)
+-		return NL_OK;
+-
+ 	ifname = if_indextoname(hardif, ifname_buf);
+ 	if (!ifname)
+ 		return NL_OK;
+ 
+ 	sprintf(mac1, "%02x:%02x:%02x:%02x:%02x:%02x",
+-		orig[0], orig[1], orig[2], orig[3], orig[4], orig[5]);
++			neigh[0], neigh[1], neigh[2], neigh[3], neigh[4], neigh[5]);
+ 
+ 	struct json_object *obj = json_object_new_object();
+ 	if (!obj)
+@@ -112,6 +107,8 @@ static int parse_orig_list_netlink_cb(struct nl_msg *msg, void *arg)
+ 		json_object_object_add(opts->interfaces, ifname, interface);
+ 	}
+ 
++	tq = gluonutil_get_pseudo_tq(throughput);
++
+ 	json_object_object_add(obj, "tq", json_object_new_int(tq));
+ 	json_object_object_add(obj, "lastseen", json_object_new_double(lastseen / 1000.));
+ 	json_object_object_add(obj, "best", json_object_new_boolean(nla_get_flag(attrs[BATADV_ATTR_FLAG_BEST])));
+@@ -132,9 +129,9 @@ static struct json_object * get_batadv(void) {
+ 	if (!opts.interfaces)
+ 		return NULL;
+ 
+-	ret = batadv_genl_query("bat0", BATADV_CMD_GET_ORIGINATORS,
+-				parse_orig_list_netlink_cb, NLM_F_DUMP,
+-				&opts.query_opts);
++	ret = batadv_genl_query("bat0", BATADV_CMD_GET_NEIGHBORS,
++							parse_neigh_list_netlink_cb, NLM_F_DUMP,
++							&opts.query_opts);
+ 	if (ret < 0) {
+ 		json_object_put(opts.interfaces);
+ 		return NULL;
+diff --git a/package/gluon-radv-filterd/src/gluon-radv-filterd.c b/package/gluon-radv-filterd/src/gluon-radv-filterd.c
+index 5a45b294..cda5f62d 100644
+--- a/package/gluon-radv-filterd/src/gluon-radv-filterd.c
++++ b/package/gluon-radv-filterd/src/gluon-radv-filterd.c
+@@ -86,7 +86,7 @@ struct router {
+ 	struct ether_addr src;
+ 	struct timespec eol;
+ 	struct ether_addr originator;
+-       uint32_t throughput;
++	uint32_t throughput;
+ };
+ 
+ static struct global {
+@@ -94,8 +94,8 @@ static struct global {
+ 	struct router *routers;
+ 	const char *mesh_iface;
+ 	const char *chain;
+-       uint32_t max_throughput;
+-       uint32_t hysteresis_thresh;
++	uint32_t max_throughput;
++	uint32_t hysteresis_thresh;
+ 	struct router *best_router;
+ 	volatile sig_atomic_t stop_daemon;
+ } G = {
+@@ -166,8 +166,8 @@ static void usage(const char *msg) {
+ 	fprintf(stderr,
+ 		"Usage: %s [-m <mesh_iface>] [-t <thresh>] -c <chain> -i <iface>\n\n"
+ 		"  -m <mesh_iface>  B.A.T.M.A.N. advanced mesh interface used to get metric\n"
+-               "                   information (\"THROUGHPUT\") for the available gateways. Default: bat0\n"
+-               "  -t <thresh>      Minimum THROUGHPUT difference required to switch the gateway.\n"
++		"                   information (\"THROUGHPUT\") for the available gateways. Default: bat0\n"
++		"  -t <thresh>      Minimum THROUGHPUT difference required to switch the gateway.\n"
+ 		"                   Default: 0\n"
+ 		"  -c <chain>       ebtables chain that should be managed by the daemon. The\n"
+ 		"                   chain already has to exist on program invocation and should\n"
+@@ -267,9 +267,9 @@ static void parse_cmdline(int argc, char *argv[]) {
+ 				threshold = strtoul(optarg, &endptr, 10);
+ 				if (*endptr != '\0')
+ 					exit_errmsg("Threshold must be a number: %s", optarg);
+-                               if (threshold >= LOCAL_THROUGHPUT)
+-                                       exit_errmsg("Threshold too large: %ld (max is %d)", threshold, LOCAL_THROUGHPUT);
+-                               G.hysteresis_thresh = (uint32_t) threshold;
++				if (threshold >= LOCAL_THROUGHPUT)
++					exit_errmsg("Threshold too large: %ld (max is %d)", threshold, LOCAL_THROUGHPUT);
++				G.hysteresis_thresh = (uint32_t)threshold;
+ 				break;
+ 			case 'h':
+ 				usage(NULL);
+@@ -437,7 +437,7 @@ static int parse_originator(struct nl_msg *msg,
+ 
+ 	static const enum batadv_nl_attrs mandatory[] = {
+ 		BATADV_ATTR_ORIG_ADDRESS,
+-               BATADV_ATTR_THROUGHPUT,
++		BATADV_ATTR_THROUGHPUT,
+ 	};
+ 	struct nlattr *attrs[BATADV_ATTR_MAX + 1];
+ 	struct nlmsghdr *nlh = nlmsg_hdr(msg);
+@@ -445,7 +445,7 @@ static int parse_originator(struct nl_msg *msg,
+ 	struct genlmsghdr *ghdr;
+ 	struct router *router;
+ 	uint8_t *orig;
+-       uint32_t throughput;
++	uint32_t throughput;
+ 
+ 	// parse netlink entry
+ 	if (!genlmsg_valid_hdr(nlh, 0))
+@@ -465,7 +465,7 @@ static int parse_originator(struct nl_msg *msg,
+ 		return NL_OK;
+ 
+ 	orig = nla_data(attrs[BATADV_ATTR_ORIG_ADDRESS]);
+-       throughput = nla_get_u32(attrs[BATADV_ATTR_THROUGHPUT]);
++	throughput = nla_get_u32(attrs[BATADV_ATTR_THROUGHPUT]);
+ 
+ 	if (!attrs[BATADV_ATTR_FLAG_BEST])
+ 		return NL_OK;
+@@ -477,11 +477,11 @@ static int parse_originator(struct nl_msg *msg,
+ 	if (!router)
+ 		return NL_OK;
+ 
+-       DEBUG_MSG("Found THROUGHPUT for router " F_MAC " (originator " F_MAC "), it's %d",
+-                 F_MAC_VAR(router->src), F_MAC_VAR(router->originator), throughput);
+-       router->throughput = throughput;
+-       if (router->throughput > G.max_throughput)
+-               G.max_throughput = router->throughput;
++	DEBUG_MSG("Found THROUGHPUT for router " F_MAC " (originator " F_MAC "), it's %d",
++			F_MAC_VAR(router->src), F_MAC_VAR(router->originator), throughput);
++	router->throughput = throughput;
++	if (router->throughput > G.max_throughput)
++		G.max_throughput = router->throughput;
+ 
+ 	return NL_OK;
+ }
+@@ -524,11 +524,11 @@ static int parse_tt_local(struct nl_msg *msg,
+ 	if (!router)
+ 		return NL_OK;
+ 
+-       DEBUG_MSG("Found router " F_MAC " in transtable_local, assigning THROUGHPUT %d",
+-                 F_MAC_VAR(router->src), LOCAL_THROUGHPUT);
+-       router->throughput = LOCAL_THROUGHPUT;
+-       if (router->throughput > G.max_throughput)
+-               G.max_throughput = router->throughput;
++	DEBUG_MSG("Found router " F_MAC " in transtable_local, assigning THROUGHPUT %d",
++			F_MAC_VAR(router->src), LOCAL_THROUGHPUT);
++	router->throughput = LOCAL_THROUGHPUT;
++	if (router->throughput > G.max_throughput)
++		G.max_throughput = router->throughput;
+ 
+ 	return NL_OK;
+ }
+@@ -540,9 +540,9 @@ static void update_throughputs(void) {
+ 	struct batadv_nlquery_opts opts;
+ 	int ret;
+ 
+-       // reset THROUGHPUTs
++	// reset THROUGHPUTs
+ 	foreach(router, G.routers) {
+-               router->throughput = 0;
++		router->throughput = 0;
+ 		if (ether_addr_equal(router->originator, unspec))
+ 			update_originators = true;
+ 	}
+@@ -557,8 +557,8 @@ static void update_throughputs(void) {
+ 			fprintf(stderr, "Parsing of global translation table failed\n");
+ 	}
+ 
+-       // look up THROUGHPUTs of originators
+-       G.max_throughput = 0;
++	// look up THROUGHPUTs of originators
++	G.max_throughput = 0;
+ 	opts.err = 0;
+ 	ret = batadv_genl_query(G.mesh_iface,
+ 				BATADV_CMD_GET_ORIGINATORS,
+@@ -566,9 +566,9 @@ static void update_throughputs(void) {
+ 	if (ret < 0)
+ 		fprintf(stderr, "Parsing of originators failed\n");
+ 
+-       // if all routers have a THROUGHPUT value, we don't need to check translocal
++	// if all routers have a THROUGHPUT value, we don't need to check translocal
+ 	foreach(router, G.routers) {
+-               if (router->throughput == 0)
++		if (router->throughput == 0)
+ 			break;
+ 	}
+ 	if (router != NULL) {
+@@ -581,14 +581,15 @@ static void update_throughputs(void) {
+ 	}
+ 
+ 	foreach(router, G.routers) {
+-               if (router->throughput == 0) {
++		if (router->throughput == 0)
++		{
+ 			if (ether_addr_equal(router->originator, unspec))
+ 				DEBUG_MSG(
+ 					"Unable to find router " F_MAC " in transtable_{global,local}",
+ 					F_MAC_VAR(router->src));
+ 			else
+ 				DEBUG_MSG(
+-                                       "Unable to find THROUGHPUT for originator " F_MAC " (router " F_MAC ")",
++					"Unable to find THROUGHPUT for originator " F_MAC " (router " F_MAC ")",
+ 					F_MAC_VAR(router->originator),
+ 					F_MAC_VAR(router->src));
+ 		}
+@@ -654,11 +655,11 @@ static bool election_required(void)
+ 	if (!G.best_router)
+ 		return true;
+ 
+-       /* should never happen. G.max_throughput also contains G.best_router->throughput */
+-       if (G.max_throughput < G.best_router->throughput)
++	/* should never happen. G.max_throughput also contains G.best_router->throughput */
++	if (G.max_throughput < G.best_router->throughput)
+ 		return false;
+ 
+-       if ((G.max_throughput - G.best_router->throughput) <= G.hysteresis_thresh)
++	if ((G.max_throughput - G.best_router->throughput) <= G.hysteresis_thresh)
+ 		return false;
+ 
+ 	return true;
+@@ -672,29 +673,30 @@ static void update_ebtables(void) {
+ 	struct router *router;
+ 
+ 	if (!election_required()) {
+-               DEBUG_MSG(F_MAC " is still good enough with THROUGHPUT=%d (max_throughput=%d), not executing ebtables",
++		DEBUG_MSG(F_MAC " is still good enough with THROUGHPUT=%d (max_throughput=%d), not executing ebtables",
+ 			F_MAC_VAR(G.best_router->src),
+-                       G.best_router->throughput,
+-                       G.max_throughput);
++			G.best_router->throughput,
++			G.max_throughput);
+ 		return;
+ 	}
+ 
+ 	foreach(router, G.routers) {
+-               if (router->throughput == G.max_throughput) {
++		if (router->throughput == G.max_throughput)
++		{
+ 			snprintf(mac, sizeof(mac), F_MAC, F_MAC_VAR(router->src));
+ 			break;
+ 		}
+ 	}
+ 	if (G.best_router)
+-               fprintf(stderr, "Switching from " F_MAC " (THROUGHPUT=%d) to %s (THROUGHPUT=%d)\n",
++		fprintf(stderr, "Switching from " F_MAC " (THROUGHPUT=%d) to %s (THROUGHPUT=%d)\n",
+ 			F_MAC_VAR(G.best_router->src),
+-                       G.best_router->throughput,
++			G.best_router->throughput,
+ 			mac,
+-                       G.max_throughput);
++			G.max_throughput);
+ 	else
+-               fprintf(stderr, "Switching to %s (THROUGHPUT=%d)\n",
++		fprintf(stderr, "Switching to %s (THROUGHPUT=%d)\n",
+ 			mac,
+-                       G.max_throughput);
++			G.max_throughput);
+ 	G.best_router = router;
+ 
+ 	if (fork_execvp_timeout(&timeout, "ebtables-tiny", (const char *[])
+@@ -779,7 +781,7 @@ int main(int argc, char *argv[]) {
+ 					next_invalidation.tv_sec += ORIGINATOR_CACHE_TTL;
+ 				}
+ 
+-                               update_throughputs();
++				update_throughputs();
+ 				update_ebtables();
+ 
+ 				next_update = now;
+diff --git a/package/libgluonutil/src/libgluonutil.c b/package/libgluonutil/src/libgluonutil.c
+index 354f7179..c0d61273 100644
+--- a/package/libgluonutil/src/libgluonutil.c
++++ b/package/libgluonutil/src/libgluonutil.c
+@@ -17,6 +17,7 @@
+ #include <string.h>
+ #include <stdlib.h>
+ #include <unistd.h>
++#include <math.h>
+ 
+ /**
+  * Merges two JSON objects
+@@ -304,6 +305,17 @@ char * gluonutil_get_primary_domain(void) {
+ 	return strdup(primary_domain_code);
+ }
+ 
++uint8_t gluonutil_get_pseudo_tq(uint32_t throughput) {
++	return throughput >= 54000 ? 255 :
++			throughput < 417 ? 0 :
++			(uint8_t)(
++				(
++					1.42459274279287898080 * log2(throughput) -
++					12.39555493934044793479
++				)
++				* 25.5
++			);
++}
+ 
+ struct json_object * gluonutil_load_site_config(void) {
+ 	char *domain_code = NULL;
+diff --git a/package/libgluonutil/src/libgluonutil.h b/package/libgluonutil/src/libgluonutil.h
+index 5ce9d448..1f72bcf7 100644
+--- a/package/libgluonutil/src/libgluonutil.h
++++ b/package/libgluonutil/src/libgluonutil.h
+@@ -35,4 +35,6 @@ char * gluonutil_get_domain(void);
+ char * gluonutil_get_primary_domain(void);
+ struct json_object * gluonutil_load_site_config(void);
+ 
++uint8_t gluonutil_get_pseudo_tq(uint32_t throughput);
++
+ #endif /* _LIBGLUON_LIBGLUON_H_ */
+-- 
+2.43.0
+
