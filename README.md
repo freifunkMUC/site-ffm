@@ -48,8 +48,6 @@ docker run --rm -v $(pwd):/site-ffm:ro -v $(pwd)/gluon-build:/site-ffm/gluon-bui
 
 ## Further Resources
 
-To change a node from the normal firmware to Parker without config mode, see [docs/parker-migration.md](docs/parker-migration.md).
-
 This firmware is based on [Gluon](https://gluon.readthedocs.io/).
 
 Look at the [site configuration related Gluon documentation](https://gluon.readthedocs.io/en/latest/user/site.html)
