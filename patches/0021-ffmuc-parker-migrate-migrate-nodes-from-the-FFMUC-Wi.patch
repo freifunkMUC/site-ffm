@@ -1,0 +1,104 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: awlx <6527744+awlx@users.noreply.github.com>
+Date: Tue, 17 Nov 2026 14:25:13 +0100
+Subject: [PATCH] ffmuc-parker-migrate: migrate nodes from the FFMUC WireGuard
+ mesh VPN
+
+Move the WireGuard key of ffmuc-mesh-vpn-wireguard-vxlan to Parker and
+remove the old mesh VPN settings. Then a node can go from the normal
+FFMUC firmware to the Parker firmware with a sysupgrade, without config
+mode.
+---
+ package/ffmuc-parker-migrate/Makefile         | 19 +++++++
+ .../gluon/upgrade/120-ffmuc-parker-migrate    | 53 +++++++++++++++++++
+ 2 files changed, 72 insertions(+)
+ create mode 100644 package/ffmuc-parker-migrate/Makefile
+ create mode 100755 package/ffmuc-parker-migrate/luasrc/lib/gluon/upgrade/120-ffmuc-parker-migrate
+
+diff --git a/package/ffmuc-parker-migrate/Makefile b/package/ffmuc-parker-migrate/Makefile
+new file mode 100644
+index 00000000..4cd72ab8
+--- /dev/null
++++ b/package/ffmuc-parker-migrate/Makefile
+@@ -0,0 +1,19 @@
++include $(TOPDIR)/rules.mk
++
++PKG_NAME:=ffmuc-parker-migrate
++
++include ../gluon.mk
++
++define Package/ffmuc-parker-migrate
++  TITLE:=Migrate a node from the FFMUC WireGuard mesh VPN to Parker
++  DEPENDS:=+gluon-core +ffbs-mesh-vpn-parker
++endef
++
++define Package/ffmuc-parker-migrate/description
++	Moves the WireGuard key of the ffmuc-mesh-vpn-wireguard-vxlan
++	package to Parker and removes the old mesh VPN settings. With
++	this package, a node can go from the normal FFMUC firmware to
++	the Parker firmware with a sysupgrade, without config mode.
++endef
++
++$(eval $(call BuildPackageGluon,ffmuc-parker-migrate))
+diff --git a/package/ffmuc-parker-migrate/luasrc/lib/gluon/upgrade/120-ffmuc-parker-migrate b/package/ffmuc-parker-migrate/luasrc/lib/gluon/upgrade/120-ffmuc-parker-migrate
+new file mode 100755
+index 00000000..a0e0ebef
+--- /dev/null
++++ b/package/ffmuc-parker-migrate/luasrc/lib/gluon/upgrade/120-ffmuc-parker-migrate
+@@ -0,0 +1,53 @@
++#!/usr/bin/lua
++
++-- Migrate from ffmuc-mesh-vpn-wireguard-vxlan to Parker.
++-- Hostname, location, contact, mesh VPN state, bandwidth limit, wired mesh
++-- and the domain already survive the sysupgrade. Only the mesh VPN key and
++-- the old provider settings need care.
++
++local uci = require('simple-uci').cursor()
++local unistd = require('posix.unistd')
++local stat = require('posix.sys.stat')
++
++local OLD_CONFIG = '/etc/config/wireguard'
++local KEY_FILE = '/etc/parker/wg-privkey'
++local PUB_FILE = '/etc/parker/wg-pubkey'
++
++if not unistd.access(OLD_CONFIG) then
++	return
++end
++
++local function valid_key(key)
++	return key and key:match('^' .. ('[%a%d+/]'):rep(42) .. '[AEIMQUYcgkosw480]=$')
++end
++
++local function file_size(path)
++	local f = io.open(path)
++	if not f then
++		return 0
++	end
++	local size = f:seek('end')
++	f:close()
++	return size
++end
++
++-- Keep the node's WireGuard identity: Parker uses the same key type.
++local privkey = uci:get('wireguard', 'mesh_vpn', 'privatekey')
++if valid_key(privkey) and file_size(KEY_FILE) == 0 then
++	os.execute('mkdir -p /etc/parker')
++	local old_umask = stat.umask(tonumber('077', 8))
++	local f = assert(io.open(KEY_FILE .. '.tmp', 'w'))
++	f:write(privkey, '\n')
++	f:close()
++	stat.umask(old_umask)
++	assert(os.rename(KEY_FILE .. '.tmp', KEY_FILE))
++	-- nodeconfig.sh creates the public key from the private key
++	os.remove(PUB_FILE)
++end
++
++-- The old provider shaped the 'mesh-vpn' interface. Parker sets
++-- its limits at runtime.
++uci:delete('simple-tc', 'mesh_vpn')
++uci:save('simple-tc')
++
++os.remove(OLD_CONFIG)
+-- 
+2.56.1
+

@@ -26,6 +26,7 @@ packages{
     'ffda-node-whisperer',
     'ffmuc-ebpf-clat',
     'ffmuc-ipv6-ra-filter',
+    'ffmuc-parker-migrate',
     '-gluon-ebtables-limit-arp',
     'iwinfo',
     'respondd-module-airtime',
