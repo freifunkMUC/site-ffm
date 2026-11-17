@@ -1,16 +1,15 @@
 From 9959159da8fd4e8f0bd90e65b2c843afdd1cac4c Mon Sep 17 00:00:00 2001
 From: awlx <6527744+awlx@users.noreply.github.com>
 Date: Tue, 17 Nov 2026 17:35:12 +0100
-Subject: [PATCH] gluon-status-page: show the parker gateway and hide empty
- neighbours
+Subject: [PATCH] gluon-status-page: show the parker gateway
 
 A parker node with a tunnel of its own routes its clients itself. Its
 gateway is a pgw. Show the gateway, gateway6 and the tunnel, without a
 batman-adv TQ. Do not show the Neighbors frame when the node has no mesh
 interface.
 ---
- .../files/lib/gluon/status-page/view/status-page.html    | 9 +++++++++
- 1 file changed, 9 insertions(+)
+ .../files/lib/gluon/status-page/view/status-page.html    | 7 +++++++
+ 1 file changed, 7 insertions(+)
 
 diff --git a/package/gluon-status-page/files/lib/gluon/status-page/view/status-page.html b/package/gluon-status-page/files/lib/gluon/status-page/view/status-page.html
 index d4081277..05d976b0 100644
@@ -38,22 +37,6 @@ index d4081277..05d976b0 100644
  					</tbody>
  				</table>
  
-@@ -280,6 +287,7 @@
- 					</table>
- 				</div>
- 			</div>
-+			<% if interfaces[1] then -%>
- 			<div class="frame frame-wide">
- 				<h2><%:Neighbors%></h2>
- 
-@@ -312,6 +320,7 @@
- 					end
- 				%>
- 			</div>
-+			<%- end %>
- 		</div>
- 		<script src="/static/status-page.js"></script>
- 	</body>
 -- 
 2.56.1
 
