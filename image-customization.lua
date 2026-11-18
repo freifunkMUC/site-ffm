@@ -28,6 +28,7 @@ packages{
     'ffmuc-ebpf-clat',
     'ffmuc-ipv6-ra-filter',
     '-gluon-ebtables-limit-arp',
+    '-gluon-radv-filterd',
     'iwinfo',
     'respondd-module-airtime',
 }
