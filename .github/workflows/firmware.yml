@@ -112,7 +112,9 @@ jobs:
           # Note: If there is no release name specified, releases created in
           # the GitHub UI do not trigger a failure and are modified instead.
           draft: false
-          prerelease: false
+          # A Parker tag is a pre-release and must not become "Latest".
+          prerelease: ${{ contains(github.ref_name, 'parker') }}
+          make_latest: ${{ !contains(github.ref_name, 'parker') && 'true' || 'false' }}
           # Note: Release notes are only auto-generated if the release was
           # created by the Github Action and was not created in the Github UI.
           generate_release_notes: true
