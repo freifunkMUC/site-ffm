@@ -15,6 +15,7 @@ features{
 
 packages{
     'ff-ap-timer',
+    'ff-mesh-vpn-parker-migrate',
     'ff-web-ap-timer',
     'ffac-autoupdater-wifi-fallback',
     'ffac-change-autoupdater',
