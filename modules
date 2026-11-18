@@ -9,5 +9,5 @@
 GLUON_SITE_FEEDS='community'
 
 PACKAGES_COMMUNITY_REPO=https://github.com/freifunkMUC/community-packages.git
-PACKAGES_COMMUNITY_COMMIT=49c1f533192e290ece8b8ae21e1d928f1fc272bb
-PACKAGES_COMMUNITY_BRANCH=awlx-parker-multipop-active-standby
+PACKAGES_COMMUNITY_COMMIT=8dcceb9b1ddc8fda6f89b072e386c3a27dd14224
+PACKAGES_COMMUNITY_BRANCH=parker-release-2026.11
