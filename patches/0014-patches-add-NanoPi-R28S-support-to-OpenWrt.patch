@@ -1,0 +1,5004 @@
+From d597fa847e2c5572e929e9bdc05273126b1d1f3b Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Thu, 19 Nov 2026 23:28:53 +0100
+Subject: [PATCH 14/15] patches: add NanoPi R28S support to OpenWrt
+
+Backport OpenWrt PR #25667, which adds the FriendlyElec NanoPi R28S
+(RK3528A) to the rockchip target, as of commit 0ec963186c05. On top,
+replace the pending U-Boot patches of the PR with cherry-picks of the
+six NanoPi R28S commits merged into U-Boot next for v2027.04. These
+build the R28S U-Boot from the nanopi-zero2-rk3528 target.
+
+Both patches apply on top of the OpenWrt commit Gluon uses without
+changes and can be dropped once the PR is merged.
+
+Link: https://github.com/openwrt/openwrt/pull/25667
+Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Grische <github@grische.xyz>
+---
+ ...-support-for-FriendlyARM-NanoPi-R28S.patch | 2462 ++++++++++++++++
+ ...NanoPi-R28S-support-from-U-Boot-next.patch | 2503 +++++++++++++++++
+ 2 files changed, 4965 insertions(+)
+ create mode 100644 patches/openwrt/0005-rockchip-add-support-for-FriendlyARM-NanoPi-R28S.patch
+ create mode 100644 patches/openwrt/0006-uboot-rockchip-backport-NanoPi-R28S-support-from-U-Boot-next.patch
+
+diff --git a/patches/openwrt/0005-rockchip-add-support-for-FriendlyARM-NanoPi-R28S.patch b/patches/openwrt/0005-rockchip-add-support-for-FriendlyARM-NanoPi-R28S.patch
+new file mode 100644
+index 00000000..18c6c963
+--- /dev/null
++++ b/patches/openwrt/0005-rockchip-add-support-for-FriendlyARM-NanoPi-R28S.patch
+@@ -0,0 +1,2462 @@
++From: Abdalla Ashry <abdallah.ashry@hotmail.com>
++Date: Mon, 5 Oct 2026 00:32:46 +0200
++Subject: rockchip: add support for FriendlyARM NanoPi R28S
++
++Hardware specification:
++- SoC: Rockchip RK3528A (4x Cortex-A53)
++- RAM: 1GB LPDDR4X
++- Storage: optional eMMC, microSD slot
++- Ethernet: 1x 1GbE RTL8211F (WAN), 1x 1GbE RTL8111H via PCIe (LAN)
++- WiFi/BT: AIC8800D80 SDIO module (no driver yet)
++- USB: 1x USB-C (power input, USB 2.0 OTG / maskrom)
++- RTC: HYM8563
++- LEDs: 1x SYS (red), 1x WAN (green), 1x LAN (green)
++- Buttons: 1x user (K2_USR, used as reset), 1x MASK
++- UART: USB-C debug port (CH340E), 1500000 8N1
++- Power: 5V via USB-C
++
++Devicetree:
++Backport the upstream FriendlyElec NanoPi R28S devicetree from v7.4
++together with the patch that moves the parts shared with the NanoPi
++Zero2 into rk3528-nanopi.dtsi. The last hunk of the split patch is
++adapted, as v6.18 lacks the USB nodes upstream has at the end of the
++NanoPi Zero2 devicetree.
++
++On top of the upstream devicetree, the user button is set as reset
++button. The SYS LED is used as OpenWrt status LED and its heartbeat
++trigger and default-on state are dropped. This is done in the shared
++RK3528 NanoPi dtsi, so the NanoPi Zero2 gets the same status LED
++handling.
++
++U-Boot:
++Add a U-Boot target for the NanoPi R28S. U-Boot 2026.10 lacks the
++board, so backport the RK3528 watchdog/USB devicetree nodes and the
++NanoPi Zero2 USB ports from U-Boot next, add the Linux v7.4 NanoPi
++RK3528 split and R28S devicetrees to dts/upstream, and apply the
++pending U-Boot patches adding the R28S defconfig.
++
++MAC addresses:
++- WAN (eth0): provided by U-Boot (generated from the SoC OTP cpuid)
++- LAN (eth1): WAN MAC + 1, as the RTL8111H has no programmed MAC
++
++Installation (microSD):
++1. Write the image to a microSD card:
++   gunzip -c openwrt-*-nanopi-r28s-squashfs-sysupgrade.img.gz | \
++     dd of=/dev/sdX bs=1M conv=fsync
++2. Insert the card and power on the board.
++3. Later upgrades can use sysupgrade.
++
++Tested: Ethernet (WAN/LAN), LEDs, reset button, microSD boot,
++sysupgrade.
++
++Signed-off-by: Abdalla Ashry <abdallah.ashry@hotmail.com>
++
++diff --git a/package/boot/uboot-rockchip/Makefile b/package/boot/uboot-rockchip/Makefile
++index c780545fd4a5c57fd450796e5b764857ec9a936e..48b5330357c1e0c990a040be79b0a60b25a8cc1d 100644
++--- a/package/boot/uboot-rockchip/Makefile
+++++ b/package/boot/uboot-rockchip/Makefile
++@@ -188,6 +188,13 @@ define U-Boot/hinlink-h28k-rk3528
++     hinlink_h28k
++ endef
++ 
+++define U-Boot/nanopi-r28s-rk3528
+++  $(U-Boot/rk3528/Default)
+++  NAME:=NanoPi R28S
+++  BUILD_DEVICES:= \
+++    friendlyarm_nanopi-r28s
+++endef
+++
++ define U-Boot/radxa-e20c-rk3528
++   $(U-Boot/rk3528/Default)
++   NAME:=E20C
++@@ -457,6 +464,7 @@ UBOOT_TARGETS := \
++   rock-pi-e-rk3328 \
++   rock-pi-e-v3-rk3328 \
++   hinlink-h28k-rk3528 \
+++  nanopi-r28s-rk3528 \
++   radxa-e20c-rk3528 \
++   rock-2-rk3528 \
++   nanopi-r3s-rk3566 \
++diff --git a/package/boot/uboot-rockchip/patches/001-01-v2027.01-arm64-dts-rockchip-Add-watchdog-node-for-RK3528.patch b/package/boot/uboot-rockchip/patches/001-01-v2027.01-arm64-dts-rockchip-Add-watchdog-node-for-RK3528.patch
++new file mode 100644
++index 0000000000000000000000000000000000000000..50deddf24eefbb2ae7bb81a5ce9dbc80c97ed9fa
++--- /dev/null
+++++ b/package/boot/uboot-rockchip/patches/001-01-v2027.01-arm64-dts-rockchip-Add-watchdog-node-for-RK3528.patch
++@@ -0,0 +1,40 @@
+++From a29794199190dee25a809210aad66ce5a18ef27f Mon Sep 17 00:00:00 2001
+++From: Jonas Karlman <jonas@kwiboo.se>
+++Date: Fri, 10 Jul 2026 10:05:13 +0000
+++Subject: [PATCH] arm64: dts: rockchip: Add watchdog node for RK3528
+++
+++Add the node describing the watchdog on the RK3528 SoC.
+++
+++Signed-off-by: Jonas Karlman <jonas@kwiboo.se>
+++Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+++Link: https://patch.msgid.link/20260506092804.3320931-1-heiko@sntech.de
+++
+++[ upstream commit: eb24b60553e0692cbbec2863ca31d2a56bff098d ]
+++
+++(cherry picked from commit 87fa1af25f01c71bd8cfc51920b3a6d51d38abe5)
+++
+++Signed-off-by: Jonas Karlman <jonas@kwiboo.se>
+++Reviewed-by: Quentin Schulz <quentin.schulz@cherry.de>
+++Link: https://patch.msgid.link/20260710100521.3677247-2-jonas@kwiboo.se
+++Signed-off-by: Quentin Schulz <u-boot@0leil.net>
+++---
+++ dts/upstream/src/arm64/rockchip/rk3528.dtsi | 8 ++++++++
+++ 1 file changed, 8 insertions(+)
+++
+++--- a/dts/upstream/src/arm64/rockchip/rk3528.dtsi
++++++ b/dts/upstream/src/arm64/rockchip/rk3528.dtsi
+++@@ -983,6 +983,14 @@
+++ 			status = "disabled";
+++ 		};
+++ 
++++		wdt: watchdog@ffac0000 {
++++			compatible = "rockchip,rk3528-wdt", "snps,dw-wdt";
++++			reg = <0x0 0xffac0000 0x0 0x100>;
++++			clocks = <&cru TCLK_WDT_NS>, <&cru PCLK_WDT_NS>;
++++			clock-names = "tclk", "pclk";
++++			interrupts = <GIC_SPI 28 IRQ_TYPE_LEVEL_HIGH>;
++++		};
++++
+++ 		saradc: adc@ffae0000 {
+++ 			compatible = "rockchip,rk3528-saradc";
+++ 			reg = <0x0 0xffae0000 0x0 0x10000>;
++diff --git a/package/boot/uboot-rockchip/patches/001-02-v2027.01-arm64-dts-rockchip-Add-USB-nodes-for-RK3528.patch b/package/boot/uboot-rockchip/patches/001-02-v2027.01-arm64-dts-rockchip-Add-USB-nodes-for-RK3528.patch
++new file mode 100644
++index 0000000000000000000000000000000000000000..109732cda3a21e2be64dce73d3a12a386da69efd
++--- /dev/null
+++++ b/package/boot/uboot-rockchip/patches/001-02-v2027.01-arm64-dts-rockchip-Add-USB-nodes-for-RK3528.patch
++@@ -0,0 +1,134 @@
+++From 42437844e1dc7b78661d8d66cb9939ad0f981734 Mon Sep 17 00:00:00 2001
+++From: Jonas Karlman <jonas@kwiboo.se>
+++Date: Fri, 10 Jul 2026 10:05:14 +0000
+++Subject: [PATCH] arm64: dts: rockchip: Add USB nodes for RK3528
+++
+++Rockchip RK3528 has one USB 3.0 DWC3 controller and oneUSB 2.0 EHCI/OHCI
+++controller and uses an Innosilicon-USB2PHY for USB 2.0. The DWC3
+++controller additionally uses the Naneng Combo PHY for USB3.
+++
+++Add device tree nodes to describe these USB controllers along with the
+++USB 2.0 PHYs.
+++
+++[moved snps,dis_u2_susphy_quirk here from individual boards,
+++ describe both usb2+3 default phy connections, usb2 boards can override]
+++
+++Signed-off-by: Jonas Karlman <jonas@kwiboo.se>
+++Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+++Link: https://patch.msgid.link/20260529190355.4148175-2-heiko@sntech.de
+++
+++[ upstream commit: 5f3ae9b12a6c523992a7216bbc4420ac33450b79 ]
+++
+++(cherry picked from commit 7793aab344678ac6b9fe039d01ff0c1106bc8b0d)
+++
+++Signed-off-by: Jonas Karlman <jonas@kwiboo.se>
+++Reviewed-by: Quentin Schulz <quentin.schulz@cherry.de>
+++Link: https://patch.msgid.link/20260710100521.3677247-3-jonas@kwiboo.se
+++Signed-off-by: Quentin Schulz <u-boot@0leil.net>
+++---
+++ dts/upstream/src/arm64/rockchip/rk3528.dtsi | 80 +++++++++++++++++++++
+++ 1 file changed, 80 insertions(+)
+++
+++--- a/dts/upstream/src/arm64/rockchip/rk3528.dtsi
++++++ b/dts/upstream/src/arm64/rockchip/rk3528.dtsi
+++@@ -336,6 +336,33 @@
+++ 			};
+++ 		};
+++ 
++++		usb_host0_xhci: usb@fe500000 {
++++			compatible = "rockchip,rk3528-dwc3", "snps,dwc3";
++++			reg = <0x0 0xfe500000 0x0 0x400000>;
++++			clocks = <&cru CLK_REF_USB3OTG>,
++++				 <&cru CLK_SUSPEND_USB3OTG>,
++++				 <&cru ACLK_USB3OTG>;
++++			clock-names = "ref_clk", "suspend_clk", "bus_clk";
++++			interrupts = <GIC_SPI 152 IRQ_TYPE_LEVEL_HIGH>;
++++			power-domains = <&power RK3528_PD_VPU>;
++++			resets = <&cru SRST_A_USB3OTG>;
++++			dr_mode = "otg";
++++			phys = <&usb2phy_otg>, <&combphy PHY_TYPE_USB3>;
++++			phy-names = "usb2-phy", "usb3-phy";
++++			phy_type = "utmi_wide";
++++			snps,dis_enblslpm_quirk;
++++			snps,dis_rxdet_inp3_quirk;
++++			snps,dis-del-phy-power-chg-quirk;
++++			snps,dis-tx-ipgap-linecheck-quirk;
++++			snps,dis-u1-entry-quirk;
++++			snps,dis-u2-entry-quirk;
++++			snps,dis-u2-freeclk-exists-quirk;
++++			snps,dis_u2_susphy_quirk;
++++			snps,parkmode-disable-hs-quirk;
++++			snps,parkmode-disable-ss-quirk;
++++			status = "disabled";
++++		};
++++
+++ 		gic: interrupt-controller@fed01000 {
+++ 			compatible = "arm,gic-400";
+++ 			reg = <0x0 0xfed01000 0 0x1000>,
+++@@ -349,6 +376,30 @@
+++ 			#interrupt-cells = <3>;
+++ 		};
+++ 
++++		usb_host0_ehci: usb@ff100000 {
++++			compatible = "generic-ehci";
++++			reg = <0x0 0xff100000 0x0 0x40000>;
++++			clocks = <&cru HCLK_USBHOST>, <&cru HCLK_USBHOST_ARB>,
++++				 <&usb2phy>;
++++			interrupts = <GIC_SPI 143 IRQ_TYPE_LEVEL_HIGH>;
++++			phys = <&usb2phy_host>;
++++			phy-names = "usb";
++++			power-domains = <&power RK3528_PD_VO>;
++++			status = "disabled";
++++		};
++++
++++		usb_host0_ohci: usb@ff140000 {
++++			compatible = "generic-ohci";
++++			reg = <0x0 0xff140000 0x0 0x40000>;
++++			clocks = <&cru HCLK_USBHOST>, <&cru HCLK_USBHOST_ARB>,
++++				 <&usb2phy>;
++++			interrupts = <GIC_SPI 144 IRQ_TYPE_LEVEL_HIGH>;
++++			phys = <&usb2phy_host>;
++++			phy-names = "usb";
++++			power-domains = <&power RK3528_PD_VO>;
++++			status = "disabled";
++++		};
++++
+++ 		qos_crypto_a: qos@ff200000 {
+++ 			compatible = "rockchip,rk3528-qos", "syscon";
+++ 			reg = <0x0 0xff200000 0x0 0x20>;
+++@@ -1281,6 +1332,35 @@
+++ 			rockchip,pipe-phy-grf = <&pipe_phy_grf>;
+++ 			status = "disabled";
+++ 		};
++++
++++		usb2phy: usb2phy@ffdf0000 {
++++			compatible = "rockchip,rk3528-usb2phy";
++++			reg = <0x0 0xffdf0000 0x0 0x10000>;
++++			clocks = <&cru CLK_REF_USBPHY>, <&cru PCLK_USBPHY>;
++++			clock-names = "phyclk", "pclk";
++++			#clock-cells = <0>;
++++			clock-output-names = "clk_usbphy_480m";
++++			power-domains = <&power RK3528_PD_VO>;
++++			rockchip,usbgrf = <&vo_grf>;
++++			status = "disabled";
++++
++++			usb2phy_otg: otg-port {
++++				interrupts = <GIC_SPI 146 IRQ_TYPE_LEVEL_HIGH>,
++++					     <GIC_SPI 147 IRQ_TYPE_LEVEL_HIGH>,
++++					     <GIC_SPI 148 IRQ_TYPE_LEVEL_HIGH>;
++++				interrupt-names = "otg-bvalid", "otg-id",
++++						  "linestate";
++++				#phy-cells = <0>;
++++				status = "disabled";
++++			};
++++
++++			usb2phy_host: host-port {
++++				interrupts = <GIC_SPI 150 IRQ_TYPE_LEVEL_HIGH>;
++++				interrupt-names = "linestate";
++++				#phy-cells = <0>;
++++				status = "disabled";
++++			};
++++		};
+++ 	};
+++ };
+++ 
++diff --git a/package/boot/uboot-rockchip/patches/001-03-v2027.01-arm64-dts-rockchip-Enable-USB-2.0-ports-on-NanoPi-Zero2.patch b/package/boot/uboot-rockchip/patches/001-03-v2027.01-arm64-dts-rockchip-Enable-USB-2.0-ports-on-NanoPi-Zero2.patch
++new file mode 100644
++index 0000000000000000000000000000000000000000..344f809526dd450965546c0fbd832bbcc5b27b2e
++--- /dev/null
+++++ b/package/boot/uboot-rockchip/patches/001-03-v2027.01-arm64-dts-rockchip-Enable-USB-2.0-ports-on-NanoPi-Zero2.patch
++@@ -0,0 +1,61 @@
+++From a6c6a2fd5bdd71fa6eedaf79ed6c55921741c9c9 Mon Sep 17 00:00:00 2001
+++From: Jonas Karlman <jonas@kwiboo.se>
+++Date: Fri, 10 Jul 2026 10:05:18 +0000
+++Subject: [PATCH] arm64: dts: rockchip: Enable USB 2.0 ports on NanoPi Zero2
+++
+++The NanoPi Zero2 has one USB 2.0 Type-A HOST port and one USB 2.0 Type-C
+++OTG port.
+++
+++Add support for using the USB 2.0 ports on NanoPi Zero2.
+++
+++Signed-off-by: Jonas Karlman <jonas@kwiboo.se>
+++Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+++Link: https://patch.msgid.link/20260529190355.4148175-6-heiko@sntech.de
+++
+++[ upstream commit: ff660109f4129a13bbdc31bc14ca233ebf0c9450 ]
+++
+++(cherry picked from commit 2f28b83dd0d59cddb15927dbf30eb6960fbf772d)
+++
+++Signed-off-by: Jonas Karlman <jonas@kwiboo.se>
+++Reviewed-by: Quentin Schulz <quentin.schulz@cherry.de>
+++Link: https://patch.msgid.link/20260710100521.3677247-7-jonas@kwiboo.se
+++Signed-off-by: Quentin Schulz <u-boot@0leil.net>
+++---
+++ .../arm64/rockchip/rk3528-nanopi-zero2.dts    | 29 +++++++++++++++++++
+++ 1 file changed, 29 insertions(+)
+++
+++--- a/dts/upstream/src/arm64/rockchip/rk3528-nanopi-zero2.dts
++++++ b/dts/upstream/src/arm64/rockchip/rk3528-nanopi-zero2.dts
+++@@ -338,3 +338,32 @@
+++ 	pinctrl-0 = <&uart0m0_xfer>;
+++ 	status = "okay";
+++ };
++++
++++&usb_host0_ehci {
++++	status = "okay";
++++};
++++
++++&usb_host0_ohci {
++++	status = "okay";
++++};
++++
++++&usb_host0_xhci {
++++	extcon = <&usb2phy>;
++++	maximum-speed = "high-speed";
++++	phys = <&usb2phy_otg>;
++++	phy-names = "usb2-phy";
++++	status = "okay";
++++};
++++
++++&usb2phy {
++++	status = "okay";
++++};
++++
++++&usb2phy_host {
++++	phy-supply = <&usb2_host_5v>;
++++	status = "okay";
++++};
++++
++++&usb2phy_otg {
++++	status = "okay";
++++};
++diff --git a/package/boot/uboot-rockchip/patches/109-1-arm64-dts-rockchip-Split-out-the-common-NanoPi-RK3528-parts.patch b/package/boot/uboot-rockchip/patches/109-1-arm64-dts-rockchip-Split-out-the-common-NanoPi-RK3528-parts.patch
++new file mode 100644
++index 0000000000000000000000000000000000000000..1cab5b96ce5d30b227017553b2dae787808ada0c
++--- /dev/null
+++++ b/package/boot/uboot-rockchip/patches/109-1-arm64-dts-rockchip-Split-out-the-common-NanoPi-RK3528-parts.patch
++@@ -0,0 +1,661 @@
+++From fdb087806e808ccc4963e2e5225fe16581ecb421 Mon Sep 17 00:00:00 2001
+++From: 安容 <HystericalDragons@proton.me>
+++Date: Sat, 19 Sep 2026 18:28:18 +0800
+++Subject: [PATCH] arm64: dts: rockchip: Split out the common NanoPi RK3528
+++ parts
+++MIME-Version: 1.0
+++Content-Type: text/plain; charset=UTF-8
+++Content-Transfer-Encoding: 8bit
+++
+++The FriendlyElec NanoPi Zero2 and the NanoPi R28S share their power
+++tree, storage, RGMII Ethernet, RTC, LEDs and debug console. Move those
+++parts into rk3528-nanopi.dtsi so the NanoPi R28S can reuse them, and
+++leave only the board specific nodes in the NanoPi Zero2 devicetree.
+++
+++Both boards drive a green LED from GPIO4_PB1, but give it a different
+++purpose, so the common file describes the LED itself and each board
+++adds the function, trigger and default state. While moving the LED pins
+++give them the usual _pin suffix, which frees the led1 label for the LED
+++node.
+++
+++Suggested-by: Chukun Pan <amadeus@jmu.edu.cn>
+++Signed-off-by: 安容 <HystericalDragons@proton.me>
+++Link: https://patch.msgid.link/20260919-r28s-upstream-v7-2-e80a6f8ef521@proton.me
+++Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+++---
+++ .../arm64/rockchip/rk3528-nanopi-zero2.dts    | 290 +----------------
+++ .../src/arm64/rockchip/rk3528-nanopi.dtsi     | 291 ++++++++++++++++++
+++ 2 files changed, 296 insertions(+), 285 deletions(-)
+++ create mode 100644 dts/upstream/src/arm64/rockchip/rk3528-nanopi.dtsi
+++
+++--- a/dts/upstream/src/arm64/rockchip/rk3528-nanopi-zero2.dts
++++++ b/dts/upstream/src/arm64/rockchip/rk3528-nanopi-zero2.dts
+++@@ -2,41 +2,12 @@
+++ 
+++ /dts-v1/;
+++ 
+++-#include <dt-bindings/input/input.h>
+++-#include <dt-bindings/leds/common.h>
+++-#include <dt-bindings/pwm/pwm.h>
+++-#include "rk3528.dtsi"
++++#include "rk3528-nanopi.dtsi"
+++ 
+++ / {
+++ 	model = "FriendlyElec NanoPi Zero2";
+++ 	compatible = "friendlyarm,nanopi-zero2", "rockchip,rk3528";
+++ 
+++-	aliases {
+++-		ethernet0 = &gmac1;
+++-		i2c1 = &i2c1;
+++-		mmc0 = &sdhci;
+++-		mmc1 = &sdmmc;
+++-		serial0 = &uart0;
+++-	};
+++-
+++-	chosen {
+++-		stdout-path = "serial0:1500000n8";
+++-	};
+++-
+++-	adc-keys-0 {
+++-		compatible = "adc-keys";
+++-		io-channels = <&saradc 0>;
+++-		io-channel-names = "buttons";
+++-		keyup-threshold-microvolt = <1800000>;
+++-		poll-interval = <100>;
+++-
+++-		button-maskrom {
+++-			label = "MASK";
+++-			linux,code = <KEY_SETUP>;
+++-			press-threshold-microvolt = <0>;
+++-		};
+++-	};
+++-
+++ 	adc-keys-1 {
+++ 		compatible = "adc-keys";
+++ 		io-channels = <&saradc 1>;
+++@@ -51,28 +22,6 @@
+++ 		};
+++ 	};
+++ 
+++-	leds {
+++-		compatible = "gpio-leds";
+++-		pinctrl-names = "default";
+++-		pinctrl-0 = <&led1>, <&led_sys>;
+++-
+++-		led-0 {
+++-			color = <LED_COLOR_ID_RED>;
+++-			default-state = "on";
+++-			function = LED_FUNCTION_HEARTBEAT;
+++-			gpios = <&gpio4 RK_PB0 GPIO_ACTIVE_HIGH>;
+++-			linux,default-trigger = "heartbeat";
+++-		};
+++-
+++-		led-1 {
+++-			color = <LED_COLOR_ID_GREEN>;
+++-			default-state = "on";
+++-			function = LED_FUNCTION_STATUS;
+++-			gpios = <&gpio4 RK_PB1 GPIO_ACTIVE_HIGH>;
+++-			linux,default-trigger = "default-on";
+++-		};
+++-	};
+++-
+++ 	vcc0v6_ddr: regulator-0v6-vcc-ddr {
+++ 		compatible = "regulator-fixed";
+++ 		regulator-name = "vcc0v6_ddr";
+++@@ -83,66 +32,6 @@
+++ 		vin-supply = <&vcc5v0_sys>;
+++ 	};
+++ 
+++-	vdd_0v9: regulator-0v9-vdd {
+++-		compatible = "regulator-fixed";
+++-		regulator-name = "vdd_0v9";
+++-		regulator-always-on;
+++-		regulator-boot-on;
+++-		regulator-min-microvolt = <900000>;
+++-		regulator-max-microvolt = <900000>;
+++-		vin-supply = <&vcc5v0_sys>;
+++-	};
+++-
+++-	vcc_ddr: regulator-1v1-vcc-ddr {
+++-		compatible = "regulator-fixed";
+++-		regulator-name = "vcc_ddr";
+++-		regulator-always-on;
+++-		regulator-boot-on;
+++-		regulator-min-microvolt = <1100000>;
+++-		regulator-max-microvolt = <1100000>;
+++-		vin-supply = <&vcc5v0_sys>;
+++-	};
+++-
+++-	vcc_1v8: regulator-1v8-vcc {
+++-		compatible = "regulator-fixed";
+++-		regulator-name = "vcc_1v8";
+++-		regulator-always-on;
+++-		regulator-boot-on;
+++-		regulator-min-microvolt = <1800000>;
+++-		regulator-max-microvolt = <1800000>;
+++-		vin-supply = <&vcc_3v3>;
+++-	};
+++-
+++-	vcc_3v3: regulator-3v3-vcc {
+++-		compatible = "regulator-fixed";
+++-		regulator-name = "vcc_3v3";
+++-		regulator-always-on;
+++-		regulator-boot-on;
+++-		regulator-min-microvolt = <3300000>;
+++-		regulator-max-microvolt = <3300000>;
+++-		vin-supply = <&vcc5v0_sys>;
+++-	};
+++-
+++-	vcc3v3_sd: regulator-3v3-vcc-sd {
+++-		compatible = "regulator-fixed";
+++-		gpios = <&gpio4 RK_PA1 GPIO_ACTIVE_LOW>;
+++-		pinctrl-names = "default";
+++-		pinctrl-0 = <&sdmmc_pwren_l>;
+++-		regulator-name = "vcc3v3_sd";
+++-		regulator-min-microvolt = <3300000>;
+++-		regulator-max-microvolt = <3300000>;
+++-		vin-supply = <&vcc_3v3>;
+++-	};
+++-
+++-	vcc5v0_sys: regulator-5v0-vcc-sys {
+++-		compatible = "regulator-fixed";
+++-		regulator-name = "vcc5v0_sys";
+++-		regulator-always-on;
+++-		regulator-boot-on;
+++-		regulator-min-microvolt = <5000000>;
+++-		regulator-max-microvolt = <5000000>;
+++-	};
+++-
+++ 	usb2_host_5v: regulator-5v0-usb2-host {
+++ 		compatible = "regulator-fixed";
+++ 		enable-active-high;
+++@@ -154,138 +43,15 @@
+++ 		regulator-max-microvolt = <5000000>;
+++ 		vin-supply = <&vcc5v0_sys>;
+++ 	};
+++-
+++-	vccio_sd: regulator-vccio-sd {
+++-		compatible = "regulator-gpio";
+++-		gpios = <&gpio4 RK_PB6 GPIO_ACTIVE_HIGH>;
+++-		pinctrl-names = "default";
+++-		pinctrl-0 = <&sdmmc_vol_ctrl_h>;
+++-		regulator-name = "vccio_sd";
+++-		regulator-min-microvolt = <1800000>;
+++-		regulator-max-microvolt = <3300000>;
+++-		states = <1800000 0x0>, <3300000 0x1>;
+++-		vin-supply = <&vcc5v0_sys>;
+++-	};
+++-
+++-	vdd_arm: regulator-vdd-arm {
+++-		compatible = "pwm-regulator";
+++-		pwms = <&pwm1 0 5000 PWM_POLARITY_INVERTED>;
+++-		pwm-supply = <&vcc5v0_sys>;
+++-		regulator-name = "vdd_arm";
+++-		regulator-always-on;
+++-		regulator-boot-on;
+++-		regulator-min-microvolt = <746000>;
+++-		regulator-max-microvolt = <1201000>;
+++-		regulator-settling-time-up-us = <250>;
+++-	};
+++-
+++-	vdd_logic: regulator-vdd-logic {
+++-		compatible = "pwm-regulator";
+++-		pwms = <&pwm2 0 5000 PWM_POLARITY_INVERTED>;
+++-		pwm-supply = <&vcc5v0_sys>;
+++-		regulator-name = "vdd_logic";
+++-		regulator-always-on;
+++-		regulator-boot-on;
+++-		regulator-min-microvolt = <705000>;
+++-		regulator-max-microvolt = <1006000>;
+++-		regulator-settling-time-up-us = <250>;
+++-	};
+++-};
+++-
+++-&cpu0 {
+++-	cpu-supply = <&vdd_arm>;
+++-};
+++-
+++-&cpu1 {
+++-	cpu-supply = <&vdd_arm>;
+++-};
+++-
+++-&cpu2 {
+++-	cpu-supply = <&vdd_arm>;
+++-};
+++-
+++-&cpu3 {
+++-	cpu-supply = <&vdd_arm>;
+++-};
+++-
+++-&gmac1 {
+++-	clock_in_out = "output";
+++-	phy-handle = <&rgmii_phy>;
+++-	phy-mode = "rgmii-id";
+++-	phy-supply = <&vcc_3v3>;
+++-	pinctrl-names = "default";
+++-	pinctrl-0 = <&rgmii_miim>, <&rgmii_tx_bus2>, <&rgmii_rx_bus2>,
+++-		    <&rgmii_rgmii_clk>, <&rgmii_rgmii_bus>;
+++-	status = "okay";
+++-};
+++-
+++-&gpu {
+++-	mali-supply = <&vdd_logic>;
+++-	status = "okay";
+++ };
+++ 
+++-&i2c1 {
+++-	pinctrl-names = "default";
+++-	pinctrl-0 = <&i2c1m0_xfer>;
+++-	status = "okay";
+++-
+++-	hym8563: rtc@51 {
+++-		compatible = "haoyu,hym8563";
+++-		reg = <0x51>;
+++-		#clock-cells = <0>;
+++-		interrupt-parent = <&gpio4>;
+++-		interrupts = <RK_PC1 IRQ_TYPE_LEVEL_LOW>;
+++-		pinctrl-names = "default";
+++-		pinctrl-0 = <&rtc_int_l>;
+++-		wakeup-source;
+++-	};
+++-};
+++-
+++-&mdio1 {
+++-	rgmii_phy: ethernet-phy@1 {
+++-		compatible = "ethernet-phy-ieee802.3-c22";
+++-		reg = <0x1>;
+++-		pinctrl-names = "default";
+++-		pinctrl-0 = <&gmac1_rstn_l>;
+++-		reset-assert-us = <20000>;
+++-		reset-deassert-us = <100000>;
+++-		reset-gpios = <&gpio4 RK_PC2 GPIO_ACTIVE_LOW>;
+++-	};
++++&led1 {
++++	default-state = "on";
++++	function = LED_FUNCTION_STATUS;
++++	linux,default-trigger = "default-on";
+++ };
+++ 
+++ &pinctrl {
+++-	ethernet {
+++-		gmac1_rstn_l: gmac1-rstn-l {
+++-			rockchip,pins = <4 RK_PC2 RK_FUNC_GPIO &pcfg_pull_none>;
+++-		};
+++-	};
+++-
+++-	leds {
+++-		led1: led1 {
+++-			rockchip,pins = <4 RK_PB1 RK_FUNC_GPIO &pcfg_pull_none>;
+++-		};
+++-
+++-		led_sys: led-sys {
+++-			rockchip,pins = <4 RK_PB0 RK_FUNC_GPIO &pcfg_pull_none>;
+++-		};
+++-	};
+++-
+++-	rtc {
+++-		rtc_int_l: rtc-int-l {
+++-			rockchip,pins = <4 RK_PC1 RK_FUNC_GPIO &pcfg_pull_up>;
+++-		};
+++-	};
+++-
+++-	sdmmc {
+++-		sdmmc_vol_ctrl_h: sdmmc-vol-ctrl-h {
+++-			rockchip,pins = <4 RK_PB6 RK_FUNC_GPIO &pcfg_pull_none>;
+++-		};
+++-
+++-		sdmmc_pwren_l: sdmmc-pwren-l {
+++-			rockchip,pins = <4 RK_PA1 RK_FUNC_GPIO &pcfg_pull_none>;
+++-		};
+++-	};
+++-
+++ 	usb {
+++ 		usb20_host1_pwren: usb20-host1-pwren {
+++ 			rockchip,pins = <4 RK_PB5 RK_FUNC_GPIO &pcfg_pull_none>;
+++@@ -293,52 +59,6 @@
+++ 	};
+++ };
+++ 
+++-&pwm1 {
+++-	pinctrl-names = "default";
+++-	pinctrl-0 = <&pwm1m0_pins>;
+++-	status = "okay";
+++-};
+++-
+++-&pwm2 {
+++-	pinctrl-names = "default";
+++-	pinctrl-0 = <&pwm2m0_pins>;
+++-	status = "okay";
+++-};
+++-
+++-&saradc {
+++-	vref-supply = <&vcc_1v8>;
+++-	status = "okay";
+++-};
+++-
+++-&sdhci {
+++-	bus-width = <8>;
+++-	cap-mmc-highspeed;
+++-	mmc-hs200-1_8v;
+++-	no-sd;
+++-	no-sdio;
+++-	non-removable;
+++-	vmmc-supply = <&vcc_3v3>;
+++-	vqmmc-supply = <&vcc_1v8>;
+++-	status = "okay";
+++-};
+++-
+++-&sdmmc {
+++-	bus-width = <4>;
+++-	cap-mmc-highspeed;
+++-	cap-sd-highspeed;
+++-	disable-wp;
+++-	sd-uhs-sdr104;
+++-	vmmc-supply = <&vcc3v3_sd>;
+++-	vqmmc-supply = <&vccio_sd>;
+++-	status = "okay";
+++-};
+++-
+++-&uart0 {
+++-	pinctrl-names = "default";
+++-	pinctrl-0 = <&uart0m0_xfer>;
+++-	status = "okay";
+++-};
+++-
+++ &usb_host0_ehci {
+++ 	status = "okay";
+++ };
+++--- /dev/null
++++++ b/dts/upstream/src/arm64/rockchip/rk3528-nanopi.dtsi
+++@@ -0,0 +1,291 @@
++++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++++
++++#include <dt-bindings/input/input.h>
++++#include <dt-bindings/leds/common.h>
++++#include <dt-bindings/pwm/pwm.h>
++++#include "rk3528.dtsi"
++++
++++/ {
++++	aliases {
++++		ethernet0 = &gmac1;
++++		i2c1 = &i2c1;
++++		mmc0 = &sdhci;
++++		mmc1 = &sdmmc;
++++		serial0 = &uart0;
++++	};
++++
++++	chosen {
++++		stdout-path = "serial0:1500000n8";
++++	};
++++
++++	adc-keys-0 {
++++		compatible = "adc-keys";
++++		io-channels = <&saradc 0>;
++++		io-channel-names = "buttons";
++++		keyup-threshold-microvolt = <1800000>;
++++		poll-interval = <100>;
++++
++++		button-maskrom {
++++			label = "MASK";
++++			linux,code = <KEY_SETUP>;
++++			press-threshold-microvolt = <0>;
++++		};
++++	};
++++
++++	leds: leds {
++++		compatible = "gpio-leds";
++++		pinctrl-names = "default";
++++		pinctrl-0 = <&led_sys_pin>, <&led1_pin>;
++++
++++		led-0 {
++++			color = <LED_COLOR_ID_RED>;
++++			default-state = "on";
++++			function = LED_FUNCTION_HEARTBEAT;
++++			gpios = <&gpio4 RK_PB0 GPIO_ACTIVE_HIGH>;
++++			linux,default-trigger = "heartbeat";
++++		};
++++
++++		/* The purpose of the second LED differs per board. */
++++		led1: led-1 {
++++			color = <LED_COLOR_ID_GREEN>;
++++			gpios = <&gpio4 RK_PB1 GPIO_ACTIVE_HIGH>;
++++		};
++++	};
++++
++++	vdd_0v9: regulator-0v9-vdd {
++++		compatible = "regulator-fixed";
++++		regulator-name = "vdd_0v9";
++++		regulator-always-on;
++++		regulator-boot-on;
++++		regulator-min-microvolt = <900000>;
++++		regulator-max-microvolt = <900000>;
++++		vin-supply = <&vcc5v0_sys>;
++++	};
++++
++++	vcc_ddr: regulator-1v1-vcc-ddr {
++++		compatible = "regulator-fixed";
++++		regulator-name = "vcc_ddr";
++++		regulator-always-on;
++++		regulator-boot-on;
++++		regulator-min-microvolt = <1100000>;
++++		regulator-max-microvolt = <1100000>;
++++		vin-supply = <&vcc5v0_sys>;
++++	};
++++
++++	vcc_1v8: regulator-1v8-vcc {
++++		compatible = "regulator-fixed";
++++		regulator-name = "vcc_1v8";
++++		regulator-always-on;
++++		regulator-boot-on;
++++		regulator-min-microvolt = <1800000>;
++++		regulator-max-microvolt = <1800000>;
++++		vin-supply = <&vcc_3v3>;
++++	};
++++
++++	vcc_3v3: regulator-3v3-vcc {
++++		compatible = "regulator-fixed";
++++		regulator-name = "vcc_3v3";
++++		regulator-always-on;
++++		regulator-boot-on;
++++		regulator-min-microvolt = <3300000>;
++++		regulator-max-microvolt = <3300000>;
++++		vin-supply = <&vcc5v0_sys>;
++++	};
++++
++++	vcc3v3_sd: regulator-3v3-vcc-sd {
++++		compatible = "regulator-fixed";
++++		gpios = <&gpio4 RK_PA1 GPIO_ACTIVE_LOW>;
++++		pinctrl-names = "default";
++++		pinctrl-0 = <&sdmmc_pwren_l>;
++++		regulator-name = "vcc3v3_sd";
++++		regulator-min-microvolt = <3300000>;
++++		regulator-max-microvolt = <3300000>;
++++		vin-supply = <&vcc_3v3>;
++++	};
++++
++++	vcc5v0_sys: regulator-5v0-vcc-sys {
++++		compatible = "regulator-fixed";
++++		regulator-name = "vcc5v0_sys";
++++		regulator-always-on;
++++		regulator-boot-on;
++++		regulator-min-microvolt = <5000000>;
++++		regulator-max-microvolt = <5000000>;
++++	};
++++
++++	vccio_sd: regulator-vccio-sd {
++++		compatible = "regulator-gpio";
++++		gpios = <&gpio4 RK_PB6 GPIO_ACTIVE_HIGH>;
++++		pinctrl-names = "default";
++++		pinctrl-0 = <&sdmmc_vol_ctrl_h>;
++++		regulator-name = "vccio_sd";
++++		regulator-min-microvolt = <1800000>;
++++		regulator-max-microvolt = <3300000>;
++++		states = <1800000 0x0>, <3300000 0x1>;
++++		vin-supply = <&vcc5v0_sys>;
++++	};
++++
++++	vdd_arm: regulator-vdd-arm {
++++		compatible = "pwm-regulator";
++++		pwms = <&pwm1 0 5000 PWM_POLARITY_INVERTED>;
++++		pwm-supply = <&vcc5v0_sys>;
++++		regulator-name = "vdd_arm";
++++		regulator-always-on;
++++		regulator-boot-on;
++++		regulator-min-microvolt = <746000>;
++++		regulator-max-microvolt = <1201000>;
++++		regulator-settling-time-up-us = <250>;
++++	};
++++
++++	vdd_logic: regulator-vdd-logic {
++++		compatible = "pwm-regulator";
++++		pwms = <&pwm2 0 5000 PWM_POLARITY_INVERTED>;
++++		pwm-supply = <&vcc5v0_sys>;
++++		regulator-name = "vdd_logic";
++++		regulator-always-on;
++++		regulator-boot-on;
++++		regulator-min-microvolt = <705000>;
++++		regulator-max-microvolt = <1006000>;
++++		regulator-settling-time-up-us = <250>;
++++	};
++++};
++++
++++&cpu0 {
++++	cpu-supply = <&vdd_arm>;
++++};
++++
++++&cpu1 {
++++	cpu-supply = <&vdd_arm>;
++++};
++++
++++&cpu2 {
++++	cpu-supply = <&vdd_arm>;
++++};
++++
++++&cpu3 {
++++	cpu-supply = <&vdd_arm>;
++++};
++++
++++&gmac1 {
++++	clock_in_out = "output";
++++	phy-handle = <&rgmii_phy>;
++++	phy-mode = "rgmii-id";
++++	phy-supply = <&vcc_3v3>;
++++	pinctrl-names = "default";
++++	pinctrl-0 = <&rgmii_miim>, <&rgmii_tx_bus2>, <&rgmii_rx_bus2>,
++++		    <&rgmii_rgmii_clk>, <&rgmii_rgmii_bus>;
++++	status = "okay";
++++};
++++
++++&gpu {
++++	mali-supply = <&vdd_logic>;
++++	status = "okay";
++++};
++++
++++&i2c1 {
++++	pinctrl-names = "default";
++++	pinctrl-0 = <&i2c1m0_xfer>;
++++	status = "okay";
++++
++++	hym8563: rtc@51 {
++++		compatible = "haoyu,hym8563";
++++		reg = <0x51>;
++++		#clock-cells = <0>;
++++		interrupt-parent = <&gpio4>;
++++		interrupts = <RK_PC1 IRQ_TYPE_LEVEL_LOW>;
++++		pinctrl-names = "default";
++++		pinctrl-0 = <&rtc_int_l>;
++++		wakeup-source;
++++	};
++++};
++++
++++&mdio1 {
++++	rgmii_phy: ethernet-phy@1 {
++++		compatible = "ethernet-phy-ieee802.3-c22";
++++		reg = <0x1>;
++++		pinctrl-names = "default";
++++		pinctrl-0 = <&gmac1_rstn_l>;
++++		reset-assert-us = <20000>;
++++		reset-deassert-us = <100000>;
++++		reset-gpios = <&gpio4 RK_PC2 GPIO_ACTIVE_LOW>;
++++	};
++++};
++++
++++&pinctrl {
++++	ethernet {
++++		gmac1_rstn_l: gmac1-rstn-l {
++++			rockchip,pins = <4 RK_PC2 RK_FUNC_GPIO &pcfg_pull_none>;
++++		};
++++	};
++++
++++	leds {
++++		led_sys_pin: led-sys-pin {
++++			rockchip,pins = <4 RK_PB0 RK_FUNC_GPIO &pcfg_pull_none>;
++++		};
++++
++++		led1_pin: led1-pin {
++++			rockchip,pins = <4 RK_PB1 RK_FUNC_GPIO &pcfg_pull_none>;
++++		};
++++	};
++++
++++	rtc {
++++		rtc_int_l: rtc-int-l {
++++			rockchip,pins = <4 RK_PC1 RK_FUNC_GPIO &pcfg_pull_up>;
++++		};
++++	};
++++
++++	sdmmc {
++++		sdmmc_pwren_l: sdmmc-pwren-l {
++++			rockchip,pins = <4 RK_PA1 RK_FUNC_GPIO &pcfg_pull_none>;
++++		};
++++
++++		sdmmc_vol_ctrl_h: sdmmc-vol-ctrl-h {
++++			rockchip,pins = <4 RK_PB6 RK_FUNC_GPIO &pcfg_pull_none>;
++++		};
++++	};
++++};
++++
++++&pwm1 {
++++	pinctrl-names = "default";
++++	pinctrl-0 = <&pwm1m0_pins>;
++++	status = "okay";
++++};
++++
++++&pwm2 {
++++	pinctrl-names = "default";
++++	pinctrl-0 = <&pwm2m0_pins>;
++++	status = "okay";
++++};
++++
++++&saradc {
++++	vref-supply = <&vcc_1v8>;
++++	status = "okay";
++++};
++++
++++&sdhci {
++++	bus-width = <8>;
++++	cap-mmc-highspeed;
++++	mmc-hs200-1_8v;
++++	no-sd;
++++	no-sdio;
++++	non-removable;
++++	vmmc-supply = <&vcc_3v3>;
++++	vqmmc-supply = <&vcc_1v8>;
++++	status = "okay";
++++};
++++
++++&sdmmc {
++++	bus-width = <4>;
++++	cap-mmc-highspeed;
++++	cap-sd-highspeed;
++++	disable-wp;
++++	sd-uhs-sdr104;
++++	vmmc-supply = <&vcc3v3_sd>;
++++	vqmmc-supply = <&vccio_sd>;
++++	status = "okay";
++++};
++++
++++&uart0 {
++++	pinctrl-names = "default";
++++	pinctrl-0 = <&uart0m0_xfer>;
++++	status = "okay";
++++};
++diff --git a/package/boot/uboot-rockchip/patches/109-2-arm64-dts-rockchip-Add-devicetree-for-the-FriendlyElec-Na.patch b/package/boot/uboot-rockchip/patches/109-2-arm64-dts-rockchip-Add-devicetree-for-the-FriendlyElec-Na.patch
++new file mode 100644
++index 0000000000000000000000000000000000000000..e22fe8c4dca2a3c997a8dcad71ff230d0b6adb5d
++--- /dev/null
+++++ b/package/boot/uboot-rockchip/patches/109-2-arm64-dts-rockchip-Add-devicetree-for-the-FriendlyElec-Na.patch
++@@ -0,0 +1,204 @@
+++From c1e23f3425c49fe22e9598f8eea2fcf693950d50 Mon Sep 17 00:00:00 2001
+++From: 安容 <HystericalDragons@proton.me>
+++Date: Sat, 19 Sep 2026 18:28:19 +0800
+++Subject: [PATCH] arm64: dts: rockchip: Add devicetree for the FriendlyElec
+++ NanoPi R28S
+++MIME-Version: 1.0
+++Content-Type: text/plain; charset=UTF-8
+++Content-Transfer-Encoding: 8bit
+++
+++The NanoPi R28S is a dual gigabit Ethernet router board based on the
+++Rockchip RK3528 SoC, designed and developed by FriendlyElec. It shares
+++most of its design with the NanoPi Zero2, so it builds on the common
+++rk3528-nanopi.dtsi.
+++
+++Specification:
+++- Rockchip RK3528
+++- 1GB RAM
+++- eMMC socket (optional)
+++- MicroSD slot
+++- 1x 1000Base-T (GMAC1, Realtek RTL8211F)
+++- 1x 1000Base-T (PCIe, Realtek RTL8111H)
+++- AICSemi AIC8800D80 SDIO WiFi + Bluetooth
+++- 3x LEDs (SYS, LAN, WAN)
+++- 1x USB 2.0 Type-C OTG, shared with the 5V power input
+++- User and MaskROM buttons
+++- Haoyu HYM8563 RTC
+++- 1x USB Type-C debug UART (onboard WCH CH340E)
+++
+++The AIC8800D80 has no upstream driver yet, so only the SDIO and UART
+++controllers it hangs off are enabled, along with the WiFi and Bluetooth
+++wake and power pins taken from the schematics.
+++
+++Assisted-by: LLM
+++Signed-off-by: 安容 <HystericalDragons@proton.me>
+++Link: https://patch.msgid.link/20260919-r28s-upstream-v7-3-e80a6f8ef521@proton.me
+++Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+++---
+++ .../src/arm64/rockchip/rk3528-nanopi-r28s.dts | 160 ++++++++++++++++++
+++ 1 file changed, 160 insertions(+)
+++ create mode 100644 dts/upstream/src/arm64/rockchip/rk3528-nanopi-r28s.dts
+++
+++--- /dev/null
++++++ b/dts/upstream/src/arm64/rockchip/rk3528-nanopi-r28s.dts
+++@@ -0,0 +1,160 @@
++++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++++/*
++++ * Copyright (c) 2022 Rockchip Electronics Co., Ltd.
++++ * Copyright (c) 2026 FriendlyElec Computer Tech. Co., Ltd.
++++ * Copyright (c) 2026 安容 <HystericalDragons@proton.me>
++++ */
++++
++++/dts-v1/;
++++
++++#include "rk3528-nanopi.dtsi"
++++
++++/ {
++++	model = "FriendlyElec NanoPi R28S";
++++	compatible = "friendlyarm,nanopi-r28s", "rockchip,rk3528";
++++
++++	aliases {
++++		mmc2 = &sdio0;
++++		serial2 = &uart2;
++++	};
++++
++++	gpio-keys {
++++		compatible = "gpio-keys";
++++		pinctrl-names = "default";
++++		pinctrl-0 = <&gpio4_b2_usr_btn>;
++++
++++		button-user {
++++			debounce-interval = <50>;
++++			gpios = <&gpio4 RK_PB2 GPIO_ACTIVE_LOW>;
++++			label = "USER";
++++			linux,code = <BTN_1>;
++++			wakeup-source;
++++		};
++++	};
++++
++++	sdio_pwrseq: sdio-pwrseq {
++++		compatible = "mmc-pwrseq-simple";
++++		pinctrl-names = "default";
++++		pinctrl-0 = <&pwr_wf>;
++++		post-power-on-delay-ms = <100>;
++++		reset-gpios = <&gpio1 RK_PC2 GPIO_ACTIVE_LOW>;
++++	};
++++};
++++
++++&combphy {
++++	status = "okay";
++++};
++++
++++&led1 {
++++	default-state = "off";
++++	function = LED_FUNCTION_WAN;
++++	linux,default-trigger = "netdev";
++++};
++++
++++&leds {
++++	pinctrl-names = "default";
++++	pinctrl-0 = <&led_sys_pin>, <&led1_pin>, <&led2_pin>;
++++
++++	led-2 {
++++		color = <LED_COLOR_ID_GREEN>;
++++		default-state = "off";
++++		function = LED_FUNCTION_LAN;
++++		gpios = <&gpio4 RK_PB3 GPIO_ACTIVE_HIGH>;
++++		linux,default-trigger = "netdev";
++++	};
++++};
++++
++++&pcie {
++++	pinctrl-names = "default";
++++	pinctrl-0 = <&pcie_eth_perstb>;
++++	reset-gpios = <&gpio4 RK_PC0 GPIO_ACTIVE_HIGH>;
++++	vpcie3v3-supply = <&vcc_3v3>;
++++	status = "okay";
++++};
++++
++++&pinctrl {
++++	bluetooth {
++++		bt_wake_host: bt-wake-host {
++++			rockchip,pins = <1 RK_PB5 RK_FUNC_GPIO &pcfg_pull_down>;
++++		};
++++
++++		host_wake_bt: host-wake-bt {
++++			rockchip,pins = <1 RK_PB4 RK_FUNC_GPIO &pcfg_pull_none>;
++++		};
++++	};
++++
++++	gpio-keys {
++++		gpio4_b2_usr_btn: gpio4-b2-usr-btn {
++++			rockchip,pins = <4 RK_PB2 RK_FUNC_GPIO &pcfg_pull_up>;
++++		};
++++	};
++++
++++	leds {
++++		led2_pin: led2-pin {
++++			rockchip,pins = <4 RK_PB3 RK_FUNC_GPIO &pcfg_pull_none>;
++++		};
++++	};
++++
++++	pcie {
++++		pcie_eth_perstb: pcie-eth-perstb {
++++			rockchip,pins = <4 RK_PC0 RK_FUNC_GPIO &pcfg_pull_none>;
++++		};
++++	};
++++
++++	wifi {
++++		host_wake_wl: host-wake-wl {
++++			rockchip,pins = <1 RK_PA6 RK_FUNC_GPIO &pcfg_pull_none>;
++++		};
++++
++++		pwr_wf: pwr-wf {
++++			rockchip,pins = <1 RK_PC2 RK_FUNC_GPIO &pcfg_pull_none>;
++++		};
++++
++++		wl_wake_host: wl-wake-host {
++++			rockchip,pins = <1 RK_PA7 RK_FUNC_GPIO &pcfg_pull_down>;
++++		};
++++	};
++++};
++++
++++&sdio0 {
++++	bus-width = <4>;
++++	cap-sd-highspeed;
++++	cap-sdio-irq;
++++	keep-power-in-suspend;
++++	mmc-pwrseq = <&sdio_pwrseq>;
++++	no-mmc;
++++	no-sd;
++++	non-removable;
++++	sd-uhs-sdr104;
++++	vmmc-supply = <&vcc_3v3>;
++++	vqmmc-supply = <&vcc_1v8>;
++++	status = "okay";
++++};
++++
++++&uart2 {
++++	dma-names = "tx", "rx";
++++	pinctrl-names = "default";
++++	pinctrl-0 = <&uart2m1_xfer>, <&uart2m1_ctsn>, <&uart2m1_rtsn>;
++++	uart-has-rtscts;
++++	status = "okay";
++++};
++++
++++&usb_host0_xhci {
++++	/*
++++	 * The Type-C port is also the 5V power input, so it comes up as a
++++	 * device, but host mode works with an externally powered hub.
++++	 */
++++	extcon = <&usb2phy>;
++++	maximum-speed = "high-speed";
++++	phys = <&usb2phy_otg>;
++++	phy-names = "usb2-phy";
++++	status = "okay";
++++};
++++
++++&usb2phy {
++++	status = "okay";
++++};
++++
++++&usb2phy_otg {
++++	status = "okay";
++++};
++diff --git a/package/boot/uboot-rockchip/patches/109-3-rockchip-rk3528-Split-out-common-NanoPi-u-boot.dtsi.patch b/package/boot/uboot-rockchip/patches/109-3-rockchip-rk3528-Split-out-common-NanoPi-u-boot.dtsi.patch
++new file mode 100644
++index 0000000000000000000000000000000000000000..6a50cd0508448e674b70abd7623c7dc8e443b9e2
++--- /dev/null
+++++ b/package/boot/uboot-rockchip/patches/109-3-rockchip-rk3528-Split-out-common-NanoPi-u-boot.dtsi.patch
++@@ -0,0 +1,64 @@
+++From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+++From: 安容 <HystericalDragons@proton.me>
+++Date: Mon, 12 Oct 2026 14:55:42 +0800
+++Subject: [PATCH] rockchip: rk3528: Split out common NanoPi u-boot.dtsi
+++MIME-Version: 1.0
+++Content-Type: text/plain; charset=UTF-8
+++Content-Transfer-Encoding: 8bit
+++
+++The Linux devicetree of the NanoPi Zero2 has been split into a common
+++rk3528-nanopi.dtsi, which the NanoPi R28S builds on. Both boards use
+++the same PWM regulators for vdd_arm and vdd_logic.
+++
+++Move the U-Boot specific parts of the NanoPi Zero2 into a common
+++rk3528-nanopi-u-boot.dtsi in the same way, so that the NanoPi R28S can
+++include it instead of duplicating it. No functional change.
+++
+++Signed-off-by: 安容 <HystericalDragons@proton.me>
+++Link: https://lore.kernel.org/all/20261012-nanopi-r28s-v1-1-042d62597829@proton.me/
+++---
+++ arch/arm/dts/rk3528-nanopi-u-boot.dtsi       | 11 +++++++++++
+++ arch/arm/dts/rk3528-nanopi-zero2-u-boot.dtsi | 10 +---------
+++ arch/arm/mach-rockchip/rk3528/MAINTAINERS    |  1 +
+++ 3 files changed, 13 insertions(+), 9 deletions(-)
+++ create mode 100644 arch/arm/dts/rk3528-nanopi-u-boot.dtsi
+++
+++--- /dev/null
++++++ b/arch/arm/dts/rk3528-nanopi-u-boot.dtsi
+++@@ -0,0 +1,11 @@
++++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++++
++++#include "rk3528-u-boot.dtsi"
++++
++++&vdd_arm {
++++	regulator-init-microvolt = <953000>;
++++};
++++
++++&vdd_logic {
++++	regulator-init-microvolt = <900000>;
++++};
+++--- a/arch/arm/dts/rk3528-nanopi-zero2-u-boot.dtsi
++++++ b/arch/arm/dts/rk3528-nanopi-zero2-u-boot.dtsi
+++@@ -1,11 +1,3 @@
+++ // SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+++ 
+++-#include "rk3528-u-boot.dtsi"
+++-
+++-&vdd_arm {
+++-	regulator-init-microvolt = <953000>;
+++-};
+++-
+++-&vdd_logic {
+++-	regulator-init-microvolt = <900000>;
+++-};
++++#include "rk3528-nanopi-u-boot.dtsi"
+++--- a/arch/arm/mach-rockchip/rk3528/MAINTAINERS
++++++ b/arch/arm/mach-rockchip/rk3528/MAINTAINERS
+++@@ -7,6 +7,7 @@ F:	configs/generic-rk3528_defconfig
+++ NANOPI-ZERO2-RK3528
+++ M:	Jonas Karlman <jonas@kwiboo.se>
+++ S:	Maintained
++++F:	arch/arm/dts/rk3528-nanopi-u-boot.dtsi
+++ F:	arch/arm/dts/rk3528-nanopi-zero2*
+++ F:	configs/nanopi-zero2-rk3528_defconfig
+++ 
++diff --git a/package/boot/uboot-rockchip/patches/109-4-board-rockchip-Add-FriendlyElec-NanoPi-R28S.patch b/package/boot/uboot-rockchip/patches/109-4-board-rockchip-Add-FriendlyElec-NanoPi-R28S.patch
++new file mode 100644
++index 0000000000000000000000000000000000000000..339028d2b684363a1d026ad32c6067bd40fda66b
++--- /dev/null
+++++ b/package/boot/uboot-rockchip/patches/109-4-board-rockchip-Add-FriendlyElec-NanoPi-R28S.patch
++@@ -0,0 +1,140 @@
+++From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+++From: 安容 <HystericalDragons@proton.me>
+++Date: Mon, 12 Oct 2026 14:55:43 +0800
+++Subject: [PATCH] board: rockchip: Add FriendlyElec NanoPi R28S
+++MIME-Version: 1.0
+++Content-Type: text/plain; charset=UTF-8
+++Content-Transfer-Encoding: 8bit
+++
+++The FriendlyElec NanoPi R28S is a dual gigabit Ethernet router board
+++based on the Rockchip RK3528 SoC. It shares most of its design with the
+++NanoPi Zero2.
+++
+++Specifications:
+++- SoC: Rockchip RK3528, quad-core Cortex-A53 @ 2.0 GHz
+++- RAM: 1 GB LPDDR4
+++- Storage: microSD slot, optional onboard eMMC
+++- Ethernet: 1x GbE (GMAC1 + Realtek RTL8211F),
+++            1x GbE (Realtek RTL8111H over PCIe)
+++- WiFi: AICSemi AIC8800D80 over SDIO
+++- USB: 1x USB 2.0 Type-C (power input and OTG)
+++- UART: USB Type-C debug console (onboard WCH CH340E), 1500000 8N1
+++- Buttons: user (GPIO), MaskROM (SARADC)
+++
+++Add support for the board based on the NanoPi Zero2, and enable
+++CONFIG_BUTTON_GPIO for the user button.
+++
+++Features tested on NanoPi R28S:
+++- SD-card boot
+++- Ethernet
+++
+++Signed-off-by: 安容 <HystericalDragons@proton.me>
+++Link: https://lore.kernel.org/all/20261012-nanopi-r28s-v1-2-042d62597829@proton.me/
+++---
+++ arch/arm/dts/rk3528-nanopi-r28s-u-boot.dtsi |  3 +
+++ arch/arm/mach-rockchip/rk3528/MAINTAINERS   |  6 ++
+++ configs/nanopi-r28s-rk3528_defconfig        | 65 +++++++++++++++++++++
+++ doc/board/rockchip/rockchip.rst             |  1 +
+++ 4 files changed, 75 insertions(+)
+++ create mode 100644 arch/arm/dts/rk3528-nanopi-r28s-u-boot.dtsi
+++ create mode 100644 configs/nanopi-r28s-rk3528_defconfig
+++
+++--- /dev/null
++++++ b/arch/arm/dts/rk3528-nanopi-r28s-u-boot.dtsi
+++@@ -0,0 +1,3 @@
++++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++++
++++#include "rk3528-nanopi-u-boot.dtsi"
+++--- a/arch/arm/mach-rockchip/rk3528/MAINTAINERS
++++++ b/arch/arm/mach-rockchip/rk3528/MAINTAINERS
+++@@ -4,6 +4,12 @@ S:	Maintained
+++ F:	arch/arm/dts/rk3528-generic*
+++ F:	configs/generic-rk3528_defconfig
+++ 
++++NANOPI-R28S-RK3528
++++M:	安容 <HystericalDragons@proton.me>
++++S:	Maintained
++++F:	arch/arm/dts/rk3528-nanopi-r28s*
++++F:	configs/nanopi-r28s-rk3528_defconfig
++++
+++ NANOPI-ZERO2-RK3528
+++ M:	Jonas Karlman <jonas@kwiboo.se>
+++ S:	Maintained
+++--- /dev/null
++++++ b/configs/nanopi-r28s-rk3528_defconfig
+++@@ -0,0 +1,65 @@
++++CONFIG_ARM=y
++++CONFIG_SKIP_LOWLEVEL_INIT=y
++++CONFIG_COUNTER_FREQUENCY=24000000
++++CONFIG_ARCH_ROCKCHIP=y
++++CONFIG_DEFAULT_DEVICE_TREE="rockchip/rk3528-nanopi-r28s"
++++CONFIG_ROCKCHIP_RK3528=y
++++CONFIG_SYS_LOAD_ADDR=0xc00800
++++CONFIG_DEBUG_UART_BASE=0xFF9F0000
++++CONFIG_DEBUG_UART_CLOCK=24000000
++++CONFIG_DEBUG_UART=y
++++CONFIG_DEFAULT_FDT_FILE="rockchip/rk3528-nanopi-r28s.dtb"
++++# CONFIG_DISPLAY_CPUINFO is not set
++++CONFIG_BOARD_RNG_SEED=y
++++CONFIG_SPL_MAX_SIZE=0x40000
++++# CONFIG_SPL_RAW_IMAGE_SUPPORT is not set
++++CONFIG_CMD_MEMINFO=y
++++CONFIG_CMD_MEMINFO_MAP=y
++++CONFIG_CMD_ADC=y
++++CONFIG_CMD_GPIO=y
++++CONFIG_CMD_GPT=y
++++CONFIG_CMD_MISC=y
++++CONFIG_CMD_MMC=y
++++CONFIG_CMD_USB=y
++++CONFIG_CMD_ROCKUSB=y
++++CONFIG_CMD_USB_MASS_STORAGE=y
++++# CONFIG_CMD_SETEXPR is not set
++++CONFIG_CMD_RNG=y
++++CONFIG_CMD_REGULATOR=y
++++# CONFIG_SPL_DOS_PARTITION is not set
++++CONFIG_OF_SPL_REMOVE_PROPS="clock-names interrupt-parent assigned-clocks assigned-clock-rates assigned-clock-parents"
++++CONFIG_BUTTON=y
++++CONFIG_BUTTON_ADC=y
++++CONFIG_BUTTON_GPIO=y
++++# CONFIG_USB_FUNCTION_FASTBOOT is not set
++++CONFIG_ROCKCHIP_GPIO=y
++++CONFIG_LED=y
++++CONFIG_LED_GPIO=y
++++CONFIG_SUPPORT_EMMC_RPMB=y
++++CONFIG_MMC_DW=y
++++CONFIG_MMC_DW_ROCKCHIP=y
++++CONFIG_MMC_SDHCI=y
++++CONFIG_MMC_SDHCI_SDMA=y
++++CONFIG_MMC_SDHCI_ROCKCHIP=y
++++CONFIG_DM_MDIO=y
++++CONFIG_DWC_ETH_QOS=y
++++CONFIG_DWC_ETH_QOS_ROCKCHIP=y
++++CONFIG_PHY_REALTEK=y
++++CONFIG_PHY_ROCKCHIP_INNO_USB2=y
++++CONFIG_PHY_ROCKCHIP_NANENG_COMBOPHY=y
++++CONFIG_REGULATOR_PWM=y
++++CONFIG_DM_REGULATOR_GPIO=y
++++CONFIG_PWM_ROCKCHIP=y
++++CONFIG_BAUDRATE=1500000
++++CONFIG_DEBUG_UART_SHIFT=2
++++CONFIG_SYS_NS16550_MEM32=y
++++CONFIG_USB=y
++++CONFIG_USB_XHCI_HCD=y
++++CONFIG_USB_EHCI_HCD=y
++++CONFIG_USB_EHCI_GENERIC=y
++++CONFIG_USB_DWC3=y
++++CONFIG_USB_DWC3_GENERIC=y
++++CONFIG_USB_GADGET=y
++++CONFIG_USB_GADGET_DOWNLOAD=y
++++CONFIG_USB_FUNCTION_ROCKUSB=y
++++CONFIG_ERRNO_STR=y
+++--- a/doc/board/rockchip/rockchip.rst
++++++ b/doc/board/rockchip/rockchip.rst
+++@@ -103,6 +103,7 @@ List of mainline supported Rockchip boar
+++ 
+++ * rk3528
+++      - ArmSoM Sige1 (sige1-rk3528)
++++     - FriendlyElec NanoPi R28S (nanopi-r28s-rk3528)
+++      - FriendlyElec NanoPi Zero2 (nanopi-zero2-rk3528)
+++      - Generic RK3528 (generic-rk3528)
+++      - Radxa E20C (radxa-e20c-rk3528)
++diff --git a/target/linux/rockchip/armv8/base-files/etc/board.d/01_leds b/target/linux/rockchip/armv8/base-files/etc/board.d/01_leds
++index 6cb8dfebb435813f4945235bdefea040e209b2bf..f591aec3e4bfae732eb9cb8ad53f39b04cdf22e0 100644
++--- a/target/linux/rockchip/armv8/base-files/etc/board.d/01_leds
+++++ b/target/linux/rockchip/armv8/base-files/etc/board.d/01_leds
++@@ -9,6 +9,7 @@ board_config_update
++ 
++ case $board in
++ friendlyarm,nanopi-m5|\
+++friendlyarm,nanopi-r28s|\
++ friendlyarm,nanopi-r2c|\
++ friendlyarm,nanopi-r2c-plus|\
++ friendlyarm,nanopi-r2s|\
++diff --git a/target/linux/rockchip/armv8/base-files/etc/board.d/02_network b/target/linux/rockchip/armv8/base-files/etc/board.d/02_network
++index df457b2e08cd503c4fdb34c3c72e9eac098c2d8e..edd44cba6cc8bd5492db6d9b49fb86203e074f5c 100644
++--- a/target/linux/rockchip/armv8/base-files/etc/board.d/02_network
+++++ b/target/linux/rockchip/armv8/base-files/etc/board.d/02_network
++@@ -9,6 +9,7 @@ rockchip_setup_interfaces()
++ 	case "$board" in
++ 	armsom,sige7|\
++ 	friendlyarm,nanopi-m5|\
+++	friendlyarm,nanopi-r28s|\
++ 	friendlyarm,nanopi-r2c|\
++ 	friendlyarm,nanopi-r2c-plus|\
++ 	friendlyarm,nanopi-r2s|\
++@@ -108,6 +109,9 @@ rockchip_setup_macs()
++ 		wan_mac=$(macaddr_generate_from_mmc_cid mmcblk*)
++ 		lan_mac=$(macaddr_add "$wan_mac" 1)
++ 		;;
+++	friendlyarm,nanopi-r28s)
+++		lan_mac=$(macaddr_add "$(cat /sys/class/net/eth0/address)" 1)
+++		;;
++ 	friendlyarm,nanopi-r4s-enterprise)
++ 		wan_mac=$(get_mac_binary "/sys/bus/i2c/devices/2-0051/eeprom" 0xfa)
++ 		lan_mac=$(macaddr_setbit_la "$wan_mac")
++diff --git a/target/linux/rockchip/armv8/base-files/etc/hotplug.d/net/40-net-smp-affinity b/target/linux/rockchip/armv8/base-files/etc/hotplug.d/net/40-net-smp-affinity
++index 4d734e514db4b3aace24e7e41643fcf22d9ab2da..d8d6f68364ed19891e42a520e6b99e0d9add7a44 100644
++--- a/target/linux/rockchip/armv8/base-files/etc/hotplug.d/net/40-net-smp-affinity
+++++ b/target/linux/rockchip/armv8/base-files/etc/hotplug.d/net/40-net-smp-affinity
++@@ -30,6 +30,7 @@ set_interface_core() {
++ 
++ case "$(board_name)" in
++ armsom,sige7|\
+++friendlyarm,nanopi-r28s|\
++ friendlyarm,nanopi-r3s|\
++ friendlyarm,nanopi-r5c|\
++ hinlink,h28k|\
++diff --git a/target/linux/rockchip/image/armv8.mk b/target/linux/rockchip/image/armv8.mk
++index 3e973b8202da836217ced3af81d2ecc2f5ab7ffb..dd4c08e56414d95f11a07efc69d67a5c9812d10d 100644
++--- a/target/linux/rockchip/image/armv8.mk
+++++ b/target/linux/rockchip/image/armv8.mk
++@@ -96,6 +96,14 @@ define Device/friendlyarm_nanopi-m5
++ endef
++ TARGET_DEVICES += friendlyarm_nanopi-m5
++ 
+++define Device/friendlyarm_nanopi-r28s
+++  $(Device/rk3528)
+++  DEVICE_VENDOR := FriendlyARM
+++  DEVICE_MODEL := NanoPi R28S
+++  DEVICE_PACKAGES := kmod-button-hotplug kmod-input-adc-keys kmod-r8169
+++endef
+++TARGET_DEVICES += friendlyarm_nanopi-r28s
+++
++ define Device/friendlyarm_nanopi-r2c
++   $(Device/rk3328)
++   DEVICE_VENDOR := FriendlyARM
++diff --git a/target/linux/rockchip/patches-6.18/075-1-v7.4-arm64-dts-rockchip-Split-out-the-common-NanoPi-RK3528-parts.patch b/target/linux/rockchip/patches-6.18/075-1-v7.4-arm64-dts-rockchip-Split-out-the-common-NanoPi-RK3528-parts.patch
++new file mode 100644
++index 0000000000000000000000000000000000000000..ad0531547af9b1318f9f6179d58e1f9b9feed81b
++--- /dev/null
+++++ b/target/linux/rockchip/patches-6.18/075-1-v7.4-arm64-dts-rockchip-Split-out-the-common-NanoPi-RK3528-parts.patch
++@@ -0,0 +1,656 @@
+++From fdb087806e808ccc4963e2e5225fe16581ecb421 Mon Sep 17 00:00:00 2001
+++From: 安容 <HystericalDragons@proton.me>
+++Date: Sat, 19 Sep 2026 18:28:18 +0800
+++Subject: [PATCH] arm64: dts: rockchip: Split out the common NanoPi RK3528 parts
+++MIME-Version: 1.0
+++Content-Type: text/plain; charset=UTF-8
+++Content-Transfer-Encoding: 8bit
+++
+++The FriendlyElec NanoPi Zero2 and the NanoPi R28S share their power
+++tree, storage, RGMII Ethernet, RTC, LEDs and debug console. Move those
+++parts into rk3528-nanopi.dtsi so the NanoPi R28S can reuse them, and
+++leave only the board specific nodes in the NanoPi Zero2 devicetree.
+++
+++Both boards drive a green LED from GPIO4_PB1, but give it a different
+++purpose, so the common file describes the LED itself and each board
+++adds the function, trigger and default state. While moving the LED pins
+++give them the usual _pin suffix, which frees the led1 label for the LED
+++node.
+++
+++Suggested-by: Chukun Pan <amadeus@jmu.edu.cn>
+++Signed-off-by: 安容 <HystericalDragons@proton.me>
+++Link: https://patch.msgid.link/20260919-r28s-upstream-v7-2-e80a6f8ef521@proton.me
+++Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+++---
+++ .../boot/dts/rockchip/rk3528-nanopi-zero2.dts      | 290 +-------------------
+++ arch/arm64/boot/dts/rockchip/rk3528-nanopi.dtsi    | 291 +++++++++++++++++++++
+++ 2 files changed, 296 insertions(+), 285 deletions(-)
+++ create mode 100644 arch/arm64/boot/dts/rockchip/rk3528-nanopi.dtsi
+++
+++--- a/arch/arm64/boot/dts/rockchip/rk3528-nanopi-zero2.dts
++++++ b/arch/arm64/boot/dts/rockchip/rk3528-nanopi-zero2.dts
+++@@ -2,41 +2,12 @@
+++ 
+++ /dts-v1/;
+++ 
+++-#include <dt-bindings/input/input.h>
+++-#include <dt-bindings/leds/common.h>
+++-#include <dt-bindings/pwm/pwm.h>
+++-#include "rk3528.dtsi"
++++#include "rk3528-nanopi.dtsi"
+++ 
+++ / {
+++ 	model = "FriendlyElec NanoPi Zero2";
+++ 	compatible = "friendlyarm,nanopi-zero2", "rockchip,rk3528";
+++ 
+++-	aliases {
+++-		ethernet0 = &gmac1;
+++-		i2c1 = &i2c1;
+++-		mmc0 = &sdhci;
+++-		mmc1 = &sdmmc;
+++-		serial0 = &uart0;
+++-	};
+++-
+++-	chosen {
+++-		stdout-path = "serial0:1500000n8";
+++-	};
+++-
+++-	adc-keys-0 {
+++-		compatible = "adc-keys";
+++-		io-channels = <&saradc 0>;
+++-		io-channel-names = "buttons";
+++-		keyup-threshold-microvolt = <1800000>;
+++-		poll-interval = <100>;
+++-
+++-		button-maskrom {
+++-			label = "MASK";
+++-			linux,code = <KEY_SETUP>;
+++-			press-threshold-microvolt = <0>;
+++-		};
+++-	};
+++-
+++ 	adc-keys-1 {
+++ 		compatible = "adc-keys";
+++ 		io-channels = <&saradc 1>;
+++@@ -51,28 +22,6 @@
+++ 		};
+++ 	};
+++ 
+++-	leds {
+++-		compatible = "gpio-leds";
+++-		pinctrl-names = "default";
+++-		pinctrl-0 = <&led1>, <&led_sys>;
+++-
+++-		led-0 {
+++-			color = <LED_COLOR_ID_RED>;
+++-			default-state = "on";
+++-			function = LED_FUNCTION_HEARTBEAT;
+++-			gpios = <&gpio4 RK_PB0 GPIO_ACTIVE_HIGH>;
+++-			linux,default-trigger = "heartbeat";
+++-		};
+++-
+++-		led-1 {
+++-			color = <LED_COLOR_ID_GREEN>;
+++-			default-state = "on";
+++-			function = LED_FUNCTION_STATUS;
+++-			gpios = <&gpio4 RK_PB1 GPIO_ACTIVE_HIGH>;
+++-			linux,default-trigger = "default-on";
+++-		};
+++-	};
+++-
+++ 	vcc0v6_ddr: regulator-0v6-vcc-ddr {
+++ 		compatible = "regulator-fixed";
+++ 		regulator-name = "vcc0v6_ddr";
+++@@ -83,66 +32,6 @@
+++ 		vin-supply = <&vcc5v0_sys>;
+++ 	};
+++ 
+++-	vdd_0v9: regulator-0v9-vdd {
+++-		compatible = "regulator-fixed";
+++-		regulator-name = "vdd_0v9";
+++-		regulator-always-on;
+++-		regulator-boot-on;
+++-		regulator-min-microvolt = <900000>;
+++-		regulator-max-microvolt = <900000>;
+++-		vin-supply = <&vcc5v0_sys>;
+++-	};
+++-
+++-	vcc_ddr: regulator-1v1-vcc-ddr {
+++-		compatible = "regulator-fixed";
+++-		regulator-name = "vcc_ddr";
+++-		regulator-always-on;
+++-		regulator-boot-on;
+++-		regulator-min-microvolt = <1100000>;
+++-		regulator-max-microvolt = <1100000>;
+++-		vin-supply = <&vcc5v0_sys>;
+++-	};
+++-
+++-	vcc_1v8: regulator-1v8-vcc {
+++-		compatible = "regulator-fixed";
+++-		regulator-name = "vcc_1v8";
+++-		regulator-always-on;
+++-		regulator-boot-on;
+++-		regulator-min-microvolt = <1800000>;
+++-		regulator-max-microvolt = <1800000>;
+++-		vin-supply = <&vcc_3v3>;
+++-	};
+++-
+++-	vcc_3v3: regulator-3v3-vcc {
+++-		compatible = "regulator-fixed";
+++-		regulator-name = "vcc_3v3";
+++-		regulator-always-on;
+++-		regulator-boot-on;
+++-		regulator-min-microvolt = <3300000>;
+++-		regulator-max-microvolt = <3300000>;
+++-		vin-supply = <&vcc5v0_sys>;
+++-	};
+++-
+++-	vcc3v3_sd: regulator-3v3-vcc-sd {
+++-		compatible = "regulator-fixed";
+++-		gpios = <&gpio4 RK_PA1 GPIO_ACTIVE_LOW>;
+++-		pinctrl-names = "default";
+++-		pinctrl-0 = <&sdmmc_pwren_l>;
+++-		regulator-name = "vcc3v3_sd";
+++-		regulator-min-microvolt = <3300000>;
+++-		regulator-max-microvolt = <3300000>;
+++-		vin-supply = <&vcc_3v3>;
+++-	};
+++-
+++-	vcc5v0_sys: regulator-5v0-vcc-sys {
+++-		compatible = "regulator-fixed";
+++-		regulator-name = "vcc5v0_sys";
+++-		regulator-always-on;
+++-		regulator-boot-on;
+++-		regulator-min-microvolt = <5000000>;
+++-		regulator-max-microvolt = <5000000>;
+++-	};
+++-
+++ 	usb2_host_5v: regulator-5v0-usb2-host {
+++ 		compatible = "regulator-fixed";
+++ 		enable-active-high;
+++@@ -154,187 +43,18 @@
+++ 		regulator-max-microvolt = <5000000>;
+++ 		vin-supply = <&vcc5v0_sys>;
+++ 	};
+++-
+++-	vccio_sd: regulator-vccio-sd {
+++-		compatible = "regulator-gpio";
+++-		gpios = <&gpio4 RK_PB6 GPIO_ACTIVE_HIGH>;
+++-		pinctrl-names = "default";
+++-		pinctrl-0 = <&sdmmc_vol_ctrl_h>;
+++-		regulator-name = "vccio_sd";
+++-		regulator-min-microvolt = <1800000>;
+++-		regulator-max-microvolt = <3300000>;
+++-		states = <1800000 0x0>, <3300000 0x1>;
+++-		vin-supply = <&vcc5v0_sys>;
+++-	};
+++-
+++-	vdd_arm: regulator-vdd-arm {
+++-		compatible = "pwm-regulator";
+++-		pwms = <&pwm1 0 5000 PWM_POLARITY_INVERTED>;
+++-		pwm-supply = <&vcc5v0_sys>;
+++-		regulator-name = "vdd_arm";
+++-		regulator-always-on;
+++-		regulator-boot-on;
+++-		regulator-min-microvolt = <746000>;
+++-		regulator-max-microvolt = <1201000>;
+++-		regulator-settling-time-up-us = <250>;
+++-	};
+++-
+++-	vdd_logic: regulator-vdd-logic {
+++-		compatible = "pwm-regulator";
+++-		pwms = <&pwm2 0 5000 PWM_POLARITY_INVERTED>;
+++-		pwm-supply = <&vcc5v0_sys>;
+++-		regulator-name = "vdd_logic";
+++-		regulator-always-on;
+++-		regulator-boot-on;
+++-		regulator-min-microvolt = <705000>;
+++-		regulator-max-microvolt = <1006000>;
+++-		regulator-settling-time-up-us = <250>;
+++-	};
+++-};
+++-
+++-&cpu0 {
+++-	cpu-supply = <&vdd_arm>;
+++-};
+++-
+++-&cpu1 {
+++-	cpu-supply = <&vdd_arm>;
+++-};
+++-
+++-&cpu2 {
+++-	cpu-supply = <&vdd_arm>;
+++-};
+++-
+++-&cpu3 {
+++-	cpu-supply = <&vdd_arm>;
+++-};
+++-
+++-&gmac1 {
+++-	clock_in_out = "output";
+++-	phy-handle = <&rgmii_phy>;
+++-	phy-mode = "rgmii-id";
+++-	phy-supply = <&vcc_3v3>;
+++-	pinctrl-names = "default";
+++-	pinctrl-0 = <&rgmii_miim>, <&rgmii_tx_bus2>, <&rgmii_rx_bus2>,
+++-		    <&rgmii_rgmii_clk>, <&rgmii_rgmii_bus>;
+++-	status = "okay";
+++-};
+++-
+++-&gpu {
+++-	mali-supply = <&vdd_logic>;
+++-	status = "okay";
+++ };
+++ 
+++-&i2c1 {
+++-	pinctrl-names = "default";
+++-	pinctrl-0 = <&i2c1m0_xfer>;
+++-	status = "okay";
+++-
+++-	hym8563: rtc@51 {
+++-		compatible = "haoyu,hym8563";
+++-		reg = <0x51>;
+++-		#clock-cells = <0>;
+++-		interrupt-parent = <&gpio4>;
+++-		interrupts = <RK_PC1 IRQ_TYPE_LEVEL_LOW>;
+++-		pinctrl-names = "default";
+++-		pinctrl-0 = <&rtc_int_l>;
+++-		wakeup-source;
+++-	};
+++-};
+++-
+++-&mdio1 {
+++-	rgmii_phy: ethernet-phy@1 {
+++-		compatible = "ethernet-phy-ieee802.3-c22";
+++-		reg = <0x1>;
+++-		pinctrl-names = "default";
+++-		pinctrl-0 = <&gmac1_rstn_l>;
+++-		reset-assert-us = <20000>;
+++-		reset-deassert-us = <100000>;
+++-		reset-gpios = <&gpio4 RK_PC2 GPIO_ACTIVE_LOW>;
+++-	};
++++&led1 {
++++	default-state = "on";
++++	function = LED_FUNCTION_STATUS;
++++	linux,default-trigger = "default-on";
+++ };
+++ 
+++ &pinctrl {
+++-	ethernet {
+++-		gmac1_rstn_l: gmac1-rstn-l {
+++-			rockchip,pins = <4 RK_PC2 RK_FUNC_GPIO &pcfg_pull_none>;
+++-		};
+++-	};
+++-
+++-	leds {
+++-		led1: led1 {
+++-			rockchip,pins = <4 RK_PB1 RK_FUNC_GPIO &pcfg_pull_none>;
+++-		};
+++-
+++-		led_sys: led-sys {
+++-			rockchip,pins = <4 RK_PB0 RK_FUNC_GPIO &pcfg_pull_none>;
+++-		};
+++-	};
+++-
+++-	rtc {
+++-		rtc_int_l: rtc-int-l {
+++-			rockchip,pins = <4 RK_PC1 RK_FUNC_GPIO &pcfg_pull_up>;
+++-		};
+++-	};
+++-
+++-	sdmmc {
+++-		sdmmc_vol_ctrl_h: sdmmc-vol-ctrl-h {
+++-			rockchip,pins = <4 RK_PB6 RK_FUNC_GPIO &pcfg_pull_none>;
+++-		};
+++-
+++-		sdmmc_pwren_l: sdmmc-pwren-l {
+++-			rockchip,pins = <4 RK_PA1 RK_FUNC_GPIO &pcfg_pull_none>;
+++-		};
+++-	};
+++-
+++ 	usb {
+++ 		usb20_host1_pwren: usb20-host1-pwren {
+++ 			rockchip,pins = <4 RK_PB5 RK_FUNC_GPIO &pcfg_pull_none>;
+++ 		};
+++ 	};
+++ };
+++-
+++-&pwm1 {
+++-	pinctrl-names = "default";
+++-	pinctrl-0 = <&pwm1m0_pins>;
+++-	status = "okay";
+++-};
+++-
+++-&pwm2 {
+++-	pinctrl-names = "default";
+++-	pinctrl-0 = <&pwm2m0_pins>;
+++-	status = "okay";
+++-};
+++-
+++-&saradc {
+++-	vref-supply = <&vcc_1v8>;
+++-	status = "okay";
+++-};
+++-
+++-&sdhci {
+++-	bus-width = <8>;
+++-	cap-mmc-highspeed;
+++-	mmc-hs200-1_8v;
+++-	no-sd;
+++-	no-sdio;
+++-	non-removable;
+++-	vmmc-supply = <&vcc_3v3>;
+++-	vqmmc-supply = <&vcc_1v8>;
+++-	status = "okay";
+++-};
+++-
+++-&sdmmc {
+++-	bus-width = <4>;
+++-	cap-mmc-highspeed;
+++-	cap-sd-highspeed;
+++-	disable-wp;
+++-	sd-uhs-sdr104;
+++-	vmmc-supply = <&vcc3v3_sd>;
+++-	vqmmc-supply = <&vccio_sd>;
+++-	status = "okay";
+++-};
+++-
+++-&uart0 {
+++-	pinctrl-names = "default";
+++-	pinctrl-0 = <&uart0m0_xfer>;
+++-	status = "okay";
+++-};
+++--- /dev/null
++++++ b/arch/arm64/boot/dts/rockchip/rk3528-nanopi.dtsi
+++@@ -0,0 +1,291 @@
++++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++++
++++#include <dt-bindings/input/input.h>
++++#include <dt-bindings/leds/common.h>
++++#include <dt-bindings/pwm/pwm.h>
++++#include "rk3528.dtsi"
++++
++++/ {
++++	aliases {
++++		ethernet0 = &gmac1;
++++		i2c1 = &i2c1;
++++		mmc0 = &sdhci;
++++		mmc1 = &sdmmc;
++++		serial0 = &uart0;
++++	};
++++
++++	chosen {
++++		stdout-path = "serial0:1500000n8";
++++	};
++++
++++	adc-keys-0 {
++++		compatible = "adc-keys";
++++		io-channels = <&saradc 0>;
++++		io-channel-names = "buttons";
++++		keyup-threshold-microvolt = <1800000>;
++++		poll-interval = <100>;
++++
++++		button-maskrom {
++++			label = "MASK";
++++			linux,code = <KEY_SETUP>;
++++			press-threshold-microvolt = <0>;
++++		};
++++	};
++++
++++	leds: leds {
++++		compatible = "gpio-leds";
++++		pinctrl-names = "default";
++++		pinctrl-0 = <&led_sys_pin>, <&led1_pin>;
++++
++++		led-0 {
++++			color = <LED_COLOR_ID_RED>;
++++			default-state = "on";
++++			function = LED_FUNCTION_HEARTBEAT;
++++			gpios = <&gpio4 RK_PB0 GPIO_ACTIVE_HIGH>;
++++			linux,default-trigger = "heartbeat";
++++		};
++++
++++		/* The purpose of the second LED differs per board. */
++++		led1: led-1 {
++++			color = <LED_COLOR_ID_GREEN>;
++++			gpios = <&gpio4 RK_PB1 GPIO_ACTIVE_HIGH>;
++++		};
++++	};
++++
++++	vdd_0v9: regulator-0v9-vdd {
++++		compatible = "regulator-fixed";
++++		regulator-name = "vdd_0v9";
++++		regulator-always-on;
++++		regulator-boot-on;
++++		regulator-min-microvolt = <900000>;
++++		regulator-max-microvolt = <900000>;
++++		vin-supply = <&vcc5v0_sys>;
++++	};
++++
++++	vcc_ddr: regulator-1v1-vcc-ddr {
++++		compatible = "regulator-fixed";
++++		regulator-name = "vcc_ddr";
++++		regulator-always-on;
++++		regulator-boot-on;
++++		regulator-min-microvolt = <1100000>;
++++		regulator-max-microvolt = <1100000>;
++++		vin-supply = <&vcc5v0_sys>;
++++	};
++++
++++	vcc_1v8: regulator-1v8-vcc {
++++		compatible = "regulator-fixed";
++++		regulator-name = "vcc_1v8";
++++		regulator-always-on;
++++		regulator-boot-on;
++++		regulator-min-microvolt = <1800000>;
++++		regulator-max-microvolt = <1800000>;
++++		vin-supply = <&vcc_3v3>;
++++	};
++++
++++	vcc_3v3: regulator-3v3-vcc {
++++		compatible = "regulator-fixed";
++++		regulator-name = "vcc_3v3";
++++		regulator-always-on;
++++		regulator-boot-on;
++++		regulator-min-microvolt = <3300000>;
++++		regulator-max-microvolt = <3300000>;
++++		vin-supply = <&vcc5v0_sys>;
++++	};
++++
++++	vcc3v3_sd: regulator-3v3-vcc-sd {
++++		compatible = "regulator-fixed";
++++		gpios = <&gpio4 RK_PA1 GPIO_ACTIVE_LOW>;
++++		pinctrl-names = "default";
++++		pinctrl-0 = <&sdmmc_pwren_l>;
++++		regulator-name = "vcc3v3_sd";
++++		regulator-min-microvolt = <3300000>;
++++		regulator-max-microvolt = <3300000>;
++++		vin-supply = <&vcc_3v3>;
++++	};
++++
++++	vcc5v0_sys: regulator-5v0-vcc-sys {
++++		compatible = "regulator-fixed";
++++		regulator-name = "vcc5v0_sys";
++++		regulator-always-on;
++++		regulator-boot-on;
++++		regulator-min-microvolt = <5000000>;
++++		regulator-max-microvolt = <5000000>;
++++	};
++++
++++	vccio_sd: regulator-vccio-sd {
++++		compatible = "regulator-gpio";
++++		gpios = <&gpio4 RK_PB6 GPIO_ACTIVE_HIGH>;
++++		pinctrl-names = "default";
++++		pinctrl-0 = <&sdmmc_vol_ctrl_h>;
++++		regulator-name = "vccio_sd";
++++		regulator-min-microvolt = <1800000>;
++++		regulator-max-microvolt = <3300000>;
++++		states = <1800000 0x0>, <3300000 0x1>;
++++		vin-supply = <&vcc5v0_sys>;
++++	};
++++
++++	vdd_arm: regulator-vdd-arm {
++++		compatible = "pwm-regulator";
++++		pwms = <&pwm1 0 5000 PWM_POLARITY_INVERTED>;
++++		pwm-supply = <&vcc5v0_sys>;
++++		regulator-name = "vdd_arm";
++++		regulator-always-on;
++++		regulator-boot-on;
++++		regulator-min-microvolt = <746000>;
++++		regulator-max-microvolt = <1201000>;
++++		regulator-settling-time-up-us = <250>;
++++	};
++++
++++	vdd_logic: regulator-vdd-logic {
++++		compatible = "pwm-regulator";
++++		pwms = <&pwm2 0 5000 PWM_POLARITY_INVERTED>;
++++		pwm-supply = <&vcc5v0_sys>;
++++		regulator-name = "vdd_logic";
++++		regulator-always-on;
++++		regulator-boot-on;
++++		regulator-min-microvolt = <705000>;
++++		regulator-max-microvolt = <1006000>;
++++		regulator-settling-time-up-us = <250>;
++++	};
++++};
++++
++++&cpu0 {
++++	cpu-supply = <&vdd_arm>;
++++};
++++
++++&cpu1 {
++++	cpu-supply = <&vdd_arm>;
++++};
++++
++++&cpu2 {
++++	cpu-supply = <&vdd_arm>;
++++};
++++
++++&cpu3 {
++++	cpu-supply = <&vdd_arm>;
++++};
++++
++++&gmac1 {
++++	clock_in_out = "output";
++++	phy-handle = <&rgmii_phy>;
++++	phy-mode = "rgmii-id";
++++	phy-supply = <&vcc_3v3>;
++++	pinctrl-names = "default";
++++	pinctrl-0 = <&rgmii_miim>, <&rgmii_tx_bus2>, <&rgmii_rx_bus2>,
++++		    <&rgmii_rgmii_clk>, <&rgmii_rgmii_bus>;
++++	status = "okay";
++++};
++++
++++&gpu {
++++	mali-supply = <&vdd_logic>;
++++	status = "okay";
++++};
++++
++++&i2c1 {
++++	pinctrl-names = "default";
++++	pinctrl-0 = <&i2c1m0_xfer>;
++++	status = "okay";
++++
++++	hym8563: rtc@51 {
++++		compatible = "haoyu,hym8563";
++++		reg = <0x51>;
++++		#clock-cells = <0>;
++++		interrupt-parent = <&gpio4>;
++++		interrupts = <RK_PC1 IRQ_TYPE_LEVEL_LOW>;
++++		pinctrl-names = "default";
++++		pinctrl-0 = <&rtc_int_l>;
++++		wakeup-source;
++++	};
++++};
++++
++++&mdio1 {
++++	rgmii_phy: ethernet-phy@1 {
++++		compatible = "ethernet-phy-ieee802.3-c22";
++++		reg = <0x1>;
++++		pinctrl-names = "default";
++++		pinctrl-0 = <&gmac1_rstn_l>;
++++		reset-assert-us = <20000>;
++++		reset-deassert-us = <100000>;
++++		reset-gpios = <&gpio4 RK_PC2 GPIO_ACTIVE_LOW>;
++++	};
++++};
++++
++++&pinctrl {
++++	ethernet {
++++		gmac1_rstn_l: gmac1-rstn-l {
++++			rockchip,pins = <4 RK_PC2 RK_FUNC_GPIO &pcfg_pull_none>;
++++		};
++++	};
++++
++++	leds {
++++		led_sys_pin: led-sys-pin {
++++			rockchip,pins = <4 RK_PB0 RK_FUNC_GPIO &pcfg_pull_none>;
++++		};
++++
++++		led1_pin: led1-pin {
++++			rockchip,pins = <4 RK_PB1 RK_FUNC_GPIO &pcfg_pull_none>;
++++		};
++++	};
++++
++++	rtc {
++++		rtc_int_l: rtc-int-l {
++++			rockchip,pins = <4 RK_PC1 RK_FUNC_GPIO &pcfg_pull_up>;
++++		};
++++	};
++++
++++	sdmmc {
++++		sdmmc_pwren_l: sdmmc-pwren-l {
++++			rockchip,pins = <4 RK_PA1 RK_FUNC_GPIO &pcfg_pull_none>;
++++		};
++++
++++		sdmmc_vol_ctrl_h: sdmmc-vol-ctrl-h {
++++			rockchip,pins = <4 RK_PB6 RK_FUNC_GPIO &pcfg_pull_none>;
++++		};
++++	};
++++};
++++
++++&pwm1 {
++++	pinctrl-names = "default";
++++	pinctrl-0 = <&pwm1m0_pins>;
++++	status = "okay";
++++};
++++
++++&pwm2 {
++++	pinctrl-names = "default";
++++	pinctrl-0 = <&pwm2m0_pins>;
++++	status = "okay";
++++};
++++
++++&saradc {
++++	vref-supply = <&vcc_1v8>;
++++	status = "okay";
++++};
++++
++++&sdhci {
++++	bus-width = <8>;
++++	cap-mmc-highspeed;
++++	mmc-hs200-1_8v;
++++	no-sd;
++++	no-sdio;
++++	non-removable;
++++	vmmc-supply = <&vcc_3v3>;
++++	vqmmc-supply = <&vcc_1v8>;
++++	status = "okay";
++++};
++++
++++&sdmmc {
++++	bus-width = <4>;
++++	cap-mmc-highspeed;
++++	cap-sd-highspeed;
++++	disable-wp;
++++	sd-uhs-sdr104;
++++	vmmc-supply = <&vcc3v3_sd>;
++++	vqmmc-supply = <&vccio_sd>;
++++	status = "okay";
++++};
++++
++++&uart0 {
++++	pinctrl-names = "default";
++++	pinctrl-0 = <&uart0m0_xfer>;
++++	status = "okay";
++++};
++diff --git a/target/linux/rockchip/patches-6.18/075-2-v7.4-arm64-dts-rockchip-Add-devicetree-for-the-FriendlyElec-Na.patch b/target/linux/rockchip/patches-6.18/075-2-v7.4-arm64-dts-rockchip-Add-devicetree-for-the-FriendlyElec-Na.patch
++new file mode 100644
++index 0000000000000000000000000000000000000000..561cfa4e9f799ba2cb1680c25f56c4d36cf14782
++--- /dev/null
+++++ b/target/linux/rockchip/patches-6.18/075-2-v7.4-arm64-dts-rockchip-Add-devicetree-for-the-FriendlyElec-Na.patch
++@@ -0,0 +1,214 @@
+++From c1e23f3425c49fe22e9598f8eea2fcf693950d50 Mon Sep 17 00:00:00 2001
+++From: 安容 <HystericalDragons@proton.me>
+++Date: Sat, 19 Sep 2026 18:28:19 +0800
+++Subject: [PATCH] arm64: dts: rockchip: Add devicetree for the FriendlyElec NanoPi R28S
+++MIME-Version: 1.0
+++Content-Type: text/plain; charset=UTF-8
+++Content-Transfer-Encoding: 8bit
+++
+++The NanoPi R28S is a dual gigabit Ethernet router board based on the
+++Rockchip RK3528 SoC, designed and developed by FriendlyElec. It shares
+++most of its design with the NanoPi Zero2, so it builds on the common
+++rk3528-nanopi.dtsi.
+++
+++Specification:
+++- Rockchip RK3528
+++- 1GB RAM
+++- eMMC socket (optional)
+++- MicroSD slot
+++- 1x 1000Base-T (GMAC1, Realtek RTL8211F)
+++- 1x 1000Base-T (PCIe, Realtek RTL8111H)
+++- AICSemi AIC8800D80 SDIO WiFi + Bluetooth
+++- 3x LEDs (SYS, LAN, WAN)
+++- 1x USB 2.0 Type-C OTG, shared with the 5V power input
+++- User and MaskROM buttons
+++- Haoyu HYM8563 RTC
+++- 1x USB Type-C debug UART (onboard WCH CH340E)
+++
+++The AIC8800D80 has no upstream driver yet, so only the SDIO and UART
+++controllers it hangs off are enabled, along with the WiFi and Bluetooth
+++wake and power pins taken from the schematics.
+++
+++Assisted-by: LLM
+++Signed-off-by: 安容 <HystericalDragons@proton.me>
+++Link: https://patch.msgid.link/20260919-r28s-upstream-v7-3-e80a6f8ef521@proton.me
+++Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+++---
+++ arch/arm64/boot/dts/rockchip/Makefile              |   1 +
+++ .../arm64/boot/dts/rockchip/rk3528-nanopi-r28s.dts | 160 +++++++++++++++++++++
+++ 2 files changed, 161 insertions(+)
+++ create mode 100644 arch/arm64/boot/dts/rockchip/rk3528-nanopi-r28s.dts
+++
+++--- a/arch/arm64/boot/dts/rockchip/Makefile
++++++ b/arch/arm64/boot/dts/rockchip/Makefile
+++@@ -90,6 +90,7 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3399-sa
+++ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3399-sapphire-excavator.dtb
+++ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3399pro-rock-pi-n10.dtb
+++ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3528-armsom-sige1.dtb
++++dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3528-nanopi-r28s.dtb
+++ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3528-nanopi-zero2.dtb
+++ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3528-radxa-e20c.dtb
+++ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3528-rock-2a.dtb
+++--- /dev/null
++++++ b/arch/arm64/boot/dts/rockchip/rk3528-nanopi-r28s.dts
+++@@ -0,0 +1,160 @@
++++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++++/*
++++ * Copyright (c) 2022 Rockchip Electronics Co., Ltd.
++++ * Copyright (c) 2026 FriendlyElec Computer Tech. Co., Ltd.
++++ * Copyright (c) 2026 安容 <HystericalDragons@proton.me>
++++ */
++++
++++/dts-v1/;
++++
++++#include "rk3528-nanopi.dtsi"
++++
++++/ {
++++	model = "FriendlyElec NanoPi R28S";
++++	compatible = "friendlyarm,nanopi-r28s", "rockchip,rk3528";
++++
++++	aliases {
++++		mmc2 = &sdio0;
++++		serial2 = &uart2;
++++	};
++++
++++	gpio-keys {
++++		compatible = "gpio-keys";
++++		pinctrl-names = "default";
++++		pinctrl-0 = <&gpio4_b2_usr_btn>;
++++
++++		button-user {
++++			debounce-interval = <50>;
++++			gpios = <&gpio4 RK_PB2 GPIO_ACTIVE_LOW>;
++++			label = "USER";
++++			linux,code = <BTN_1>;
++++			wakeup-source;
++++		};
++++	};
++++
++++	sdio_pwrseq: sdio-pwrseq {
++++		compatible = "mmc-pwrseq-simple";
++++		pinctrl-names = "default";
++++		pinctrl-0 = <&pwr_wf>;
++++		post-power-on-delay-ms = <100>;
++++		reset-gpios = <&gpio1 RK_PC2 GPIO_ACTIVE_LOW>;
++++	};
++++};
++++
++++&combphy {
++++	status = "okay";
++++};
++++
++++&led1 {
++++	default-state = "off";
++++	function = LED_FUNCTION_WAN;
++++	linux,default-trigger = "netdev";
++++};
++++
++++&leds {
++++	pinctrl-names = "default";
++++	pinctrl-0 = <&led_sys_pin>, <&led1_pin>, <&led2_pin>;
++++
++++	led-2 {
++++		color = <LED_COLOR_ID_GREEN>;
++++		default-state = "off";
++++		function = LED_FUNCTION_LAN;
++++		gpios = <&gpio4 RK_PB3 GPIO_ACTIVE_HIGH>;
++++		linux,default-trigger = "netdev";
++++	};
++++};
++++
++++&pcie {
++++	pinctrl-names = "default";
++++	pinctrl-0 = <&pcie_eth_perstb>;
++++	reset-gpios = <&gpio4 RK_PC0 GPIO_ACTIVE_HIGH>;
++++	vpcie3v3-supply = <&vcc_3v3>;
++++	status = "okay";
++++};
++++
++++&pinctrl {
++++	bluetooth {
++++		bt_wake_host: bt-wake-host {
++++			rockchip,pins = <1 RK_PB5 RK_FUNC_GPIO &pcfg_pull_down>;
++++		};
++++
++++		host_wake_bt: host-wake-bt {
++++			rockchip,pins = <1 RK_PB4 RK_FUNC_GPIO &pcfg_pull_none>;
++++		};
++++	};
++++
++++	gpio-keys {
++++		gpio4_b2_usr_btn: gpio4-b2-usr-btn {
++++			rockchip,pins = <4 RK_PB2 RK_FUNC_GPIO &pcfg_pull_up>;
++++		};
++++	};
++++
++++	leds {
++++		led2_pin: led2-pin {
++++			rockchip,pins = <4 RK_PB3 RK_FUNC_GPIO &pcfg_pull_none>;
++++		};
++++	};
++++
++++	pcie {
++++		pcie_eth_perstb: pcie-eth-perstb {
++++			rockchip,pins = <4 RK_PC0 RK_FUNC_GPIO &pcfg_pull_none>;
++++		};
++++	};
++++
++++	wifi {
++++		host_wake_wl: host-wake-wl {
++++			rockchip,pins = <1 RK_PA6 RK_FUNC_GPIO &pcfg_pull_none>;
++++		};
++++
++++		pwr_wf: pwr-wf {
++++			rockchip,pins = <1 RK_PC2 RK_FUNC_GPIO &pcfg_pull_none>;
++++		};
++++
++++		wl_wake_host: wl-wake-host {
++++			rockchip,pins = <1 RK_PA7 RK_FUNC_GPIO &pcfg_pull_down>;
++++		};
++++	};
++++};
++++
++++&sdio0 {
++++	bus-width = <4>;
++++	cap-sd-highspeed;
++++	cap-sdio-irq;
++++	keep-power-in-suspend;
++++	mmc-pwrseq = <&sdio_pwrseq>;
++++	no-mmc;
++++	no-sd;
++++	non-removable;
++++	sd-uhs-sdr104;
++++	vmmc-supply = <&vcc_3v3>;
++++	vqmmc-supply = <&vcc_1v8>;
++++	status = "okay";
++++};
++++
++++&uart2 {
++++	dma-names = "tx", "rx";
++++	pinctrl-names = "default";
++++	pinctrl-0 = <&uart2m1_xfer>, <&uart2m1_ctsn>, <&uart2m1_rtsn>;
++++	uart-has-rtscts;
++++	status = "okay";
++++};
++++
++++&usb_host0_xhci {
++++	/*
++++	 * The Type-C port is also the 5V power input, so it comes up as a
++++	 * device, but host mode works with an externally powered hub.
++++	 */
++++	extcon = <&usb2phy>;
++++	maximum-speed = "high-speed";
++++	phys = <&usb2phy_otg>;
++++	phy-names = "usb2-phy";
++++	status = "okay";
++++};
++++
++++&usb2phy {
++++	status = "okay";
++++};
++++
++++&usb2phy_otg {
++++	status = "okay";
++++};
++diff --git a/target/linux/rockchip/patches-6.18/101-arm64-dts-rockchip-Add-HINLINK-H28K.patch b/target/linux/rockchip/patches-6.18/101-arm64-dts-rockchip-Add-HINLINK-H28K.patch
++index d03253d2dd1a1efce134c69421f8a084fcdf4dc8..1dbd40638ea02036df5ba08198135e75a7ca5e56 100644
++--- a/target/linux/rockchip/patches-6.18/101-arm64-dts-rockchip-Add-HINLINK-H28K.patch
+++++ b/target/linux/rockchip/patches-6.18/101-arm64-dts-rockchip-Add-HINLINK-H28K.patch
++@@ -27,9 +27,9 @@ Signed-off-by: Chukun Pan <amadeus@jmu.edu.cn>
++  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3399pro-rock-pi-n10.dtb
++  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3528-armsom-sige1.dtb
++ +dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3528-hinlink-h28k.dtb
+++ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3528-nanopi-r28s.dtb
++  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3528-nanopi-zero2.dtb
++  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3528-radxa-e20c.dtb
++- dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3528-rock-2a.dtb
++ --- /dev/null
++ +++ b/arch/arm64/boot/dts/rockchip/rk3528-hinlink-h28k.dts
++ @@ -0,0 +1,318 @@
++diff --git a/target/linux/rockchip/patches-6.18/143-arm64-dts-rockchip-set-reset-button-for-NanoPi-R28S.patch b/target/linux/rockchip/patches-6.18/143-arm64-dts-rockchip-set-reset-button-for-NanoPi-R28S.patch
++new file mode 100644
++index 0000000000000000000000000000000000000000..b6c716c533114f7ba8ca2c166d5baed58254f746
++--- /dev/null
+++++ b/target/linux/rockchip/patches-6.18/143-arm64-dts-rockchip-set-reset-button-for-NanoPi-R28S.patch
++@@ -0,0 +1,23 @@
+++From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+++From: Abdalla Ashry <abdallah.ashry@hotmail.com>
+++Date: Wed, 07 Oct 2026 12:00:00 +0200
+++Subject: [PATCH] arm64: dts: rockchip: set reset button for NanoPi R28S
+++
+++Use the user button (K2_USR) as reset button (KEY_RESTART) so it can be
+++used for OpenWrt failsafe and factory reset.
+++
+++Signed-off-by: Abdalla Ashry <abdallah.ashry@hotmail.com>
+++---
+++--- a/arch/arm64/boot/dts/rockchip/rk3528-nanopi-r28s.dts
++++++ b/arch/arm64/boot/dts/rockchip/rk3528-nanopi-r28s.dts
+++@@ -26,8 +26,8 @@
+++ 		button-user {
+++ 			debounce-interval = <50>;
+++ 			gpios = <&gpio4 RK_PB2 GPIO_ACTIVE_LOW>;
+++-			label = "USER";
+++-			linux,code = <BTN_1>;
++++			label = "reset";
++++			linux,code = <KEY_RESTART>;
+++ 			wakeup-source;
+++ 		};
+++ 	};
++diff --git a/target/linux/rockchip/patches-6.18/144-arm64-dts-rockchip-add-led-aliases-for-NanoPi-RK3528.patch b/target/linux/rockchip/patches-6.18/144-arm64-dts-rockchip-add-led-aliases-for-NanoPi-RK3528.patch
++new file mode 100644
++index 0000000000000000000000000000000000000000..e5aa0de97f75d0993de49eeba7bb17e267862650
++--- /dev/null
+++++ b/target/linux/rockchip/patches-6.18/144-arm64-dts-rockchip-add-led-aliases-for-NanoPi-RK3528.patch
++@@ -0,0 +1,40 @@
+++From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+++From: Abdalla Ashry <abdallah.ashry@hotmail.com>
+++Date: Wed, 07 Oct 2026 12:00:00 +0200
+++Subject: [PATCH] arm64: dts: rockchip: add led aliases for NanoPi RK3528 boards
+++
+++Use the red SYS LED as OpenWrt status LED on the NanoPi R28S and
+++Zero2, and drop its heartbeat trigger and default-on state so the
+++boot/failsafe/upgrade states are visible. As it no longer beats,
+++change its function from heartbeat to power.
+++
+++Signed-off-by: Abdalla Ashry <abdallah.ashry@hotmail.com>
+++---
+++--- a/arch/arm64/boot/dts/rockchip/rk3528-nanopi.dtsi
++++++ b/arch/arm64/boot/dts/rockchip/rk3528-nanopi.dtsi
+++@@ -9,6 +9,10 @@
+++ 	aliases {
+++ 		ethernet0 = &gmac1;
+++ 		i2c1 = &i2c1;
++++		led-boot = &led_sys;
++++		led-failsafe = &led_sys;
++++		led-running = &led_sys;
++++		led-upgrade = &led_sys;
+++ 		mmc0 = &sdhci;
+++ 		mmc1 = &sdmmc;
+++ 		serial0 = &uart0;
+++@@ -37,12 +41,10 @@
+++ 		pinctrl-names = "default";
+++ 		pinctrl-0 = <&led_sys_pin>, <&led1_pin>;
+++ 
+++-		led-0 {
++++		led_sys: led-0 {
+++ 			color = <LED_COLOR_ID_RED>;
+++-			default-state = "on";
+++-			function = LED_FUNCTION_HEARTBEAT;
++++			function = LED_FUNCTION_POWER;
+++ 			gpios = <&gpio4 RK_PB0 GPIO_ACTIVE_HIGH>;
+++-			linux,default-trigger = "heartbeat";
+++ 		};
+++ 
+++ 		/* The purpose of the second LED differs per board. */
+diff --git a/patches/openwrt/0006-uboot-rockchip-backport-NanoPi-R28S-support-from-U-Boot-next.patch b/patches/openwrt/0006-uboot-rockchip-backport-NanoPi-R28S-support-from-U-Boot-next.patch
+new file mode 100644
+index 00000000..70d84af3
+--- /dev/null
++++ b/patches/openwrt/0006-uboot-rockchip-backport-NanoPi-R28S-support-from-U-Boot-next.patch
+@@ -0,0 +1,2503 @@
++From: Grische <github@grische.xyz>
++Date: Thu, 19 Nov 2026 19:24:06 +0100
++Subject: uboot-rockchip: backport NanoPi R28S support from U-Boot next
++
++Upstream U-Boot merged version 3 of the NanoPi R28S series into next
++for v2027.04. Unlike version 1, it adds no defconfig for the R28S. The
++nanopi-zero2-rk3528 defconfig builds one image with the devicetrees of
++both boards. U-Boot selects the devicetree by the HW_ID voltage on
++SARADC channel 2.
++
++Replace the R28S patches with cherry-picks of the six merged commits
++and build the R28S U-Boot from the nanopi-zero2-rk3528 target. Because
++the commits are in next, the update to U-Boot v2027.04 can drop these
++patches.
++
++Signed-off-by: Grische <github@grische.xyz>
++Assisted-by: Claude:claude-opus-5-5
++
++diff --git a/package/boot/uboot-rockchip/Makefile b/package/boot/uboot-rockchip/Makefile
++index 48b5330357c1e0c990a040be79b0a60b25a8cc1d..b45a99e6a64c83a9a3935d44f81e4c66a0a5344a 100644
++--- a/package/boot/uboot-rockchip/Makefile
+++++ b/package/boot/uboot-rockchip/Makefile
++@@ -188,9 +188,9 @@ define U-Boot/hinlink-h28k-rk3528
++     hinlink_h28k
++ endef
++ 
++-define U-Boot/nanopi-r28s-rk3528
+++define U-Boot/nanopi-zero2-rk3528
++   $(U-Boot/rk3528/Default)
++-  NAME:=NanoPi R28S
+++  NAME:=NanoPi R28S/Zero2
++   BUILD_DEVICES:= \
++     friendlyarm_nanopi-r28s
++ endef
++@@ -464,7 +464,7 @@ UBOOT_TARGETS := \
++   rock-pi-e-rk3328 \
++   rock-pi-e-v3-rk3328 \
++   hinlink-h28k-rk3528 \
++-  nanopi-r28s-rk3528 \
+++  nanopi-zero2-rk3528 \
++   radxa-e20c-rk3528 \
++   rock-2-rk3528 \
++   nanopi-r3s-rk3566 \
++diff --git a/package/boot/uboot-rockchip/patches/002-01-v2027.04-dt-bindings-arm-rockchip-Add-FriendlyElec-NanoPi-R28S.patch b/package/boot/uboot-rockchip/patches/002-01-v2027.04-dt-bindings-arm-rockchip-Add-FriendlyElec-NanoPi-R28S.patch
++new file mode 100644
++index 0000000000000000000000000000000000000000..375c0e73ab9789ec5c3677b6b113aaa0847ab7b6
++--- /dev/null
+++++ b/package/boot/uboot-rockchip/patches/002-01-v2027.04-dt-bindings-arm-rockchip-Add-FriendlyElec-NanoPi-R28S.patch
++@@ -0,0 +1,58 @@
+++From 05b25e457f7fd2a843124fb99c7e921d92ab902a Mon Sep 17 00:00:00 2001
+++From: =?UTF-8?q?=E5=AE=89=E5=AE=B9?= <HystericalDragons@proton.me>
+++Date: Tue, 3 Nov 2026 18:37:06 +0800
+++Subject: [PATCH] dt-bindings: arm: rockchip: Add FriendlyElec NanoPi R28S
+++MIME-Version: 1.0
+++Content-Type: text/plain; charset=UTF-8
+++Content-Transfer-Encoding: 8bit
+++
+++The NanoPi R28S is a dual gigabit Ethernet router board based on the
+++Rockchip RK3528 SoC. It shares its base devicetree with the NanoPi
+++Zero2, so fold both boards into a single RK3528 series entry, which
+++further RK3528 based NanoPi boards can join without renaming it.
+++
+++Acked-by: Conor Dooley <conor.dooley@microchip.com>
+++Signed-off-by: 安容 <HystericalDragons@proton.me>
+++Link: https://patch.msgid.link/20260919-r28s-upstream-v7-1-e80a6f8ef521@proton.me
+++Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+++
+++[ upstream commit: bdcf29a379afecc02c3e99c0d1745363ad7a7407 ]
+++
+++(cherry picked from commit e9eafc0ca521c8d12e1a65b43f899e336ef28eba)
+++
+++Reviewed-by: Quentin Schulz <quentin.schulz@cherry.de>
+++Link: https://patch.msgid.link/20261103-nanopi-r28s-v3-1-ae8664fd168f@proton.me
+++Signed-off-by: Quentin Schulz <u-boot@0leil.net>
+++(cherry picked from commit 5949dc67a319cf7330312cf8a494e474a841efc8)
+++---
+++ dts/upstream/Bindings/arm/rockchip.yaml | 12 +++++++-----
+++ 1 file changed, 7 insertions(+), 5 deletions(-)
+++
+++--- a/dts/upstream/Bindings/arm/rockchip.yaml
++++++ b/dts/upstream/Bindings/arm/rockchip.yaml
+++@@ -315,6 +315,13 @@ properties:
+++               - friendlyarm,nanopi-r2s-plus
+++           - const: rockchip,rk3328
+++ 
++++      - description: FriendlyElec NanoPi RK3528 series boards
++++        items:
++++          - enum:
++++              - friendlyarm,nanopi-r28s
++++              - friendlyarm,nanopi-zero2
++++          - const: rockchip,rk3528
++++
+++       - description: FriendlyElec NanoPi R3S
+++         items:
+++           - const: friendlyarm,nanopi-r3s
+++@@ -356,11 +363,6 @@ properties:
+++           - const: friendlyarm,nanopi-r76s
+++           - const: rockchip,rk3576
+++ 
+++-      - description: FriendlyElec NanoPi Zero2
+++-        items:
+++-          - const: friendlyarm,nanopi-zero2
+++-          - const: rockchip,rk3528
+++-
+++       - description: FriendlyElec NanoPC T6 series boards
+++         items:
+++           - enum:
++diff --git a/package/boot/uboot-rockchip/patches/002-02-v2027.04-arm64-dts-rockchip-Split-out-the-common-NanoPi-RK3528-parts.patch b/package/boot/uboot-rockchip/patches/002-02-v2027.04-arm64-dts-rockchip-Split-out-the-common-NanoPi-RK3528-parts.patch
++new file mode 100644
++index 0000000000000000000000000000000000000000..a41ebd0d101cd4ba79ca1c418211f89dbf00c8d5
++--- /dev/null
+++++ b/package/boot/uboot-rockchip/patches/002-02-v2027.04-arm64-dts-rockchip-Split-out-the-common-NanoPi-RK3528-parts.patch
++@@ -0,0 +1,670 @@
+++From 39cea000780e2c81835096e39c199754a362721f Mon Sep 17 00:00:00 2001
+++From: =?UTF-8?q?=E5=AE=89=E5=AE=B9?= <HystericalDragons@proton.me>
+++Date: Tue, 3 Nov 2026 18:37:07 +0800
+++Subject: [PATCH] arm64: dts: rockchip: Split out the common NanoPi RK3528
+++ parts
+++MIME-Version: 1.0
+++Content-Type: text/plain; charset=UTF-8
+++Content-Transfer-Encoding: 8bit
+++
+++The FriendlyElec NanoPi Zero2 and the NanoPi R28S share their power
+++tree, storage, RGMII Ethernet, RTC, LEDs and debug console. Move those
+++parts into rk3528-nanopi.dtsi so the NanoPi R28S can reuse them, and
+++leave only the board specific nodes in the NanoPi Zero2 devicetree.
+++
+++Both boards drive a green LED from GPIO4_PB1, but give it a different
+++purpose, so the common file describes the LED itself and each board
+++adds the function, trigger and default state. While moving the LED pins
+++give them the usual _pin suffix, which frees the led1 label for the LED
+++node.
+++
+++Suggested-by: Chukun Pan <amadeus@jmu.edu.cn>
+++Signed-off-by: 安容 <HystericalDragons@proton.me>
+++Link: https://patch.msgid.link/20260919-r28s-upstream-v7-2-e80a6f8ef521@proton.me
+++Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+++
+++[ upstream commit: fdb087806e808ccc4963e2e5225fe16581ecb421 ]
+++
+++(cherry picked from commit f7f1ea96945deee8bbadfd0737706ce770315342)
+++
+++Reviewed-by: Quentin Schulz <quentin.schulz@cherry.de>
+++Link: https://patch.msgid.link/20261103-nanopi-r28s-v3-2-ae8664fd168f@proton.me
+++Signed-off-by: Quentin Schulz <u-boot@0leil.net>
+++(cherry picked from commit e0eeca5960f0ecf9e056dd9a01f398d68a02d16e)
+++---
+++ .../arm64/rockchip/rk3528-nanopi-zero2.dts    | 290 +----------------
+++ .../src/arm64/rockchip/rk3528-nanopi.dtsi     | 291 ++++++++++++++++++
+++ 2 files changed, 296 insertions(+), 285 deletions(-)
+++ create mode 100644 dts/upstream/src/arm64/rockchip/rk3528-nanopi.dtsi
+++
+++--- a/dts/upstream/src/arm64/rockchip/rk3528-nanopi-zero2.dts
++++++ b/dts/upstream/src/arm64/rockchip/rk3528-nanopi-zero2.dts
+++@@ -2,41 +2,12 @@
+++ 
+++ /dts-v1/;
+++ 
+++-#include <dt-bindings/input/input.h>
+++-#include <dt-bindings/leds/common.h>
+++-#include <dt-bindings/pwm/pwm.h>
+++-#include "rk3528.dtsi"
++++#include "rk3528-nanopi.dtsi"
+++ 
+++ / {
+++ 	model = "FriendlyElec NanoPi Zero2";
+++ 	compatible = "friendlyarm,nanopi-zero2", "rockchip,rk3528";
+++ 
+++-	aliases {
+++-		ethernet0 = &gmac1;
+++-		i2c1 = &i2c1;
+++-		mmc0 = &sdhci;
+++-		mmc1 = &sdmmc;
+++-		serial0 = &uart0;
+++-	};
+++-
+++-	chosen {
+++-		stdout-path = "serial0:1500000n8";
+++-	};
+++-
+++-	adc-keys-0 {
+++-		compatible = "adc-keys";
+++-		io-channels = <&saradc 0>;
+++-		io-channel-names = "buttons";
+++-		keyup-threshold-microvolt = <1800000>;
+++-		poll-interval = <100>;
+++-
+++-		button-maskrom {
+++-			label = "MASK";
+++-			linux,code = <KEY_SETUP>;
+++-			press-threshold-microvolt = <0>;
+++-		};
+++-	};
+++-
+++ 	adc-keys-1 {
+++ 		compatible = "adc-keys";
+++ 		io-channels = <&saradc 1>;
+++@@ -51,28 +22,6 @@
+++ 		};
+++ 	};
+++ 
+++-	leds {
+++-		compatible = "gpio-leds";
+++-		pinctrl-names = "default";
+++-		pinctrl-0 = <&led1>, <&led_sys>;
+++-
+++-		led-0 {
+++-			color = <LED_COLOR_ID_RED>;
+++-			default-state = "on";
+++-			function = LED_FUNCTION_HEARTBEAT;
+++-			gpios = <&gpio4 RK_PB0 GPIO_ACTIVE_HIGH>;
+++-			linux,default-trigger = "heartbeat";
+++-		};
+++-
+++-		led-1 {
+++-			color = <LED_COLOR_ID_GREEN>;
+++-			default-state = "on";
+++-			function = LED_FUNCTION_STATUS;
+++-			gpios = <&gpio4 RK_PB1 GPIO_ACTIVE_HIGH>;
+++-			linux,default-trigger = "default-on";
+++-		};
+++-	};
+++-
+++ 	vcc0v6_ddr: regulator-0v6-vcc-ddr {
+++ 		compatible = "regulator-fixed";
+++ 		regulator-name = "vcc0v6_ddr";
+++@@ -83,66 +32,6 @@
+++ 		vin-supply = <&vcc5v0_sys>;
+++ 	};
+++ 
+++-	vdd_0v9: regulator-0v9-vdd {
+++-		compatible = "regulator-fixed";
+++-		regulator-name = "vdd_0v9";
+++-		regulator-always-on;
+++-		regulator-boot-on;
+++-		regulator-min-microvolt = <900000>;
+++-		regulator-max-microvolt = <900000>;
+++-		vin-supply = <&vcc5v0_sys>;
+++-	};
+++-
+++-	vcc_ddr: regulator-1v1-vcc-ddr {
+++-		compatible = "regulator-fixed";
+++-		regulator-name = "vcc_ddr";
+++-		regulator-always-on;
+++-		regulator-boot-on;
+++-		regulator-min-microvolt = <1100000>;
+++-		regulator-max-microvolt = <1100000>;
+++-		vin-supply = <&vcc5v0_sys>;
+++-	};
+++-
+++-	vcc_1v8: regulator-1v8-vcc {
+++-		compatible = "regulator-fixed";
+++-		regulator-name = "vcc_1v8";
+++-		regulator-always-on;
+++-		regulator-boot-on;
+++-		regulator-min-microvolt = <1800000>;
+++-		regulator-max-microvolt = <1800000>;
+++-		vin-supply = <&vcc_3v3>;
+++-	};
+++-
+++-	vcc_3v3: regulator-3v3-vcc {
+++-		compatible = "regulator-fixed";
+++-		regulator-name = "vcc_3v3";
+++-		regulator-always-on;
+++-		regulator-boot-on;
+++-		regulator-min-microvolt = <3300000>;
+++-		regulator-max-microvolt = <3300000>;
+++-		vin-supply = <&vcc5v0_sys>;
+++-	};
+++-
+++-	vcc3v3_sd: regulator-3v3-vcc-sd {
+++-		compatible = "regulator-fixed";
+++-		gpios = <&gpio4 RK_PA1 GPIO_ACTIVE_LOW>;
+++-		pinctrl-names = "default";
+++-		pinctrl-0 = <&sdmmc_pwren_l>;
+++-		regulator-name = "vcc3v3_sd";
+++-		regulator-min-microvolt = <3300000>;
+++-		regulator-max-microvolt = <3300000>;
+++-		vin-supply = <&vcc_3v3>;
+++-	};
+++-
+++-	vcc5v0_sys: regulator-5v0-vcc-sys {
+++-		compatible = "regulator-fixed";
+++-		regulator-name = "vcc5v0_sys";
+++-		regulator-always-on;
+++-		regulator-boot-on;
+++-		regulator-min-microvolt = <5000000>;
+++-		regulator-max-microvolt = <5000000>;
+++-	};
+++-
+++ 	usb2_host_5v: regulator-5v0-usb2-host {
+++ 		compatible = "regulator-fixed";
+++ 		enable-active-high;
+++@@ -154,138 +43,15 @@
+++ 		regulator-max-microvolt = <5000000>;
+++ 		vin-supply = <&vcc5v0_sys>;
+++ 	};
+++-
+++-	vccio_sd: regulator-vccio-sd {
+++-		compatible = "regulator-gpio";
+++-		gpios = <&gpio4 RK_PB6 GPIO_ACTIVE_HIGH>;
+++-		pinctrl-names = "default";
+++-		pinctrl-0 = <&sdmmc_vol_ctrl_h>;
+++-		regulator-name = "vccio_sd";
+++-		regulator-min-microvolt = <1800000>;
+++-		regulator-max-microvolt = <3300000>;
+++-		states = <1800000 0x0>, <3300000 0x1>;
+++-		vin-supply = <&vcc5v0_sys>;
+++-	};
+++-
+++-	vdd_arm: regulator-vdd-arm {
+++-		compatible = "pwm-regulator";
+++-		pwms = <&pwm1 0 5000 PWM_POLARITY_INVERTED>;
+++-		pwm-supply = <&vcc5v0_sys>;
+++-		regulator-name = "vdd_arm";
+++-		regulator-always-on;
+++-		regulator-boot-on;
+++-		regulator-min-microvolt = <746000>;
+++-		regulator-max-microvolt = <1201000>;
+++-		regulator-settling-time-up-us = <250>;
+++-	};
+++-
+++-	vdd_logic: regulator-vdd-logic {
+++-		compatible = "pwm-regulator";
+++-		pwms = <&pwm2 0 5000 PWM_POLARITY_INVERTED>;
+++-		pwm-supply = <&vcc5v0_sys>;
+++-		regulator-name = "vdd_logic";
+++-		regulator-always-on;
+++-		regulator-boot-on;
+++-		regulator-min-microvolt = <705000>;
+++-		regulator-max-microvolt = <1006000>;
+++-		regulator-settling-time-up-us = <250>;
+++-	};
+++-};
+++-
+++-&cpu0 {
+++-	cpu-supply = <&vdd_arm>;
+++-};
+++-
+++-&cpu1 {
+++-	cpu-supply = <&vdd_arm>;
+++-};
+++-
+++-&cpu2 {
+++-	cpu-supply = <&vdd_arm>;
+++-};
+++-
+++-&cpu3 {
+++-	cpu-supply = <&vdd_arm>;
+++-};
+++-
+++-&gmac1 {
+++-	clock_in_out = "output";
+++-	phy-handle = <&rgmii_phy>;
+++-	phy-mode = "rgmii-id";
+++-	phy-supply = <&vcc_3v3>;
+++-	pinctrl-names = "default";
+++-	pinctrl-0 = <&rgmii_miim>, <&rgmii_tx_bus2>, <&rgmii_rx_bus2>,
+++-		    <&rgmii_rgmii_clk>, <&rgmii_rgmii_bus>;
+++-	status = "okay";
+++-};
+++-
+++-&gpu {
+++-	mali-supply = <&vdd_logic>;
+++-	status = "okay";
+++ };
+++ 
+++-&i2c1 {
+++-	pinctrl-names = "default";
+++-	pinctrl-0 = <&i2c1m0_xfer>;
+++-	status = "okay";
+++-
+++-	hym8563: rtc@51 {
+++-		compatible = "haoyu,hym8563";
+++-		reg = <0x51>;
+++-		#clock-cells = <0>;
+++-		interrupt-parent = <&gpio4>;
+++-		interrupts = <RK_PC1 IRQ_TYPE_LEVEL_LOW>;
+++-		pinctrl-names = "default";
+++-		pinctrl-0 = <&rtc_int_l>;
+++-		wakeup-source;
+++-	};
+++-};
+++-
+++-&mdio1 {
+++-	rgmii_phy: ethernet-phy@1 {
+++-		compatible = "ethernet-phy-ieee802.3-c22";
+++-		reg = <0x1>;
+++-		pinctrl-names = "default";
+++-		pinctrl-0 = <&gmac1_rstn_l>;
+++-		reset-assert-us = <20000>;
+++-		reset-deassert-us = <100000>;
+++-		reset-gpios = <&gpio4 RK_PC2 GPIO_ACTIVE_LOW>;
+++-	};
++++&led1 {
++++	default-state = "on";
++++	function = LED_FUNCTION_STATUS;
++++	linux,default-trigger = "default-on";
+++ };
+++ 
+++ &pinctrl {
+++-	ethernet {
+++-		gmac1_rstn_l: gmac1-rstn-l {
+++-			rockchip,pins = <4 RK_PC2 RK_FUNC_GPIO &pcfg_pull_none>;
+++-		};
+++-	};
+++-
+++-	leds {
+++-		led1: led1 {
+++-			rockchip,pins = <4 RK_PB1 RK_FUNC_GPIO &pcfg_pull_none>;
+++-		};
+++-
+++-		led_sys: led-sys {
+++-			rockchip,pins = <4 RK_PB0 RK_FUNC_GPIO &pcfg_pull_none>;
+++-		};
+++-	};
+++-
+++-	rtc {
+++-		rtc_int_l: rtc-int-l {
+++-			rockchip,pins = <4 RK_PC1 RK_FUNC_GPIO &pcfg_pull_up>;
+++-		};
+++-	};
+++-
+++-	sdmmc {
+++-		sdmmc_vol_ctrl_h: sdmmc-vol-ctrl-h {
+++-			rockchip,pins = <4 RK_PB6 RK_FUNC_GPIO &pcfg_pull_none>;
+++-		};
+++-
+++-		sdmmc_pwren_l: sdmmc-pwren-l {
+++-			rockchip,pins = <4 RK_PA1 RK_FUNC_GPIO &pcfg_pull_none>;
+++-		};
+++-	};
+++-
+++ 	usb {
+++ 		usb20_host1_pwren: usb20-host1-pwren {
+++ 			rockchip,pins = <4 RK_PB5 RK_FUNC_GPIO &pcfg_pull_none>;
+++@@ -293,52 +59,6 @@
+++ 	};
+++ };
+++ 
+++-&pwm1 {
+++-	pinctrl-names = "default";
+++-	pinctrl-0 = <&pwm1m0_pins>;
+++-	status = "okay";
+++-};
+++-
+++-&pwm2 {
+++-	pinctrl-names = "default";
+++-	pinctrl-0 = <&pwm2m0_pins>;
+++-	status = "okay";
+++-};
+++-
+++-&saradc {
+++-	vref-supply = <&vcc_1v8>;
+++-	status = "okay";
+++-};
+++-
+++-&sdhci {
+++-	bus-width = <8>;
+++-	cap-mmc-highspeed;
+++-	mmc-hs200-1_8v;
+++-	no-sd;
+++-	no-sdio;
+++-	non-removable;
+++-	vmmc-supply = <&vcc_3v3>;
+++-	vqmmc-supply = <&vcc_1v8>;
+++-	status = "okay";
+++-};
+++-
+++-&sdmmc {
+++-	bus-width = <4>;
+++-	cap-mmc-highspeed;
+++-	cap-sd-highspeed;
+++-	disable-wp;
+++-	sd-uhs-sdr104;
+++-	vmmc-supply = <&vcc3v3_sd>;
+++-	vqmmc-supply = <&vccio_sd>;
+++-	status = "okay";
+++-};
+++-
+++-&uart0 {
+++-	pinctrl-names = "default";
+++-	pinctrl-0 = <&uart0m0_xfer>;
+++-	status = "okay";
+++-};
+++-
+++ &usb_host0_ehci {
+++ 	status = "okay";
+++ };
+++--- /dev/null
++++++ b/dts/upstream/src/arm64/rockchip/rk3528-nanopi.dtsi
+++@@ -0,0 +1,291 @@
++++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++++
++++#include <dt-bindings/input/input.h>
++++#include <dt-bindings/leds/common.h>
++++#include <dt-bindings/pwm/pwm.h>
++++#include "rk3528.dtsi"
++++
++++/ {
++++	aliases {
++++		ethernet0 = &gmac1;
++++		i2c1 = &i2c1;
++++		mmc0 = &sdhci;
++++		mmc1 = &sdmmc;
++++		serial0 = &uart0;
++++	};
++++
++++	chosen {
++++		stdout-path = "serial0:1500000n8";
++++	};
++++
++++	adc-keys-0 {
++++		compatible = "adc-keys";
++++		io-channels = <&saradc 0>;
++++		io-channel-names = "buttons";
++++		keyup-threshold-microvolt = <1800000>;
++++		poll-interval = <100>;
++++
++++		button-maskrom {
++++			label = "MASK";
++++			linux,code = <KEY_SETUP>;
++++			press-threshold-microvolt = <0>;
++++		};
++++	};
++++
++++	leds: leds {
++++		compatible = "gpio-leds";
++++		pinctrl-names = "default";
++++		pinctrl-0 = <&led_sys_pin>, <&led1_pin>;
++++
++++		led-0 {
++++			color = <LED_COLOR_ID_RED>;
++++			default-state = "on";
++++			function = LED_FUNCTION_HEARTBEAT;
++++			gpios = <&gpio4 RK_PB0 GPIO_ACTIVE_HIGH>;
++++			linux,default-trigger = "heartbeat";
++++		};
++++
++++		/* The purpose of the second LED differs per board. */
++++		led1: led-1 {
++++			color = <LED_COLOR_ID_GREEN>;
++++			gpios = <&gpio4 RK_PB1 GPIO_ACTIVE_HIGH>;
++++		};
++++	};
++++
++++	vdd_0v9: regulator-0v9-vdd {
++++		compatible = "regulator-fixed";
++++		regulator-name = "vdd_0v9";
++++		regulator-always-on;
++++		regulator-boot-on;
++++		regulator-min-microvolt = <900000>;
++++		regulator-max-microvolt = <900000>;
++++		vin-supply = <&vcc5v0_sys>;
++++	};
++++
++++	vcc_ddr: regulator-1v1-vcc-ddr {
++++		compatible = "regulator-fixed";
++++		regulator-name = "vcc_ddr";
++++		regulator-always-on;
++++		regulator-boot-on;
++++		regulator-min-microvolt = <1100000>;
++++		regulator-max-microvolt = <1100000>;
++++		vin-supply = <&vcc5v0_sys>;
++++	};
++++
++++	vcc_1v8: regulator-1v8-vcc {
++++		compatible = "regulator-fixed";
++++		regulator-name = "vcc_1v8";
++++		regulator-always-on;
++++		regulator-boot-on;
++++		regulator-min-microvolt = <1800000>;
++++		regulator-max-microvolt = <1800000>;
++++		vin-supply = <&vcc_3v3>;
++++	};
++++
++++	vcc_3v3: regulator-3v3-vcc {
++++		compatible = "regulator-fixed";
++++		regulator-name = "vcc_3v3";
++++		regulator-always-on;
++++		regulator-boot-on;
++++		regulator-min-microvolt = <3300000>;
++++		regulator-max-microvolt = <3300000>;
++++		vin-supply = <&vcc5v0_sys>;
++++	};
++++
++++	vcc3v3_sd: regulator-3v3-vcc-sd {
++++		compatible = "regulator-fixed";
++++		gpios = <&gpio4 RK_PA1 GPIO_ACTIVE_LOW>;
++++		pinctrl-names = "default";
++++		pinctrl-0 = <&sdmmc_pwren_l>;
++++		regulator-name = "vcc3v3_sd";
++++		regulator-min-microvolt = <3300000>;
++++		regulator-max-microvolt = <3300000>;
++++		vin-supply = <&vcc_3v3>;
++++	};
++++
++++	vcc5v0_sys: regulator-5v0-vcc-sys {
++++		compatible = "regulator-fixed";
++++		regulator-name = "vcc5v0_sys";
++++		regulator-always-on;
++++		regulator-boot-on;
++++		regulator-min-microvolt = <5000000>;
++++		regulator-max-microvolt = <5000000>;
++++	};
++++
++++	vccio_sd: regulator-vccio-sd {
++++		compatible = "regulator-gpio";
++++		gpios = <&gpio4 RK_PB6 GPIO_ACTIVE_HIGH>;
++++		pinctrl-names = "default";
++++		pinctrl-0 = <&sdmmc_vol_ctrl_h>;
++++		regulator-name = "vccio_sd";
++++		regulator-min-microvolt = <1800000>;
++++		regulator-max-microvolt = <3300000>;
++++		states = <1800000 0x0>, <3300000 0x1>;
++++		vin-supply = <&vcc5v0_sys>;
++++	};
++++
++++	vdd_arm: regulator-vdd-arm {
++++		compatible = "pwm-regulator";
++++		pwms = <&pwm1 0 5000 PWM_POLARITY_INVERTED>;
++++		pwm-supply = <&vcc5v0_sys>;
++++		regulator-name = "vdd_arm";
++++		regulator-always-on;
++++		regulator-boot-on;
++++		regulator-min-microvolt = <746000>;
++++		regulator-max-microvolt = <1201000>;
++++		regulator-settling-time-up-us = <250>;
++++	};
++++
++++	vdd_logic: regulator-vdd-logic {
++++		compatible = "pwm-regulator";
++++		pwms = <&pwm2 0 5000 PWM_POLARITY_INVERTED>;
++++		pwm-supply = <&vcc5v0_sys>;
++++		regulator-name = "vdd_logic";
++++		regulator-always-on;
++++		regulator-boot-on;
++++		regulator-min-microvolt = <705000>;
++++		regulator-max-microvolt = <1006000>;
++++		regulator-settling-time-up-us = <250>;
++++	};
++++};
++++
++++&cpu0 {
++++	cpu-supply = <&vdd_arm>;
++++};
++++
++++&cpu1 {
++++	cpu-supply = <&vdd_arm>;
++++};
++++
++++&cpu2 {
++++	cpu-supply = <&vdd_arm>;
++++};
++++
++++&cpu3 {
++++	cpu-supply = <&vdd_arm>;
++++};
++++
++++&gmac1 {
++++	clock_in_out = "output";
++++	phy-handle = <&rgmii_phy>;
++++	phy-mode = "rgmii-id";
++++	phy-supply = <&vcc_3v3>;
++++	pinctrl-names = "default";
++++	pinctrl-0 = <&rgmii_miim>, <&rgmii_tx_bus2>, <&rgmii_rx_bus2>,
++++		    <&rgmii_rgmii_clk>, <&rgmii_rgmii_bus>;
++++	status = "okay";
++++};
++++
++++&gpu {
++++	mali-supply = <&vdd_logic>;
++++	status = "okay";
++++};
++++
++++&i2c1 {
++++	pinctrl-names = "default";
++++	pinctrl-0 = <&i2c1m0_xfer>;
++++	status = "okay";
++++
++++	hym8563: rtc@51 {
++++		compatible = "haoyu,hym8563";
++++		reg = <0x51>;
++++		#clock-cells = <0>;
++++		interrupt-parent = <&gpio4>;
++++		interrupts = <RK_PC1 IRQ_TYPE_LEVEL_LOW>;
++++		pinctrl-names = "default";
++++		pinctrl-0 = <&rtc_int_l>;
++++		wakeup-source;
++++	};
++++};
++++
++++&mdio1 {
++++	rgmii_phy: ethernet-phy@1 {
++++		compatible = "ethernet-phy-ieee802.3-c22";
++++		reg = <0x1>;
++++		pinctrl-names = "default";
++++		pinctrl-0 = <&gmac1_rstn_l>;
++++		reset-assert-us = <20000>;
++++		reset-deassert-us = <100000>;
++++		reset-gpios = <&gpio4 RK_PC2 GPIO_ACTIVE_LOW>;
++++	};
++++};
++++
++++&pinctrl {
++++	ethernet {
++++		gmac1_rstn_l: gmac1-rstn-l {
++++			rockchip,pins = <4 RK_PC2 RK_FUNC_GPIO &pcfg_pull_none>;
++++		};
++++	};
++++
++++	leds {
++++		led_sys_pin: led-sys-pin {
++++			rockchip,pins = <4 RK_PB0 RK_FUNC_GPIO &pcfg_pull_none>;
++++		};
++++
++++		led1_pin: led1-pin {
++++			rockchip,pins = <4 RK_PB1 RK_FUNC_GPIO &pcfg_pull_none>;
++++		};
++++	};
++++
++++	rtc {
++++		rtc_int_l: rtc-int-l {
++++			rockchip,pins = <4 RK_PC1 RK_FUNC_GPIO &pcfg_pull_up>;
++++		};
++++	};
++++
++++	sdmmc {
++++		sdmmc_pwren_l: sdmmc-pwren-l {
++++			rockchip,pins = <4 RK_PA1 RK_FUNC_GPIO &pcfg_pull_none>;
++++		};
++++
++++		sdmmc_vol_ctrl_h: sdmmc-vol-ctrl-h {
++++			rockchip,pins = <4 RK_PB6 RK_FUNC_GPIO &pcfg_pull_none>;
++++		};
++++	};
++++};
++++
++++&pwm1 {
++++	pinctrl-names = "default";
++++	pinctrl-0 = <&pwm1m0_pins>;
++++	status = "okay";
++++};
++++
++++&pwm2 {
++++	pinctrl-names = "default";
++++	pinctrl-0 = <&pwm2m0_pins>;
++++	status = "okay";
++++};
++++
++++&saradc {
++++	vref-supply = <&vcc_1v8>;
++++	status = "okay";
++++};
++++
++++&sdhci {
++++	bus-width = <8>;
++++	cap-mmc-highspeed;
++++	mmc-hs200-1_8v;
++++	no-sd;
++++	no-sdio;
++++	non-removable;
++++	vmmc-supply = <&vcc_3v3>;
++++	vqmmc-supply = <&vcc_1v8>;
++++	status = "okay";
++++};
++++
++++&sdmmc {
++++	bus-width = <4>;
++++	cap-mmc-highspeed;
++++	cap-sd-highspeed;
++++	disable-wp;
++++	sd-uhs-sdr104;
++++	vmmc-supply = <&vcc3v3_sd>;
++++	vqmmc-supply = <&vccio_sd>;
++++	status = "okay";
++++};
++++
++++&uart0 {
++++	pinctrl-names = "default";
++++	pinctrl-0 = <&uart0m0_xfer>;
++++	status = "okay";
++++};
++diff --git a/package/boot/uboot-rockchip/patches/002-03-v2027.04-arm64-dts-rockchip-Add-devicetree-for-the-FriendlyElec-NanoPi-R28S.patch b/package/boot/uboot-rockchip/patches/002-03-v2027.04-arm64-dts-rockchip-Add-devicetree-for-the-FriendlyElec-NanoPi-R28S.patch
++new file mode 100644
++index 0000000000000000000000000000000000000000..c37d80b66f37e8f1a42ce420598450340082a428
++--- /dev/null
+++++ b/package/boot/uboot-rockchip/patches/002-03-v2027.04-arm64-dts-rockchip-Add-devicetree-for-the-FriendlyElec-NanoPi-R28S.patch
++@@ -0,0 +1,213 @@
+++From 15dedffc7456e509c6e68a07896ef727a2582617 Mon Sep 17 00:00:00 2001
+++From: =?UTF-8?q?=E5=AE=89=E5=AE=B9?= <HystericalDragons@proton.me>
+++Date: Tue, 3 Nov 2026 18:37:08 +0800
+++Subject: [PATCH] arm64: dts: rockchip: Add devicetree for the FriendlyElec
+++ NanoPi R28S
+++MIME-Version: 1.0
+++Content-Type: text/plain; charset=UTF-8
+++Content-Transfer-Encoding: 8bit
+++
+++The NanoPi R28S is a dual gigabit Ethernet router board based on the
+++Rockchip RK3528 SoC, designed and developed by FriendlyElec. It shares
+++most of its design with the NanoPi Zero2, so it builds on the common
+++rk3528-nanopi.dtsi.
+++
+++Specification:
+++- Rockchip RK3528
+++- 1GB RAM
+++- eMMC socket (optional)
+++- MicroSD slot
+++- 1x 1000Base-T (GMAC1, Realtek RTL8211F)
+++- 1x 1000Base-T (PCIe, Realtek RTL8111H)
+++- AICSemi AIC8800D80 SDIO WiFi + Bluetooth
+++- 3x LEDs (SYS, LAN, WAN)
+++- 1x USB 2.0 Type-C OTG, shared with the 5V power input
+++- User and MaskROM buttons
+++- Haoyu HYM8563 RTC
+++- 1x USB Type-C debug UART (onboard WCH CH340E)
+++
+++The AIC8800D80 has no upstream driver yet, so only the SDIO and UART
+++controllers it hangs off are enabled, along with the WiFi and Bluetooth
+++wake and power pins taken from the schematics.
+++
+++Assisted-by: LLM
+++Signed-off-by: 安容 <HystericalDragons@proton.me>
+++Link: https://patch.msgid.link/20260919-r28s-upstream-v7-3-e80a6f8ef521@proton.me
+++Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+++
+++[ upstream commit: c1e23f3425c49fe22e9598f8eea2fcf693950d50 ]
+++
+++(cherry picked from commit d0f6e37c635be183ff10d8a0291f54afd1365f30)
+++
+++Reviewed-by: Quentin Schulz <quentin.schulz@cherry.de>
+++Link: https://patch.msgid.link/20261103-nanopi-r28s-v3-3-ae8664fd168f@proton.me
+++Signed-off-by: Quentin Schulz <u-boot@0leil.net>
+++(cherry picked from commit fa7e4782468fbfa95dee2b21abde5cd86810a927)
+++---
+++ .../src/arm64/rockchip/rk3528-nanopi-r28s.dts | 160 ++++++++++++++++++
+++ 1 file changed, 160 insertions(+)
+++ create mode 100644 dts/upstream/src/arm64/rockchip/rk3528-nanopi-r28s.dts
+++
+++--- /dev/null
++++++ b/dts/upstream/src/arm64/rockchip/rk3528-nanopi-r28s.dts
+++@@ -0,0 +1,160 @@
++++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++++/*
++++ * Copyright (c) 2022 Rockchip Electronics Co., Ltd.
++++ * Copyright (c) 2026 FriendlyElec Computer Tech. Co., Ltd.
++++ * Copyright (c) 2026 安容 <HystericalDragons@proton.me>
++++ */
++++
++++/dts-v1/;
++++
++++#include "rk3528-nanopi.dtsi"
++++
++++/ {
++++	model = "FriendlyElec NanoPi R28S";
++++	compatible = "friendlyarm,nanopi-r28s", "rockchip,rk3528";
++++
++++	aliases {
++++		mmc2 = &sdio0;
++++		serial2 = &uart2;
++++	};
++++
++++	gpio-keys {
++++		compatible = "gpio-keys";
++++		pinctrl-names = "default";
++++		pinctrl-0 = <&gpio4_b2_usr_btn>;
++++
++++		button-user {
++++			debounce-interval = <50>;
++++			gpios = <&gpio4 RK_PB2 GPIO_ACTIVE_LOW>;
++++			label = "USER";
++++			linux,code = <BTN_1>;
++++			wakeup-source;
++++		};
++++	};
++++
++++	sdio_pwrseq: sdio-pwrseq {
++++		compatible = "mmc-pwrseq-simple";
++++		pinctrl-names = "default";
++++		pinctrl-0 = <&pwr_wf>;
++++		post-power-on-delay-ms = <100>;
++++		reset-gpios = <&gpio1 RK_PC2 GPIO_ACTIVE_LOW>;
++++	};
++++};
++++
++++&combphy {
++++	status = "okay";
++++};
++++
++++&led1 {
++++	default-state = "off";
++++	function = LED_FUNCTION_WAN;
++++	linux,default-trigger = "netdev";
++++};
++++
++++&leds {
++++	pinctrl-names = "default";
++++	pinctrl-0 = <&led_sys_pin>, <&led1_pin>, <&led2_pin>;
++++
++++	led-2 {
++++		color = <LED_COLOR_ID_GREEN>;
++++		default-state = "off";
++++		function = LED_FUNCTION_LAN;
++++		gpios = <&gpio4 RK_PB3 GPIO_ACTIVE_HIGH>;
++++		linux,default-trigger = "netdev";
++++	};
++++};
++++
++++&pcie {
++++	pinctrl-names = "default";
++++	pinctrl-0 = <&pcie_eth_perstb>;
++++	reset-gpios = <&gpio4 RK_PC0 GPIO_ACTIVE_HIGH>;
++++	vpcie3v3-supply = <&vcc_3v3>;
++++	status = "okay";
++++};
++++
++++&pinctrl {
++++	bluetooth {
++++		bt_wake_host: bt-wake-host {
++++			rockchip,pins = <1 RK_PB5 RK_FUNC_GPIO &pcfg_pull_down>;
++++		};
++++
++++		host_wake_bt: host-wake-bt {
++++			rockchip,pins = <1 RK_PB4 RK_FUNC_GPIO &pcfg_pull_none>;
++++		};
++++	};
++++
++++	gpio-keys {
++++		gpio4_b2_usr_btn: gpio4-b2-usr-btn {
++++			rockchip,pins = <4 RK_PB2 RK_FUNC_GPIO &pcfg_pull_up>;
++++		};
++++	};
++++
++++	leds {
++++		led2_pin: led2-pin {
++++			rockchip,pins = <4 RK_PB3 RK_FUNC_GPIO &pcfg_pull_none>;
++++		};
++++	};
++++
++++	pcie {
++++		pcie_eth_perstb: pcie-eth-perstb {
++++			rockchip,pins = <4 RK_PC0 RK_FUNC_GPIO &pcfg_pull_none>;
++++		};
++++	};
++++
++++	wifi {
++++		host_wake_wl: host-wake-wl {
++++			rockchip,pins = <1 RK_PA6 RK_FUNC_GPIO &pcfg_pull_none>;
++++		};
++++
++++		pwr_wf: pwr-wf {
++++			rockchip,pins = <1 RK_PC2 RK_FUNC_GPIO &pcfg_pull_none>;
++++		};
++++
++++		wl_wake_host: wl-wake-host {
++++			rockchip,pins = <1 RK_PA7 RK_FUNC_GPIO &pcfg_pull_down>;
++++		};
++++	};
++++};
++++
++++&sdio0 {
++++	bus-width = <4>;
++++	cap-sd-highspeed;
++++	cap-sdio-irq;
++++	keep-power-in-suspend;
++++	mmc-pwrseq = <&sdio_pwrseq>;
++++	no-mmc;
++++	no-sd;
++++	non-removable;
++++	sd-uhs-sdr104;
++++	vmmc-supply = <&vcc_3v3>;
++++	vqmmc-supply = <&vcc_1v8>;
++++	status = "okay";
++++};
++++
++++&uart2 {
++++	dma-names = "tx", "rx";
++++	pinctrl-names = "default";
++++	pinctrl-0 = <&uart2m1_xfer>, <&uart2m1_ctsn>, <&uart2m1_rtsn>;
++++	uart-has-rtscts;
++++	status = "okay";
++++};
++++
++++&usb_host0_xhci {
++++	/*
++++	 * The Type-C port is also the 5V power input, so it comes up as a
++++	 * device, but host mode works with an externally powered hub.
++++	 */
++++	extcon = <&usb2phy>;
++++	maximum-speed = "high-speed";
++++	phys = <&usb2phy_otg>;
++++	phy-names = "usb2-phy";
++++	status = "okay";
++++};
++++
++++&usb2phy {
++++	status = "okay";
++++};
++++
++++&usb2phy_otg {
++++	status = "okay";
++++};
++diff --git a/package/boot/uboot-rockchip/patches/002-04-v2027.04-rockchip-rk3528-Split-out-common-NanoPi-u-boot.dtsi.patch b/package/boot/uboot-rockchip/patches/002-04-v2027.04-rockchip-rk3528-Split-out-common-NanoPi-u-boot.dtsi.patch
++new file mode 100644
++index 0000000000000000000000000000000000000000..bb0e279cdc5f4493cb840b5203b38b7f7cb43a66
++--- /dev/null
+++++ b/package/boot/uboot-rockchip/patches/002-04-v2027.04-rockchip-rk3528-Split-out-common-NanoPi-u-boot.dtsi.patch
++@@ -0,0 +1,67 @@
+++From 78dbcb0ae88db4efa3685088ae3b27b10470f22c Mon Sep 17 00:00:00 2001
+++From: =?UTF-8?q?=E5=AE=89=E5=AE=B9?= <HystericalDragons@proton.me>
+++Date: Tue, 3 Nov 2026 18:37:09 +0800
+++Subject: [PATCH] rockchip: rk3528: Split out common NanoPi u-boot.dtsi
+++MIME-Version: 1.0
+++Content-Type: text/plain; charset=UTF-8
+++Content-Transfer-Encoding: 8bit
+++
+++The Linux devicetree of the NanoPi Zero2 has been split into a common
+++rk3528-nanopi.dtsi, which the NanoPi R28S builds on. Both boards use
+++the same PWM regulators for vdd_arm and vdd_logic.
+++
+++Move the U-Boot specific parts of the NanoPi Zero2 into a common
+++rk3528-nanopi-u-boot.dtsi in the same way, so that the NanoPi R28S can
+++include it instead of duplicating it. No functional change.
+++
+++Signed-off-by: 安容 <HystericalDragons@proton.me>
+++Reviewed-by: Quentin Schulz <quentin.schulz@cherry.de>
+++Link: https://patch.msgid.link/20261103-nanopi-r28s-v3-4-ae8664fd168f@proton.me
+++Signed-off-by: Quentin Schulz <u-boot@0leil.net>
+++(cherry picked from commit fff001a5d389facb25e999ed683e8426d51e5f51)
+++---
+++ arch/arm/dts/rk3528-nanopi-u-boot.dtsi       | 11 +++++++++++
+++ arch/arm/dts/rk3528-nanopi-zero2-u-boot.dtsi | 10 +---------
+++ arch/arm/mach-rockchip/rk3528/MAINTAINERS    |  1 +
+++ 3 files changed, 13 insertions(+), 9 deletions(-)
+++ create mode 100644 arch/arm/dts/rk3528-nanopi-u-boot.dtsi
+++
+++--- /dev/null
++++++ b/arch/arm/dts/rk3528-nanopi-u-boot.dtsi
+++@@ -0,0 +1,11 @@
++++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++++
++++#include "rk3528-u-boot.dtsi"
++++
++++&vdd_arm {
++++	regulator-init-microvolt = <953000>;
++++};
++++
++++&vdd_logic {
++++	regulator-init-microvolt = <900000>;
++++};
+++--- a/arch/arm/dts/rk3528-nanopi-zero2-u-boot.dtsi
++++++ b/arch/arm/dts/rk3528-nanopi-zero2-u-boot.dtsi
+++@@ -1,11 +1,3 @@
+++ // SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+++ 
+++-#include "rk3528-u-boot.dtsi"
+++-
+++-&vdd_arm {
+++-	regulator-init-microvolt = <953000>;
+++-};
+++-
+++-&vdd_logic {
+++-	regulator-init-microvolt = <900000>;
+++-};
++++#include "rk3528-nanopi-u-boot.dtsi"
+++--- a/arch/arm/mach-rockchip/rk3528/MAINTAINERS
++++++ b/arch/arm/mach-rockchip/rk3528/MAINTAINERS
+++@@ -7,6 +7,7 @@ F:	configs/generic-rk3528_defconfig
+++ NANOPI-ZERO2-RK3528
+++ M:	Jonas Karlman <jonas@kwiboo.se>
+++ S:	Maintained
++++F:	arch/arm/dts/rk3528-nanopi-u-boot.dtsi
+++ F:	arch/arm/dts/rk3528-nanopi-zero2*
+++ F:	configs/nanopi-zero2-rk3528_defconfig
+++ 
++diff --git a/package/boot/uboot-rockchip/patches/002-05-v2027.04-board-rockchip-Add-common-NanoPi-RK3528-board-target.patch b/package/boot/uboot-rockchip/patches/002-05-v2027.04-board-rockchip-Add-common-NanoPi-RK3528-board-target.patch
++new file mode 100644
++index 0000000000000000000000000000000000000000..fb9a87de0c087f9744ff987668310fe7be9a01b5
++--- /dev/null
+++++ b/package/boot/uboot-rockchip/patches/002-05-v2027.04-board-rockchip-Add-common-NanoPi-RK3528-board-target.patch
++@@ -0,0 +1,197 @@
+++From e11b3c092128e080fabec4c815ab3c1fd9cff3b5 Mon Sep 17 00:00:00 2001
+++From: =?UTF-8?q?=E5=AE=89=E5=AE=B9?= <HystericalDragons@proton.me>
+++Date: Tue, 3 Nov 2026 18:37:10 +0800
+++Subject: [PATCH] board: rockchip: Add common NanoPi RK3528 board target
+++MIME-Version: 1.0
+++Content-Type: text/plain; charset=UTF-8
+++Content-Transfer-Encoding: 8bit
+++
+++The board variant of the FriendlyElec NanoPi RK3528 family can be
+++identified using the HW_ID voltage divider on SARADC channel 2.
+++
+++Add a TARGET_NANOPI_RK3528 board target, based on the Radxa ROCK 2
+++board target, that reads HW_ID to select the FDT in SPL and to set the
+++fdtfile env var. This allows one defconfig to support multiple NanoPi
+++RK3528 board variants.
+++
+++Move the NanoPi Zero2 to the new board target, it is the only variant
+++for now.
+++
+++Suggested-by: Jonas Karlman <jonas@kwiboo.se>
+++Signed-off-by: 安容 <HystericalDragons@proton.me>
+++Reviewed-by: Quentin Schulz <quentin.schulz@cherry.de>
+++Link: https://patch.msgid.link/20261103-nanopi-r28s-v3-5-ae8664fd168f@proton.me
+++Signed-off-by: Quentin Schulz <u-boot@0leil.net>
+++(cherry picked from commit 3ad7bc377887f87ef917f4c9bd790d70d37f90c8)
+++[ rk3528/MAINTAINERS: context lacks the HINLINK-H28K entry from 64e0d6a036 ]
+++---
+++ arch/arm/dts/rk3528-nanopi-u-boot.dtsi        |  5 ++
+++ arch/arm/mach-rockchip/rk3528/Kconfig         |  6 ++
+++ arch/arm/mach-rockchip/rk3528/MAINTAINERS     |  7 ---
+++ board/friendlyelec/nanopi-rk3528/Kconfig      | 14 +++++
+++ board/friendlyelec/nanopi-rk3528/MAINTAINERS  |  7 +++
+++ board/friendlyelec/nanopi-rk3528/Makefile     |  3 +
+++ .../nanopi-rk3528/nanopi-rk3528.c             | 59 +++++++++++++++++++
+++ configs/nanopi-zero2-rk3528_defconfig         |  1 +
+++ 8 files changed, 95 insertions(+), 7 deletions(-)
+++ create mode 100644 board/friendlyelec/nanopi-rk3528/Kconfig
+++ create mode 100644 board/friendlyelec/nanopi-rk3528/MAINTAINERS
+++ create mode 100644 board/friendlyelec/nanopi-rk3528/Makefile
+++ create mode 100644 board/friendlyelec/nanopi-rk3528/nanopi-rk3528.c
+++
+++--- a/arch/arm/dts/rk3528-nanopi-u-boot.dtsi
++++++ b/arch/arm/dts/rk3528-nanopi-u-boot.dtsi
+++@@ -2,6 +2,11 @@
+++ 
+++ #include "rk3528-u-boot.dtsi"
+++ 
++++&saradc {
++++	bootph-pre-ram;
++++	vdd-microvolts = <1800000>;
++++};
++++
+++ &vdd_arm {
+++ 	regulator-init-microvolt = <953000>;
+++ };
+++--- a/arch/arm/mach-rockchip/rk3528/Kconfig
++++++ b/arch/arm/mach-rockchip/rk3528/Kconfig
+++@@ -1,5 +1,10 @@
+++ if ROCKCHIP_RK3528
+++ 
++++config TARGET_NANOPI_RK3528
++++	bool "FriendlyElec NanoPi Zero2"
++++	help
++++	  FriendlyElec NanoPi Zero2 single board computer with a RK3528A SoC.
++++
+++ config TARGET_RADXA_ROCK_2_RK3528
+++ 	bool "Radxa ROCK 2A/2F"
+++ 	help
+++@@ -14,6 +19,7 @@ config ROCKCHIP_STIMER_BASE
+++ config SYS_SOC
+++ 	default "rk3528"
+++ 
++++source "board/friendlyelec/nanopi-rk3528/Kconfig"
+++ source "board/radxa/rock-2-rk3528/Kconfig"
+++ 
+++ config SYS_CONFIG_NAME
+++--- a/arch/arm/mach-rockchip/rk3528/MAINTAINERS
++++++ b/arch/arm/mach-rockchip/rk3528/MAINTAINERS
+++@@ -4,13 +4,6 @@ S:	Maintained
+++ F:	arch/arm/dts/rk3528-generic*
+++ F:	configs/generic-rk3528_defconfig
+++ 
+++-NANOPI-ZERO2-RK3528
+++-M:	Jonas Karlman <jonas@kwiboo.se>
+++-S:	Maintained
+++-F:	arch/arm/dts/rk3528-nanopi-u-boot.dtsi
+++-F:	arch/arm/dts/rk3528-nanopi-zero2*
+++-F:	configs/nanopi-zero2-rk3528_defconfig
+++-
+++ RADXA-E20C
+++ M:	Jonas Karlman <jonas@kwiboo.se>
+++ S:	Maintained
+++--- /dev/null
++++++ b/board/friendlyelec/nanopi-rk3528/Kconfig
+++@@ -0,0 +1,14 @@
++++if TARGET_NANOPI_RK3528
++++
++++config SYS_BOARD
++++	default "nanopi-rk3528"
++++
++++config SYS_VENDOR
++++	default "friendlyelec"
++++
++++config BOARD_SPECIFIC_OPTIONS # dummy
++++	def_bool y
++++	select ADC
++++	select SPL_ADC
++++
++++endif
+++--- /dev/null
++++++ b/board/friendlyelec/nanopi-rk3528/MAINTAINERS
+++@@ -0,0 +1,7 @@
++++NANOPI-RK3528
++++M:	Jonas Karlman <jonas@kwiboo.se>
++++S:	Maintained
++++F:	board/friendlyelec/nanopi-rk3528
++++F:	arch/arm/dts/rk3528-nanopi-u-boot.dtsi
++++F:	arch/arm/dts/rk3528-nanopi-zero2*
++++F:	configs/nanopi-zero2-rk3528_defconfig
+++--- /dev/null
++++++ b/board/friendlyelec/nanopi-rk3528/Makefile
+++@@ -0,0 +1,3 @@
++++# SPDX-License-Identifier: GPL-2.0+
++++
++++obj-y += nanopi-rk3528.o
+++--- /dev/null
++++++ b/board/friendlyelec/nanopi-rk3528/nanopi-rk3528.c
+++@@ -0,0 +1,59 @@
++++// SPDX-License-Identifier: GPL-2.0+
++++
++++#include <linux/errno.h>
++++#include <linux/kernel.h>
++++#include <adc.h>
++++#include <env.h>
++++
++++#define HW_ID_CHANNEL	2
++++
++++struct board_model {
++++	unsigned int low;
++++	unsigned int high;
++++	const char *fdtfile;
++++};
++++
++++/* HW_ID buckets from the FriendlyElec vendor U-Boot hwrev.c */
++++static const struct board_model board_models[] = {
++++	{  82, 150, "rockchip/rk3528-nanopi-zero2.dtb" },
++++};
++++
++++static const struct board_model *get_board_model(void)
++++{
++++	unsigned int val;
++++	int i, ret;
++++
++++	ret = adc_channel_single_shot("adc@ffae0000", HW_ID_CHANNEL, &val);
++++	if (ret)
++++		return NULL;
++++
++++	for (i = 0; i < ARRAY_SIZE(board_models); i++) {
++++		unsigned int min = board_models[i].low;
++++		unsigned int max = board_models[i].high;
++++
++++		if (min <= val && val <= max)
++++			return &board_models[i];
++++	}
++++
++++	return NULL;
++++}
++++
++++int rk_board_late_init(void)
++++{
++++	const struct board_model *model = get_board_model();
++++
++++	if (model)
++++		env_set("fdtfile", model->fdtfile);
++++
++++	return 0;
++++}
++++
++++int board_fit_config_name_match(const char *name)
++++{
++++	const struct board_model *model = get_board_model();
++++
++++	if (model && !strcmp(name, model->fdtfile))
++++		return 0;
++++
++++	return -EINVAL;
++++}
+++--- a/configs/nanopi-zero2-rk3528_defconfig
++++++ b/configs/nanopi-zero2-rk3528_defconfig
+++@@ -4,6 +4,7 @@ CONFIG_COUNTER_FREQUENCY=24000000
+++ CONFIG_ARCH_ROCKCHIP=y
+++ CONFIG_DEFAULT_DEVICE_TREE="rockchip/rk3528-nanopi-zero2"
+++ CONFIG_ROCKCHIP_RK3528=y
++++CONFIG_TARGET_NANOPI_RK3528=y
+++ CONFIG_SYS_LOAD_ADDR=0xc00800
+++ CONFIG_DEBUG_UART_BASE=0xFF9F0000
+++ CONFIG_DEBUG_UART_CLOCK=24000000
++diff --git a/package/boot/uboot-rockchip/patches/002-06-v2027.04-board-rockchip-Add-FriendlyElec-NanoPi-R28S.patch b/package/boot/uboot-rockchip/patches/002-06-v2027.04-board-rockchip-Add-FriendlyElec-NanoPi-R28S.patch
++new file mode 100644
++index 0000000000000000000000000000000000000000..62beedd0cab5eb66dcf3c8b5ec19ef10e7d40d23
++--- /dev/null
+++++ b/package/boot/uboot-rockchip/patches/002-06-v2027.04-board-rockchip-Add-FriendlyElec-NanoPi-R28S.patch
++@@ -0,0 +1,114 @@
+++From adf01f2d2ddca1be5a0d6431d54cd907df7976e2 Mon Sep 17 00:00:00 2001
+++From: =?UTF-8?q?=E5=AE=89=E5=AE=B9?= <HystericalDragons@proton.me>
+++Date: Tue, 3 Nov 2026 18:37:11 +0800
+++Subject: [PATCH] board: rockchip: Add FriendlyElec NanoPi R28S
+++MIME-Version: 1.0
+++Content-Type: text/plain; charset=UTF-8
+++Content-Transfer-Encoding: 8bit
+++
+++The FriendlyElec NanoPi R28S is a dual gigabit Ethernet router board
+++based on the Rockchip RK3528 SoC. It shares most of its design with the
+++NanoPi Zero2.
+++
+++Specifications:
+++- SoC: Rockchip RK3528, quad-core Cortex-A53 @ 2.0 GHz
+++- RAM: 1 GB LPDDR4
+++- Storage: microSD slot, optional onboard eMMC
+++- Ethernet: 1x GbE (GMAC1 + Realtek RTL8211F),
+++            1x GbE (Realtek RTL8111H over PCIe)
+++- WiFi: AICSemi AIC8800D80 over SDIO
+++- USB: 1x USB 2.0 Type-C (power input and OTG)
+++- UART: USB Type-C debug console (onboard WCH CH340E), 1500000 8N1
+++- Buttons: user (GPIO), MaskROM (SARADC)
+++
+++Add the board to the NanoPi RK3528 board target, which selects the
+++R28S FDT based on its HW_ID, and enable CONFIG_BUTTON_GPIO for the user
+++button.
+++
+++Features tested on NanoPi R28S:
+++- SD-card boot
+++- Ethernet
+++
+++Signed-off-by: 安容 <HystericalDragons@proton.me>
+++Reviewed-by: Quentin Schulz <quentin.schulz@cherry.de>
+++Link: https://patch.msgid.link/20261103-nanopi-r28s-v3-6-ae8664fd168f@proton.me
+++Signed-off-by: Quentin Schulz <u-boot@0leil.net>
+++(cherry picked from commit 28d923fc96438291c20658cde27452ceea124870)
+++---
+++ arch/arm/dts/rk3528-nanopi-r28s-u-boot.dtsi      | 3 +++
+++ arch/arm/mach-rockchip/rk3528/Kconfig            | 5 +++--
+++ board/friendlyelec/nanopi-rk3528/MAINTAINERS     | 2 ++
+++ board/friendlyelec/nanopi-rk3528/nanopi-rk3528.c | 1 +
+++ configs/nanopi-zero2-rk3528_defconfig            | 2 ++
+++ doc/board/rockchip/rockchip.rst                  | 2 +-
+++ 6 files changed, 12 insertions(+), 3 deletions(-)
+++ create mode 100644 arch/arm/dts/rk3528-nanopi-r28s-u-boot.dtsi
+++
+++--- /dev/null
++++++ b/arch/arm/dts/rk3528-nanopi-r28s-u-boot.dtsi
+++@@ -0,0 +1,3 @@
++++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++++
++++#include "rk3528-nanopi-u-boot.dtsi"
+++--- a/arch/arm/mach-rockchip/rk3528/Kconfig
++++++ b/arch/arm/mach-rockchip/rk3528/Kconfig
+++@@ -1,9 +1,10 @@
+++ if ROCKCHIP_RK3528
+++ 
+++ config TARGET_NANOPI_RK3528
+++-	bool "FriendlyElec NanoPi Zero2"
++++	bool "FriendlyElec NanoPi R28S/Zero2"
+++ 	help
+++-	  FriendlyElec NanoPi Zero2 single board computer with a RK3528A SoC.
++++	  FriendlyElec NanoPi R28S/Zero2 single board computers with a RK3528A
++++	  SoC.
+++ 
+++ config TARGET_RADXA_ROCK_2_RK3528
+++ 	bool "Radxa ROCK 2A/2F"
+++--- a/board/friendlyelec/nanopi-rk3528/MAINTAINERS
++++++ b/board/friendlyelec/nanopi-rk3528/MAINTAINERS
+++@@ -1,7 +1,9 @@
+++ NANOPI-RK3528
+++ M:	Jonas Karlman <jonas@kwiboo.se>
++++M:	安容 <HystericalDragons@proton.me>
+++ S:	Maintained
+++ F:	board/friendlyelec/nanopi-rk3528
+++ F:	arch/arm/dts/rk3528-nanopi-u-boot.dtsi
++++F:	arch/arm/dts/rk3528-nanopi-r28s*
+++ F:	arch/arm/dts/rk3528-nanopi-zero2*
+++ F:	configs/nanopi-zero2-rk3528_defconfig
+++--- a/board/friendlyelec/nanopi-rk3528/nanopi-rk3528.c
++++++ b/board/friendlyelec/nanopi-rk3528/nanopi-rk3528.c
+++@@ -16,6 +16,7 @@ struct board_model {
+++ /* HW_ID buckets from the FriendlyElec vendor U-Boot hwrev.c */
+++ static const struct board_model board_models[] = {
+++ 	{  82, 150, "rockchip/rk3528-nanopi-zero2.dtb" },
++++	{ 212, 274, "rockchip/rk3528-nanopi-r28s.dtb" },
+++ };
+++ 
+++ static const struct board_model *get_board_model(void)
+++--- a/configs/nanopi-zero2-rk3528_defconfig
++++++ b/configs/nanopi-zero2-rk3528_defconfig
+++@@ -28,9 +28,11 @@ CONFIG_CMD_USB_MASS_STORAGE=y
+++ CONFIG_CMD_RNG=y
+++ CONFIG_CMD_REGULATOR=y
+++ # CONFIG_SPL_DOS_PARTITION is not set
++++CONFIG_OF_LIST="rockchip/rk3528-nanopi-zero2 rockchip/rk3528-nanopi-r28s"
+++ CONFIG_OF_SPL_REMOVE_PROPS="clock-names interrupt-parent assigned-clocks assigned-clock-rates assigned-clock-parents"
+++ CONFIG_BUTTON=y
+++ CONFIG_BUTTON_ADC=y
++++CONFIG_BUTTON_GPIO=y
+++ # CONFIG_USB_FUNCTION_FASTBOOT is not set
+++ CONFIG_ROCKCHIP_GPIO=y
+++ CONFIG_LED=y
+++--- a/doc/board/rockchip/rockchip.rst
++++++ b/doc/board/rockchip/rockchip.rst
+++@@ -103,7 +103,7 @@ List of mainline supported Rockchip boar
+++ 
+++ * rk3528
+++      - ArmSoM Sige1 (sige1-rk3528)
+++-     - FriendlyElec NanoPi Zero2 (nanopi-zero2-rk3528)
++++     - FriendlyElec NanoPi R28S/Zero2 (nanopi-zero2-rk3528)
+++      - Generic RK3528 (generic-rk3528)
+++      - Radxa E20C (radxa-e20c-rk3528)
+++      - Radxa ROCK 2A/2F (rock-2-rk3528)
++diff --git a/package/boot/uboot-rockchip/patches/109-1-arm64-dts-rockchip-Split-out-the-common-NanoPi-RK3528-parts.patch b/package/boot/uboot-rockchip/patches/109-1-arm64-dts-rockchip-Split-out-the-common-NanoPi-RK3528-parts.patch
++deleted file mode 100644
++index 1cab5b96ce5d30b227017553b2dae787808ada0c..0000000000000000000000000000000000000000
++--- a/package/boot/uboot-rockchip/patches/109-1-arm64-dts-rockchip-Split-out-the-common-NanoPi-RK3528-parts.patch
+++++ /dev/null
++@@ -1,661 +0,0 @@
++-From fdb087806e808ccc4963e2e5225fe16581ecb421 Mon Sep 17 00:00:00 2001
++-From: 安容 <HystericalDragons@proton.me>
++-Date: Sat, 19 Sep 2026 18:28:18 +0800
++-Subject: [PATCH] arm64: dts: rockchip: Split out the common NanoPi RK3528
++- parts
++-MIME-Version: 1.0
++-Content-Type: text/plain; charset=UTF-8
++-Content-Transfer-Encoding: 8bit
++-
++-The FriendlyElec NanoPi Zero2 and the NanoPi R28S share their power
++-tree, storage, RGMII Ethernet, RTC, LEDs and debug console. Move those
++-parts into rk3528-nanopi.dtsi so the NanoPi R28S can reuse them, and
++-leave only the board specific nodes in the NanoPi Zero2 devicetree.
++-
++-Both boards drive a green LED from GPIO4_PB1, but give it a different
++-purpose, so the common file describes the LED itself and each board
++-adds the function, trigger and default state. While moving the LED pins
++-give them the usual _pin suffix, which frees the led1 label for the LED
++-node.
++-
++-Suggested-by: Chukun Pan <amadeus@jmu.edu.cn>
++-Signed-off-by: 安容 <HystericalDragons@proton.me>
++-Link: https://patch.msgid.link/20260919-r28s-upstream-v7-2-e80a6f8ef521@proton.me
++-Signed-off-by: Heiko Stuebner <heiko@sntech.de>
++----
++- .../arm64/rockchip/rk3528-nanopi-zero2.dts    | 290 +----------------
++- .../src/arm64/rockchip/rk3528-nanopi.dtsi     | 291 ++++++++++++++++++
++- 2 files changed, 296 insertions(+), 285 deletions(-)
++- create mode 100644 dts/upstream/src/arm64/rockchip/rk3528-nanopi.dtsi
++-
++---- a/dts/upstream/src/arm64/rockchip/rk3528-nanopi-zero2.dts
++-+++ b/dts/upstream/src/arm64/rockchip/rk3528-nanopi-zero2.dts
++-@@ -2,41 +2,12 @@
++- 
++- /dts-v1/;
++- 
++--#include <dt-bindings/input/input.h>
++--#include <dt-bindings/leds/common.h>
++--#include <dt-bindings/pwm/pwm.h>
++--#include "rk3528.dtsi"
++-+#include "rk3528-nanopi.dtsi"
++- 
++- / {
++- 	model = "FriendlyElec NanoPi Zero2";
++- 	compatible = "friendlyarm,nanopi-zero2", "rockchip,rk3528";
++- 
++--	aliases {
++--		ethernet0 = &gmac1;
++--		i2c1 = &i2c1;
++--		mmc0 = &sdhci;
++--		mmc1 = &sdmmc;
++--		serial0 = &uart0;
++--	};
++--
++--	chosen {
++--		stdout-path = "serial0:1500000n8";
++--	};
++--
++--	adc-keys-0 {
++--		compatible = "adc-keys";
++--		io-channels = <&saradc 0>;
++--		io-channel-names = "buttons";
++--		keyup-threshold-microvolt = <1800000>;
++--		poll-interval = <100>;
++--
++--		button-maskrom {
++--			label = "MASK";
++--			linux,code = <KEY_SETUP>;
++--			press-threshold-microvolt = <0>;
++--		};
++--	};
++--
++- 	adc-keys-1 {
++- 		compatible = "adc-keys";
++- 		io-channels = <&saradc 1>;
++-@@ -51,28 +22,6 @@
++- 		};
++- 	};
++- 
++--	leds {
++--		compatible = "gpio-leds";
++--		pinctrl-names = "default";
++--		pinctrl-0 = <&led1>, <&led_sys>;
++--
++--		led-0 {
++--			color = <LED_COLOR_ID_RED>;
++--			default-state = "on";
++--			function = LED_FUNCTION_HEARTBEAT;
++--			gpios = <&gpio4 RK_PB0 GPIO_ACTIVE_HIGH>;
++--			linux,default-trigger = "heartbeat";
++--		};
++--
++--		led-1 {
++--			color = <LED_COLOR_ID_GREEN>;
++--			default-state = "on";
++--			function = LED_FUNCTION_STATUS;
++--			gpios = <&gpio4 RK_PB1 GPIO_ACTIVE_HIGH>;
++--			linux,default-trigger = "default-on";
++--		};
++--	};
++--
++- 	vcc0v6_ddr: regulator-0v6-vcc-ddr {
++- 		compatible = "regulator-fixed";
++- 		regulator-name = "vcc0v6_ddr";
++-@@ -83,66 +32,6 @@
++- 		vin-supply = <&vcc5v0_sys>;
++- 	};
++- 
++--	vdd_0v9: regulator-0v9-vdd {
++--		compatible = "regulator-fixed";
++--		regulator-name = "vdd_0v9";
++--		regulator-always-on;
++--		regulator-boot-on;
++--		regulator-min-microvolt = <900000>;
++--		regulator-max-microvolt = <900000>;
++--		vin-supply = <&vcc5v0_sys>;
++--	};
++--
++--	vcc_ddr: regulator-1v1-vcc-ddr {
++--		compatible = "regulator-fixed";
++--		regulator-name = "vcc_ddr";
++--		regulator-always-on;
++--		regulator-boot-on;
++--		regulator-min-microvolt = <1100000>;
++--		regulator-max-microvolt = <1100000>;
++--		vin-supply = <&vcc5v0_sys>;
++--	};
++--
++--	vcc_1v8: regulator-1v8-vcc {
++--		compatible = "regulator-fixed";
++--		regulator-name = "vcc_1v8";
++--		regulator-always-on;
++--		regulator-boot-on;
++--		regulator-min-microvolt = <1800000>;
++--		regulator-max-microvolt = <1800000>;
++--		vin-supply = <&vcc_3v3>;
++--	};
++--
++--	vcc_3v3: regulator-3v3-vcc {
++--		compatible = "regulator-fixed";
++--		regulator-name = "vcc_3v3";
++--		regulator-always-on;
++--		regulator-boot-on;
++--		regulator-min-microvolt = <3300000>;
++--		regulator-max-microvolt = <3300000>;
++--		vin-supply = <&vcc5v0_sys>;
++--	};
++--
++--	vcc3v3_sd: regulator-3v3-vcc-sd {
++--		compatible = "regulator-fixed";
++--		gpios = <&gpio4 RK_PA1 GPIO_ACTIVE_LOW>;
++--		pinctrl-names = "default";
++--		pinctrl-0 = <&sdmmc_pwren_l>;
++--		regulator-name = "vcc3v3_sd";
++--		regulator-min-microvolt = <3300000>;
++--		regulator-max-microvolt = <3300000>;
++--		vin-supply = <&vcc_3v3>;
++--	};
++--
++--	vcc5v0_sys: regulator-5v0-vcc-sys {
++--		compatible = "regulator-fixed";
++--		regulator-name = "vcc5v0_sys";
++--		regulator-always-on;
++--		regulator-boot-on;
++--		regulator-min-microvolt = <5000000>;
++--		regulator-max-microvolt = <5000000>;
++--	};
++--
++- 	usb2_host_5v: regulator-5v0-usb2-host {
++- 		compatible = "regulator-fixed";
++- 		enable-active-high;
++-@@ -154,138 +43,15 @@
++- 		regulator-max-microvolt = <5000000>;
++- 		vin-supply = <&vcc5v0_sys>;
++- 	};
++--
++--	vccio_sd: regulator-vccio-sd {
++--		compatible = "regulator-gpio";
++--		gpios = <&gpio4 RK_PB6 GPIO_ACTIVE_HIGH>;
++--		pinctrl-names = "default";
++--		pinctrl-0 = <&sdmmc_vol_ctrl_h>;
++--		regulator-name = "vccio_sd";
++--		regulator-min-microvolt = <1800000>;
++--		regulator-max-microvolt = <3300000>;
++--		states = <1800000 0x0>, <3300000 0x1>;
++--		vin-supply = <&vcc5v0_sys>;
++--	};
++--
++--	vdd_arm: regulator-vdd-arm {
++--		compatible = "pwm-regulator";
++--		pwms = <&pwm1 0 5000 PWM_POLARITY_INVERTED>;
++--		pwm-supply = <&vcc5v0_sys>;
++--		regulator-name = "vdd_arm";
++--		regulator-always-on;
++--		regulator-boot-on;
++--		regulator-min-microvolt = <746000>;
++--		regulator-max-microvolt = <1201000>;
++--		regulator-settling-time-up-us = <250>;
++--	};
++--
++--	vdd_logic: regulator-vdd-logic {
++--		compatible = "pwm-regulator";
++--		pwms = <&pwm2 0 5000 PWM_POLARITY_INVERTED>;
++--		pwm-supply = <&vcc5v0_sys>;
++--		regulator-name = "vdd_logic";
++--		regulator-always-on;
++--		regulator-boot-on;
++--		regulator-min-microvolt = <705000>;
++--		regulator-max-microvolt = <1006000>;
++--		regulator-settling-time-up-us = <250>;
++--	};
++--};
++--
++--&cpu0 {
++--	cpu-supply = <&vdd_arm>;
++--};
++--
++--&cpu1 {
++--	cpu-supply = <&vdd_arm>;
++--};
++--
++--&cpu2 {
++--	cpu-supply = <&vdd_arm>;
++--};
++--
++--&cpu3 {
++--	cpu-supply = <&vdd_arm>;
++--};
++--
++--&gmac1 {
++--	clock_in_out = "output";
++--	phy-handle = <&rgmii_phy>;
++--	phy-mode = "rgmii-id";
++--	phy-supply = <&vcc_3v3>;
++--	pinctrl-names = "default";
++--	pinctrl-0 = <&rgmii_miim>, <&rgmii_tx_bus2>, <&rgmii_rx_bus2>,
++--		    <&rgmii_rgmii_clk>, <&rgmii_rgmii_bus>;
++--	status = "okay";
++--};
++--
++--&gpu {
++--	mali-supply = <&vdd_logic>;
++--	status = "okay";
++- };
++- 
++--&i2c1 {
++--	pinctrl-names = "default";
++--	pinctrl-0 = <&i2c1m0_xfer>;
++--	status = "okay";
++--
++--	hym8563: rtc@51 {
++--		compatible = "haoyu,hym8563";
++--		reg = <0x51>;
++--		#clock-cells = <0>;
++--		interrupt-parent = <&gpio4>;
++--		interrupts = <RK_PC1 IRQ_TYPE_LEVEL_LOW>;
++--		pinctrl-names = "default";
++--		pinctrl-0 = <&rtc_int_l>;
++--		wakeup-source;
++--	};
++--};
++--
++--&mdio1 {
++--	rgmii_phy: ethernet-phy@1 {
++--		compatible = "ethernet-phy-ieee802.3-c22";
++--		reg = <0x1>;
++--		pinctrl-names = "default";
++--		pinctrl-0 = <&gmac1_rstn_l>;
++--		reset-assert-us = <20000>;
++--		reset-deassert-us = <100000>;
++--		reset-gpios = <&gpio4 RK_PC2 GPIO_ACTIVE_LOW>;
++--	};
++-+&led1 {
++-+	default-state = "on";
++-+	function = LED_FUNCTION_STATUS;
++-+	linux,default-trigger = "default-on";
++- };
++- 
++- &pinctrl {
++--	ethernet {
++--		gmac1_rstn_l: gmac1-rstn-l {
++--			rockchip,pins = <4 RK_PC2 RK_FUNC_GPIO &pcfg_pull_none>;
++--		};
++--	};
++--
++--	leds {
++--		led1: led1 {
++--			rockchip,pins = <4 RK_PB1 RK_FUNC_GPIO &pcfg_pull_none>;
++--		};
++--
++--		led_sys: led-sys {
++--			rockchip,pins = <4 RK_PB0 RK_FUNC_GPIO &pcfg_pull_none>;
++--		};
++--	};
++--
++--	rtc {
++--		rtc_int_l: rtc-int-l {
++--			rockchip,pins = <4 RK_PC1 RK_FUNC_GPIO &pcfg_pull_up>;
++--		};
++--	};
++--
++--	sdmmc {
++--		sdmmc_vol_ctrl_h: sdmmc-vol-ctrl-h {
++--			rockchip,pins = <4 RK_PB6 RK_FUNC_GPIO &pcfg_pull_none>;
++--		};
++--
++--		sdmmc_pwren_l: sdmmc-pwren-l {
++--			rockchip,pins = <4 RK_PA1 RK_FUNC_GPIO &pcfg_pull_none>;
++--		};
++--	};
++--
++- 	usb {
++- 		usb20_host1_pwren: usb20-host1-pwren {
++- 			rockchip,pins = <4 RK_PB5 RK_FUNC_GPIO &pcfg_pull_none>;
++-@@ -293,52 +59,6 @@
++- 	};
++- };
++- 
++--&pwm1 {
++--	pinctrl-names = "default";
++--	pinctrl-0 = <&pwm1m0_pins>;
++--	status = "okay";
++--};
++--
++--&pwm2 {
++--	pinctrl-names = "default";
++--	pinctrl-0 = <&pwm2m0_pins>;
++--	status = "okay";
++--};
++--
++--&saradc {
++--	vref-supply = <&vcc_1v8>;
++--	status = "okay";
++--};
++--
++--&sdhci {
++--	bus-width = <8>;
++--	cap-mmc-highspeed;
++--	mmc-hs200-1_8v;
++--	no-sd;
++--	no-sdio;
++--	non-removable;
++--	vmmc-supply = <&vcc_3v3>;
++--	vqmmc-supply = <&vcc_1v8>;
++--	status = "okay";
++--};
++--
++--&sdmmc {
++--	bus-width = <4>;
++--	cap-mmc-highspeed;
++--	cap-sd-highspeed;
++--	disable-wp;
++--	sd-uhs-sdr104;
++--	vmmc-supply = <&vcc3v3_sd>;
++--	vqmmc-supply = <&vccio_sd>;
++--	status = "okay";
++--};
++--
++--&uart0 {
++--	pinctrl-names = "default";
++--	pinctrl-0 = <&uart0m0_xfer>;
++--	status = "okay";
++--};
++--
++- &usb_host0_ehci {
++- 	status = "okay";
++- };
++---- /dev/null
++-+++ b/dts/upstream/src/arm64/rockchip/rk3528-nanopi.dtsi
++-@@ -0,0 +1,291 @@
++-+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++-+
++-+#include <dt-bindings/input/input.h>
++-+#include <dt-bindings/leds/common.h>
++-+#include <dt-bindings/pwm/pwm.h>
++-+#include "rk3528.dtsi"
++-+
++-+/ {
++-+	aliases {
++-+		ethernet0 = &gmac1;
++-+		i2c1 = &i2c1;
++-+		mmc0 = &sdhci;
++-+		mmc1 = &sdmmc;
++-+		serial0 = &uart0;
++-+	};
++-+
++-+	chosen {
++-+		stdout-path = "serial0:1500000n8";
++-+	};
++-+
++-+	adc-keys-0 {
++-+		compatible = "adc-keys";
++-+		io-channels = <&saradc 0>;
++-+		io-channel-names = "buttons";
++-+		keyup-threshold-microvolt = <1800000>;
++-+		poll-interval = <100>;
++-+
++-+		button-maskrom {
++-+			label = "MASK";
++-+			linux,code = <KEY_SETUP>;
++-+			press-threshold-microvolt = <0>;
++-+		};
++-+	};
++-+
++-+	leds: leds {
++-+		compatible = "gpio-leds";
++-+		pinctrl-names = "default";
++-+		pinctrl-0 = <&led_sys_pin>, <&led1_pin>;
++-+
++-+		led-0 {
++-+			color = <LED_COLOR_ID_RED>;
++-+			default-state = "on";
++-+			function = LED_FUNCTION_HEARTBEAT;
++-+			gpios = <&gpio4 RK_PB0 GPIO_ACTIVE_HIGH>;
++-+			linux,default-trigger = "heartbeat";
++-+		};
++-+
++-+		/* The purpose of the second LED differs per board. */
++-+		led1: led-1 {
++-+			color = <LED_COLOR_ID_GREEN>;
++-+			gpios = <&gpio4 RK_PB1 GPIO_ACTIVE_HIGH>;
++-+		};
++-+	};
++-+
++-+	vdd_0v9: regulator-0v9-vdd {
++-+		compatible = "regulator-fixed";
++-+		regulator-name = "vdd_0v9";
++-+		regulator-always-on;
++-+		regulator-boot-on;
++-+		regulator-min-microvolt = <900000>;
++-+		regulator-max-microvolt = <900000>;
++-+		vin-supply = <&vcc5v0_sys>;
++-+	};
++-+
++-+	vcc_ddr: regulator-1v1-vcc-ddr {
++-+		compatible = "regulator-fixed";
++-+		regulator-name = "vcc_ddr";
++-+		regulator-always-on;
++-+		regulator-boot-on;
++-+		regulator-min-microvolt = <1100000>;
++-+		regulator-max-microvolt = <1100000>;
++-+		vin-supply = <&vcc5v0_sys>;
++-+	};
++-+
++-+	vcc_1v8: regulator-1v8-vcc {
++-+		compatible = "regulator-fixed";
++-+		regulator-name = "vcc_1v8";
++-+		regulator-always-on;
++-+		regulator-boot-on;
++-+		regulator-min-microvolt = <1800000>;
++-+		regulator-max-microvolt = <1800000>;
++-+		vin-supply = <&vcc_3v3>;
++-+	};
++-+
++-+	vcc_3v3: regulator-3v3-vcc {
++-+		compatible = "regulator-fixed";
++-+		regulator-name = "vcc_3v3";
++-+		regulator-always-on;
++-+		regulator-boot-on;
++-+		regulator-min-microvolt = <3300000>;
++-+		regulator-max-microvolt = <3300000>;
++-+		vin-supply = <&vcc5v0_sys>;
++-+	};
++-+
++-+	vcc3v3_sd: regulator-3v3-vcc-sd {
++-+		compatible = "regulator-fixed";
++-+		gpios = <&gpio4 RK_PA1 GPIO_ACTIVE_LOW>;
++-+		pinctrl-names = "default";
++-+		pinctrl-0 = <&sdmmc_pwren_l>;
++-+		regulator-name = "vcc3v3_sd";
++-+		regulator-min-microvolt = <3300000>;
++-+		regulator-max-microvolt = <3300000>;
++-+		vin-supply = <&vcc_3v3>;
++-+	};
++-+
++-+	vcc5v0_sys: regulator-5v0-vcc-sys {
++-+		compatible = "regulator-fixed";
++-+		regulator-name = "vcc5v0_sys";
++-+		regulator-always-on;
++-+		regulator-boot-on;
++-+		regulator-min-microvolt = <5000000>;
++-+		regulator-max-microvolt = <5000000>;
++-+	};
++-+
++-+	vccio_sd: regulator-vccio-sd {
++-+		compatible = "regulator-gpio";
++-+		gpios = <&gpio4 RK_PB6 GPIO_ACTIVE_HIGH>;
++-+		pinctrl-names = "default";
++-+		pinctrl-0 = <&sdmmc_vol_ctrl_h>;
++-+		regulator-name = "vccio_sd";
++-+		regulator-min-microvolt = <1800000>;
++-+		regulator-max-microvolt = <3300000>;
++-+		states = <1800000 0x0>, <3300000 0x1>;
++-+		vin-supply = <&vcc5v0_sys>;
++-+	};
++-+
++-+	vdd_arm: regulator-vdd-arm {
++-+		compatible = "pwm-regulator";
++-+		pwms = <&pwm1 0 5000 PWM_POLARITY_INVERTED>;
++-+		pwm-supply = <&vcc5v0_sys>;
++-+		regulator-name = "vdd_arm";
++-+		regulator-always-on;
++-+		regulator-boot-on;
++-+		regulator-min-microvolt = <746000>;
++-+		regulator-max-microvolt = <1201000>;
++-+		regulator-settling-time-up-us = <250>;
++-+	};
++-+
++-+	vdd_logic: regulator-vdd-logic {
++-+		compatible = "pwm-regulator";
++-+		pwms = <&pwm2 0 5000 PWM_POLARITY_INVERTED>;
++-+		pwm-supply = <&vcc5v0_sys>;
++-+		regulator-name = "vdd_logic";
++-+		regulator-always-on;
++-+		regulator-boot-on;
++-+		regulator-min-microvolt = <705000>;
++-+		regulator-max-microvolt = <1006000>;
++-+		regulator-settling-time-up-us = <250>;
++-+	};
++-+};
++-+
++-+&cpu0 {
++-+	cpu-supply = <&vdd_arm>;
++-+};
++-+
++-+&cpu1 {
++-+	cpu-supply = <&vdd_arm>;
++-+};
++-+
++-+&cpu2 {
++-+	cpu-supply = <&vdd_arm>;
++-+};
++-+
++-+&cpu3 {
++-+	cpu-supply = <&vdd_arm>;
++-+};
++-+
++-+&gmac1 {
++-+	clock_in_out = "output";
++-+	phy-handle = <&rgmii_phy>;
++-+	phy-mode = "rgmii-id";
++-+	phy-supply = <&vcc_3v3>;
++-+	pinctrl-names = "default";
++-+	pinctrl-0 = <&rgmii_miim>, <&rgmii_tx_bus2>, <&rgmii_rx_bus2>,
++-+		    <&rgmii_rgmii_clk>, <&rgmii_rgmii_bus>;
++-+	status = "okay";
++-+};
++-+
++-+&gpu {
++-+	mali-supply = <&vdd_logic>;
++-+	status = "okay";
++-+};
++-+
++-+&i2c1 {
++-+	pinctrl-names = "default";
++-+	pinctrl-0 = <&i2c1m0_xfer>;
++-+	status = "okay";
++-+
++-+	hym8563: rtc@51 {
++-+		compatible = "haoyu,hym8563";
++-+		reg = <0x51>;
++-+		#clock-cells = <0>;
++-+		interrupt-parent = <&gpio4>;
++-+		interrupts = <RK_PC1 IRQ_TYPE_LEVEL_LOW>;
++-+		pinctrl-names = "default";
++-+		pinctrl-0 = <&rtc_int_l>;
++-+		wakeup-source;
++-+	};
++-+};
++-+
++-+&mdio1 {
++-+	rgmii_phy: ethernet-phy@1 {
++-+		compatible = "ethernet-phy-ieee802.3-c22";
++-+		reg = <0x1>;
++-+		pinctrl-names = "default";
++-+		pinctrl-0 = <&gmac1_rstn_l>;
++-+		reset-assert-us = <20000>;
++-+		reset-deassert-us = <100000>;
++-+		reset-gpios = <&gpio4 RK_PC2 GPIO_ACTIVE_LOW>;
++-+	};
++-+};
++-+
++-+&pinctrl {
++-+	ethernet {
++-+		gmac1_rstn_l: gmac1-rstn-l {
++-+			rockchip,pins = <4 RK_PC2 RK_FUNC_GPIO &pcfg_pull_none>;
++-+		};
++-+	};
++-+
++-+	leds {
++-+		led_sys_pin: led-sys-pin {
++-+			rockchip,pins = <4 RK_PB0 RK_FUNC_GPIO &pcfg_pull_none>;
++-+		};
++-+
++-+		led1_pin: led1-pin {
++-+			rockchip,pins = <4 RK_PB1 RK_FUNC_GPIO &pcfg_pull_none>;
++-+		};
++-+	};
++-+
++-+	rtc {
++-+		rtc_int_l: rtc-int-l {
++-+			rockchip,pins = <4 RK_PC1 RK_FUNC_GPIO &pcfg_pull_up>;
++-+		};
++-+	};
++-+
++-+	sdmmc {
++-+		sdmmc_pwren_l: sdmmc-pwren-l {
++-+			rockchip,pins = <4 RK_PA1 RK_FUNC_GPIO &pcfg_pull_none>;
++-+		};
++-+
++-+		sdmmc_vol_ctrl_h: sdmmc-vol-ctrl-h {
++-+			rockchip,pins = <4 RK_PB6 RK_FUNC_GPIO &pcfg_pull_none>;
++-+		};
++-+	};
++-+};
++-+
++-+&pwm1 {
++-+	pinctrl-names = "default";
++-+	pinctrl-0 = <&pwm1m0_pins>;
++-+	status = "okay";
++-+};
++-+
++-+&pwm2 {
++-+	pinctrl-names = "default";
++-+	pinctrl-0 = <&pwm2m0_pins>;
++-+	status = "okay";
++-+};
++-+
++-+&saradc {
++-+	vref-supply = <&vcc_1v8>;
++-+	status = "okay";
++-+};
++-+
++-+&sdhci {
++-+	bus-width = <8>;
++-+	cap-mmc-highspeed;
++-+	mmc-hs200-1_8v;
++-+	no-sd;
++-+	no-sdio;
++-+	non-removable;
++-+	vmmc-supply = <&vcc_3v3>;
++-+	vqmmc-supply = <&vcc_1v8>;
++-+	status = "okay";
++-+};
++-+
++-+&sdmmc {
++-+	bus-width = <4>;
++-+	cap-mmc-highspeed;
++-+	cap-sd-highspeed;
++-+	disable-wp;
++-+	sd-uhs-sdr104;
++-+	vmmc-supply = <&vcc3v3_sd>;
++-+	vqmmc-supply = <&vccio_sd>;
++-+	status = "okay";
++-+};
++-+
++-+&uart0 {
++-+	pinctrl-names = "default";
++-+	pinctrl-0 = <&uart0m0_xfer>;
++-+	status = "okay";
++-+};
++diff --git a/package/boot/uboot-rockchip/patches/109-2-arm64-dts-rockchip-Add-devicetree-for-the-FriendlyElec-Na.patch b/package/boot/uboot-rockchip/patches/109-2-arm64-dts-rockchip-Add-devicetree-for-the-FriendlyElec-Na.patch
++deleted file mode 100644
++index e22fe8c4dca2a3c997a8dcad71ff230d0b6adb5d..0000000000000000000000000000000000000000
++--- a/package/boot/uboot-rockchip/patches/109-2-arm64-dts-rockchip-Add-devicetree-for-the-FriendlyElec-Na.patch
+++++ /dev/null
++@@ -1,204 +0,0 @@
++-From c1e23f3425c49fe22e9598f8eea2fcf693950d50 Mon Sep 17 00:00:00 2001
++-From: 安容 <HystericalDragons@proton.me>
++-Date: Sat, 19 Sep 2026 18:28:19 +0800
++-Subject: [PATCH] arm64: dts: rockchip: Add devicetree for the FriendlyElec
++- NanoPi R28S
++-MIME-Version: 1.0
++-Content-Type: text/plain; charset=UTF-8
++-Content-Transfer-Encoding: 8bit
++-
++-The NanoPi R28S is a dual gigabit Ethernet router board based on the
++-Rockchip RK3528 SoC, designed and developed by FriendlyElec. It shares
++-most of its design with the NanoPi Zero2, so it builds on the common
++-rk3528-nanopi.dtsi.
++-
++-Specification:
++-- Rockchip RK3528
++-- 1GB RAM
++-- eMMC socket (optional)
++-- MicroSD slot
++-- 1x 1000Base-T (GMAC1, Realtek RTL8211F)
++-- 1x 1000Base-T (PCIe, Realtek RTL8111H)
++-- AICSemi AIC8800D80 SDIO WiFi + Bluetooth
++-- 3x LEDs (SYS, LAN, WAN)
++-- 1x USB 2.0 Type-C OTG, shared with the 5V power input
++-- User and MaskROM buttons
++-- Haoyu HYM8563 RTC
++-- 1x USB Type-C debug UART (onboard WCH CH340E)
++-
++-The AIC8800D80 has no upstream driver yet, so only the SDIO and UART
++-controllers it hangs off are enabled, along with the WiFi and Bluetooth
++-wake and power pins taken from the schematics.
++-
++-Assisted-by: LLM
++-Signed-off-by: 安容 <HystericalDragons@proton.me>
++-Link: https://patch.msgid.link/20260919-r28s-upstream-v7-3-e80a6f8ef521@proton.me
++-Signed-off-by: Heiko Stuebner <heiko@sntech.de>
++----
++- .../src/arm64/rockchip/rk3528-nanopi-r28s.dts | 160 ++++++++++++++++++
++- 1 file changed, 160 insertions(+)
++- create mode 100644 dts/upstream/src/arm64/rockchip/rk3528-nanopi-r28s.dts
++-
++---- /dev/null
++-+++ b/dts/upstream/src/arm64/rockchip/rk3528-nanopi-r28s.dts
++-@@ -0,0 +1,160 @@
++-+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++-+/*
++-+ * Copyright (c) 2022 Rockchip Electronics Co., Ltd.
++-+ * Copyright (c) 2026 FriendlyElec Computer Tech. Co., Ltd.
++-+ * Copyright (c) 2026 安容 <HystericalDragons@proton.me>
++-+ */
++-+
++-+/dts-v1/;
++-+
++-+#include "rk3528-nanopi.dtsi"
++-+
++-+/ {
++-+	model = "FriendlyElec NanoPi R28S";
++-+	compatible = "friendlyarm,nanopi-r28s", "rockchip,rk3528";
++-+
++-+	aliases {
++-+		mmc2 = &sdio0;
++-+		serial2 = &uart2;
++-+	};
++-+
++-+	gpio-keys {
++-+		compatible = "gpio-keys";
++-+		pinctrl-names = "default";
++-+		pinctrl-0 = <&gpio4_b2_usr_btn>;
++-+
++-+		button-user {
++-+			debounce-interval = <50>;
++-+			gpios = <&gpio4 RK_PB2 GPIO_ACTIVE_LOW>;
++-+			label = "USER";
++-+			linux,code = <BTN_1>;
++-+			wakeup-source;
++-+		};
++-+	};
++-+
++-+	sdio_pwrseq: sdio-pwrseq {
++-+		compatible = "mmc-pwrseq-simple";
++-+		pinctrl-names = "default";
++-+		pinctrl-0 = <&pwr_wf>;
++-+		post-power-on-delay-ms = <100>;
++-+		reset-gpios = <&gpio1 RK_PC2 GPIO_ACTIVE_LOW>;
++-+	};
++-+};
++-+
++-+&combphy {
++-+	status = "okay";
++-+};
++-+
++-+&led1 {
++-+	default-state = "off";
++-+	function = LED_FUNCTION_WAN;
++-+	linux,default-trigger = "netdev";
++-+};
++-+
++-+&leds {
++-+	pinctrl-names = "default";
++-+	pinctrl-0 = <&led_sys_pin>, <&led1_pin>, <&led2_pin>;
++-+
++-+	led-2 {
++-+		color = <LED_COLOR_ID_GREEN>;
++-+		default-state = "off";
++-+		function = LED_FUNCTION_LAN;
++-+		gpios = <&gpio4 RK_PB3 GPIO_ACTIVE_HIGH>;
++-+		linux,default-trigger = "netdev";
++-+	};
++-+};
++-+
++-+&pcie {
++-+	pinctrl-names = "default";
++-+	pinctrl-0 = <&pcie_eth_perstb>;
++-+	reset-gpios = <&gpio4 RK_PC0 GPIO_ACTIVE_HIGH>;
++-+	vpcie3v3-supply = <&vcc_3v3>;
++-+	status = "okay";
++-+};
++-+
++-+&pinctrl {
++-+	bluetooth {
++-+		bt_wake_host: bt-wake-host {
++-+			rockchip,pins = <1 RK_PB5 RK_FUNC_GPIO &pcfg_pull_down>;
++-+		};
++-+
++-+		host_wake_bt: host-wake-bt {
++-+			rockchip,pins = <1 RK_PB4 RK_FUNC_GPIO &pcfg_pull_none>;
++-+		};
++-+	};
++-+
++-+	gpio-keys {
++-+		gpio4_b2_usr_btn: gpio4-b2-usr-btn {
++-+			rockchip,pins = <4 RK_PB2 RK_FUNC_GPIO &pcfg_pull_up>;
++-+		};
++-+	};
++-+
++-+	leds {
++-+		led2_pin: led2-pin {
++-+			rockchip,pins = <4 RK_PB3 RK_FUNC_GPIO &pcfg_pull_none>;
++-+		};
++-+	};
++-+
++-+	pcie {
++-+		pcie_eth_perstb: pcie-eth-perstb {
++-+			rockchip,pins = <4 RK_PC0 RK_FUNC_GPIO &pcfg_pull_none>;
++-+		};
++-+	};
++-+
++-+	wifi {
++-+		host_wake_wl: host-wake-wl {
++-+			rockchip,pins = <1 RK_PA6 RK_FUNC_GPIO &pcfg_pull_none>;
++-+		};
++-+
++-+		pwr_wf: pwr-wf {
++-+			rockchip,pins = <1 RK_PC2 RK_FUNC_GPIO &pcfg_pull_none>;
++-+		};
++-+
++-+		wl_wake_host: wl-wake-host {
++-+			rockchip,pins = <1 RK_PA7 RK_FUNC_GPIO &pcfg_pull_down>;
++-+		};
++-+	};
++-+};
++-+
++-+&sdio0 {
++-+	bus-width = <4>;
++-+	cap-sd-highspeed;
++-+	cap-sdio-irq;
++-+	keep-power-in-suspend;
++-+	mmc-pwrseq = <&sdio_pwrseq>;
++-+	no-mmc;
++-+	no-sd;
++-+	non-removable;
++-+	sd-uhs-sdr104;
++-+	vmmc-supply = <&vcc_3v3>;
++-+	vqmmc-supply = <&vcc_1v8>;
++-+	status = "okay";
++-+};
++-+
++-+&uart2 {
++-+	dma-names = "tx", "rx";
++-+	pinctrl-names = "default";
++-+	pinctrl-0 = <&uart2m1_xfer>, <&uart2m1_ctsn>, <&uart2m1_rtsn>;
++-+	uart-has-rtscts;
++-+	status = "okay";
++-+};
++-+
++-+&usb_host0_xhci {
++-+	/*
++-+	 * The Type-C port is also the 5V power input, so it comes up as a
++-+	 * device, but host mode works with an externally powered hub.
++-+	 */
++-+	extcon = <&usb2phy>;
++-+	maximum-speed = "high-speed";
++-+	phys = <&usb2phy_otg>;
++-+	phy-names = "usb2-phy";
++-+	status = "okay";
++-+};
++-+
++-+&usb2phy {
++-+	status = "okay";
++-+};
++-+
++-+&usb2phy_otg {
++-+	status = "okay";
++-+};
++diff --git a/package/boot/uboot-rockchip/patches/109-3-rockchip-rk3528-Split-out-common-NanoPi-u-boot.dtsi.patch b/package/boot/uboot-rockchip/patches/109-3-rockchip-rk3528-Split-out-common-NanoPi-u-boot.dtsi.patch
++deleted file mode 100644
++index 6a50cd0508448e674b70abd7623c7dc8e443b9e2..0000000000000000000000000000000000000000
++--- a/package/boot/uboot-rockchip/patches/109-3-rockchip-rk3528-Split-out-common-NanoPi-u-boot.dtsi.patch
+++++ /dev/null
++@@ -1,64 +0,0 @@
++-From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
++-From: 安容 <HystericalDragons@proton.me>
++-Date: Mon, 12 Oct 2026 14:55:42 +0800
++-Subject: [PATCH] rockchip: rk3528: Split out common NanoPi u-boot.dtsi
++-MIME-Version: 1.0
++-Content-Type: text/plain; charset=UTF-8
++-Content-Transfer-Encoding: 8bit
++-
++-The Linux devicetree of the NanoPi Zero2 has been split into a common
++-rk3528-nanopi.dtsi, which the NanoPi R28S builds on. Both boards use
++-the same PWM regulators for vdd_arm and vdd_logic.
++-
++-Move the U-Boot specific parts of the NanoPi Zero2 into a common
++-rk3528-nanopi-u-boot.dtsi in the same way, so that the NanoPi R28S can
++-include it instead of duplicating it. No functional change.
++-
++-Signed-off-by: 安容 <HystericalDragons@proton.me>
++-Link: https://lore.kernel.org/all/20261012-nanopi-r28s-v1-1-042d62597829@proton.me/
++----
++- arch/arm/dts/rk3528-nanopi-u-boot.dtsi       | 11 +++++++++++
++- arch/arm/dts/rk3528-nanopi-zero2-u-boot.dtsi | 10 +---------
++- arch/arm/mach-rockchip/rk3528/MAINTAINERS    |  1 +
++- 3 files changed, 13 insertions(+), 9 deletions(-)
++- create mode 100644 arch/arm/dts/rk3528-nanopi-u-boot.dtsi
++-
++---- /dev/null
++-+++ b/arch/arm/dts/rk3528-nanopi-u-boot.dtsi
++-@@ -0,0 +1,11 @@
++-+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++-+
++-+#include "rk3528-u-boot.dtsi"
++-+
++-+&vdd_arm {
++-+	regulator-init-microvolt = <953000>;
++-+};
++-+
++-+&vdd_logic {
++-+	regulator-init-microvolt = <900000>;
++-+};
++---- a/arch/arm/dts/rk3528-nanopi-zero2-u-boot.dtsi
++-+++ b/arch/arm/dts/rk3528-nanopi-zero2-u-boot.dtsi
++-@@ -1,11 +1,3 @@
++- // SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++- 
++--#include "rk3528-u-boot.dtsi"
++--
++--&vdd_arm {
++--	regulator-init-microvolt = <953000>;
++--};
++--
++--&vdd_logic {
++--	regulator-init-microvolt = <900000>;
++--};
++-+#include "rk3528-nanopi-u-boot.dtsi"
++---- a/arch/arm/mach-rockchip/rk3528/MAINTAINERS
++-+++ b/arch/arm/mach-rockchip/rk3528/MAINTAINERS
++-@@ -7,6 +7,7 @@ F:	configs/generic-rk3528_defconfig
++- NANOPI-ZERO2-RK3528
++- M:	Jonas Karlman <jonas@kwiboo.se>
++- S:	Maintained
++-+F:	arch/arm/dts/rk3528-nanopi-u-boot.dtsi
++- F:	arch/arm/dts/rk3528-nanopi-zero2*
++- F:	configs/nanopi-zero2-rk3528_defconfig
++- 
++diff --git a/package/boot/uboot-rockchip/patches/109-4-board-rockchip-Add-FriendlyElec-NanoPi-R28S.patch b/package/boot/uboot-rockchip/patches/109-4-board-rockchip-Add-FriendlyElec-NanoPi-R28S.patch
++deleted file mode 100644
++index 339028d2b684363a1d026ad32c6067bd40fda66b..0000000000000000000000000000000000000000
++--- a/package/boot/uboot-rockchip/patches/109-4-board-rockchip-Add-FriendlyElec-NanoPi-R28S.patch
+++++ /dev/null
++@@ -1,140 +0,0 @@
++-From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
++-From: 安容 <HystericalDragons@proton.me>
++-Date: Mon, 12 Oct 2026 14:55:43 +0800
++-Subject: [PATCH] board: rockchip: Add FriendlyElec NanoPi R28S
++-MIME-Version: 1.0
++-Content-Type: text/plain; charset=UTF-8
++-Content-Transfer-Encoding: 8bit
++-
++-The FriendlyElec NanoPi R28S is a dual gigabit Ethernet router board
++-based on the Rockchip RK3528 SoC. It shares most of its design with the
++-NanoPi Zero2.
++-
++-Specifications:
++-- SoC: Rockchip RK3528, quad-core Cortex-A53 @ 2.0 GHz
++-- RAM: 1 GB LPDDR4
++-- Storage: microSD slot, optional onboard eMMC
++-- Ethernet: 1x GbE (GMAC1 + Realtek RTL8211F),
++-            1x GbE (Realtek RTL8111H over PCIe)
++-- WiFi: AICSemi AIC8800D80 over SDIO
++-- USB: 1x USB 2.0 Type-C (power input and OTG)
++-- UART: USB Type-C debug console (onboard WCH CH340E), 1500000 8N1
++-- Buttons: user (GPIO), MaskROM (SARADC)
++-
++-Add support for the board based on the NanoPi Zero2, and enable
++-CONFIG_BUTTON_GPIO for the user button.
++-
++-Features tested on NanoPi R28S:
++-- SD-card boot
++-- Ethernet
++-
++-Signed-off-by: 安容 <HystericalDragons@proton.me>
++-Link: https://lore.kernel.org/all/20261012-nanopi-r28s-v1-2-042d62597829@proton.me/
++----
++- arch/arm/dts/rk3528-nanopi-r28s-u-boot.dtsi |  3 +
++- arch/arm/mach-rockchip/rk3528/MAINTAINERS   |  6 ++
++- configs/nanopi-r28s-rk3528_defconfig        | 65 +++++++++++++++++++++
++- doc/board/rockchip/rockchip.rst             |  1 +
++- 4 files changed, 75 insertions(+)
++- create mode 100644 arch/arm/dts/rk3528-nanopi-r28s-u-boot.dtsi
++- create mode 100644 configs/nanopi-r28s-rk3528_defconfig
++-
++---- /dev/null
++-+++ b/arch/arm/dts/rk3528-nanopi-r28s-u-boot.dtsi
++-@@ -0,0 +1,3 @@
++-+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++-+
++-+#include "rk3528-nanopi-u-boot.dtsi"
++---- a/arch/arm/mach-rockchip/rk3528/MAINTAINERS
++-+++ b/arch/arm/mach-rockchip/rk3528/MAINTAINERS
++-@@ -4,6 +4,12 @@ S:	Maintained
++- F:	arch/arm/dts/rk3528-generic*
++- F:	configs/generic-rk3528_defconfig
++- 
++-+NANOPI-R28S-RK3528
++-+M:	安容 <HystericalDragons@proton.me>
++-+S:	Maintained
++-+F:	arch/arm/dts/rk3528-nanopi-r28s*
++-+F:	configs/nanopi-r28s-rk3528_defconfig
++-+
++- NANOPI-ZERO2-RK3528
++- M:	Jonas Karlman <jonas@kwiboo.se>
++- S:	Maintained
++---- /dev/null
++-+++ b/configs/nanopi-r28s-rk3528_defconfig
++-@@ -0,0 +1,65 @@
++-+CONFIG_ARM=y
++-+CONFIG_SKIP_LOWLEVEL_INIT=y
++-+CONFIG_COUNTER_FREQUENCY=24000000
++-+CONFIG_ARCH_ROCKCHIP=y
++-+CONFIG_DEFAULT_DEVICE_TREE="rockchip/rk3528-nanopi-r28s"
++-+CONFIG_ROCKCHIP_RK3528=y
++-+CONFIG_SYS_LOAD_ADDR=0xc00800
++-+CONFIG_DEBUG_UART_BASE=0xFF9F0000
++-+CONFIG_DEBUG_UART_CLOCK=24000000
++-+CONFIG_DEBUG_UART=y
++-+CONFIG_DEFAULT_FDT_FILE="rockchip/rk3528-nanopi-r28s.dtb"
++-+# CONFIG_DISPLAY_CPUINFO is not set
++-+CONFIG_BOARD_RNG_SEED=y
++-+CONFIG_SPL_MAX_SIZE=0x40000
++-+# CONFIG_SPL_RAW_IMAGE_SUPPORT is not set
++-+CONFIG_CMD_MEMINFO=y
++-+CONFIG_CMD_MEMINFO_MAP=y
++-+CONFIG_CMD_ADC=y
++-+CONFIG_CMD_GPIO=y
++-+CONFIG_CMD_GPT=y
++-+CONFIG_CMD_MISC=y
++-+CONFIG_CMD_MMC=y
++-+CONFIG_CMD_USB=y
++-+CONFIG_CMD_ROCKUSB=y
++-+CONFIG_CMD_USB_MASS_STORAGE=y
++-+# CONFIG_CMD_SETEXPR is not set
++-+CONFIG_CMD_RNG=y
++-+CONFIG_CMD_REGULATOR=y
++-+# CONFIG_SPL_DOS_PARTITION is not set
++-+CONFIG_OF_SPL_REMOVE_PROPS="clock-names interrupt-parent assigned-clocks assigned-clock-rates assigned-clock-parents"
++-+CONFIG_BUTTON=y
++-+CONFIG_BUTTON_ADC=y
++-+CONFIG_BUTTON_GPIO=y
++-+# CONFIG_USB_FUNCTION_FASTBOOT is not set
++-+CONFIG_ROCKCHIP_GPIO=y
++-+CONFIG_LED=y
++-+CONFIG_LED_GPIO=y
++-+CONFIG_SUPPORT_EMMC_RPMB=y
++-+CONFIG_MMC_DW=y
++-+CONFIG_MMC_DW_ROCKCHIP=y
++-+CONFIG_MMC_SDHCI=y
++-+CONFIG_MMC_SDHCI_SDMA=y
++-+CONFIG_MMC_SDHCI_ROCKCHIP=y
++-+CONFIG_DM_MDIO=y
++-+CONFIG_DWC_ETH_QOS=y
++-+CONFIG_DWC_ETH_QOS_ROCKCHIP=y
++-+CONFIG_PHY_REALTEK=y
++-+CONFIG_PHY_ROCKCHIP_INNO_USB2=y
++-+CONFIG_PHY_ROCKCHIP_NANENG_COMBOPHY=y
++-+CONFIG_REGULATOR_PWM=y
++-+CONFIG_DM_REGULATOR_GPIO=y
++-+CONFIG_PWM_ROCKCHIP=y
++-+CONFIG_BAUDRATE=1500000
++-+CONFIG_DEBUG_UART_SHIFT=2
++-+CONFIG_SYS_NS16550_MEM32=y
++-+CONFIG_USB=y
++-+CONFIG_USB_XHCI_HCD=y
++-+CONFIG_USB_EHCI_HCD=y
++-+CONFIG_USB_EHCI_GENERIC=y
++-+CONFIG_USB_DWC3=y
++-+CONFIG_USB_DWC3_GENERIC=y
++-+CONFIG_USB_GADGET=y
++-+CONFIG_USB_GADGET_DOWNLOAD=y
++-+CONFIG_USB_FUNCTION_ROCKUSB=y
++-+CONFIG_ERRNO_STR=y
++---- a/doc/board/rockchip/rockchip.rst
++-+++ b/doc/board/rockchip/rockchip.rst
++-@@ -103,6 +103,7 @@ List of mainline supported Rockchip boar
++- 
++- * rk3528
++-      - ArmSoM Sige1 (sige1-rk3528)
++-+     - FriendlyElec NanoPi R28S (nanopi-r28s-rk3528)
++-      - FriendlyElec NanoPi Zero2 (nanopi-zero2-rk3528)
++-      - Generic RK3528 (generic-rk3528)
++-      - Radxa E20C (radxa-e20c-rk3528)
++diff --git a/target/linux/rockchip/image/armv8.mk b/target/linux/rockchip/image/armv8.mk
++index dd4c08e56414d95f11a07efc69d67a5c9812d10d..3bb5a76cdb1451f241586711aa7d92f7c2b8318a 100644
++--- a/target/linux/rockchip/image/armv8.mk
+++++ b/target/linux/rockchip/image/armv8.mk
++@@ -100,6 +100,7 @@ define Device/friendlyarm_nanopi-r28s
++   $(Device/rk3528)
++   DEVICE_VENDOR := FriendlyARM
++   DEVICE_MODEL := NanoPi R28S
+++  UBOOT_DEVICE_NAME := nanopi-zero2-rk3528
++   DEVICE_PACKAGES := kmod-button-hotplug kmod-input-adc-keys kmod-r8169
++ endef
++ TARGET_DEVICES += friendlyarm_nanopi-r28s
+-- 
+2.54.0
+
