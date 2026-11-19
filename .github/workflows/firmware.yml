@@ -4,6 +4,10 @@ name: Build ffmuc firmware
 on:
   workflow_dispatch:
   push:
+    branches:
+      - parker
+    tags:
+      - v*
   pull_request:
 
 concurrency:
