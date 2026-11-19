@@ -9,7 +9,7 @@ GLUON_TARGETS ?= $(shell cat targets | tr '\n' ' ')
 GLUON_AUTOUPDATER_ENABLED := 1
 
 # Release name of an untagged build. Tag the release with this name.
-GLUON_RELEASE_NEXT ?= v2026.11.1-parker14
+GLUON_RELEASE_NEXT ?= v2026.11.1-parker4
 
 ifneq (,$(shell git describe --exact-match --tags 2>/dev/null))
 	GLUON_AUTOUPDATER_BRANCH := parker
