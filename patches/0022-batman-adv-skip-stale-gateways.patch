@@ -3,7 +3,7 @@ From: Annika Wickert <6527744+awlx@users.noreply.github.com>
 Date: Thu, 19 Nov 2026 10:26:53 +0100
 Subject: [PATCH] batman-adv: skip stale gateways
 
-A gateway that loses power stays selected for up to 200 s, so the mesh clients have no IPv4 uplink. The patch makes batman-adv skip a gateway without OGMs for 3 originator intervals (about 15 s) in the gateway election.
+A gateway that loses power stays selected for up to 200 s, so the mesh clients have no IPv4 uplink. The patch makes batman-adv skip a gateway without OGMs for 3 originator intervals (15 s with the Gluon interval of 5 s) in the gateway election.
 ---
  .../0004-batman-adv-skip-stale-gateways.patch | 188 ++++++++++++++++++
  1 file changed, 188 insertions(+)
