@@ -1,0 +1,53 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Annika Wickert <6527744+awlx@users.noreply.github.com>
+Date: Thu, 19 Nov 2026 11:45:05 +0100
+Subject: [PATCH] gluon-config-mode-domain-select: show each domain name once
+
+When several domain codes have the same name, the selector shows
+the name only once. If the node uses one of these codes, the entry
+keeps the code of the node. Thus a node with a hidden alias code
+keeps its code when the user saves the form without a change.
+---
+ .../config-mode/wizard/0200-domain-select.lua  | 18 +++++++++++++-----
+ 1 file changed, 13 insertions(+), 5 deletions(-)
+
+diff --git a/package/gluon-config-mode-domain-select/luasrc/lib/gluon/config-mode/wizard/0200-domain-select.lua b/package/gluon-config-mode-domain-select/luasrc/lib/gluon/config-mode/wizard/0200-domain-select.lua
+index 72c3529e..27d9d57c 100644
+--- a/package/gluon-config-mode-domain-select/luasrc/lib/gluon/config-mode/wizard/0200-domain-select.lua
++++ b/package/gluon-config-mode-domain-select/luasrc/lib/gluon/config-mode/wizard/0200-domain-select.lua
+@@ -21,19 +21,27 @@ return function(form, uci)
+ 	end
+ 
+ 	local function get_domain_list()
+-		local list = {}
++		-- Show each domain name once. If codes share a name, keep the code of this node.
++		local by_name = {}
+ 		for _, domain_path in ipairs(util.glob('/lib/gluon/domains/*.json')) do
+ 			local domain_code = domain_path:match('([^/]+)%.json$')
+ 			local domain = assert(json.load(domain_path))
++			local domain_name = domain.domain_names[domain_code]
+ 
+-			if not hide_domain_code(domain, domain_code) then
+-				table.insert(list, {
++			if not hide_domain_code(domain, domain_code) and
++					(not by_name[domain_name] or (configured and domain_code == selected_domain)) then
++				by_name[domain_name] = {
+ 					domain_code = domain_code,
+-					domain_name = domain.domain_names[domain_code],
+-				})
++					domain_name = domain_name,
++				}
+ 			end
+ 		end
+ 
++		local list = {}
++		for _, entry in pairs(by_name) do
++			table.insert(list, entry)
++		end
++
+ 		table.sort(list, function(a, b) return a.domain_name < b.domain_name end)
+ 		return list
+ 	end
+-- 
+2.56.1
+

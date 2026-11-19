@@ -17,10 +17,11 @@ msgstr ""
 "et enregistrez le"
 
 msgid "gluon-config-mode:domain"
-msgstr "Domaine"
+msgstr "Nom du Wi-Fi (SSID)"
 
 msgid "gluon-config-mode:domain-select"
 msgstr ""
+"Choisissez le nom du Wi-Fi (SSID) que votre nœud diffuse. Tous les nœuds se connectent dans un seul mesh, quel que soit leur nom de Wi-Fi."
 
 msgid "gluon-config-mode:pubkey"
 msgstr ""

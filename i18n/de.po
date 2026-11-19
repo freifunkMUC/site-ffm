@@ -17,13 +17,11 @@ msgstr ""
 "entsprechend aus und sende es ab."
 
 msgid "gluon-config-mode:domain"
-msgstr "Domäne"
+msgstr "WLAN-Name (SSID)"
 
 msgid "gluon-config-mode:domain-select"
 msgstr ""
-"Hier hast du die Möglichkeit, die Mesh-Domäne, in der sich dein Knoten "
-"befindet, auszuwählen. Bitte denke daran, dass sich dein Knoten nur mit den "
-"Knoten der ausgewählten Domäne verbinden kann."
+"Wähle den WLAN-Namen (SSID), den dein Knoten aussendet. Alle Knoten verbinden sich in einem Mesh, egal welchen WLAN-Namen sie aussenden."
 
 msgid "gluon-config-mode:pubkey"
 msgstr ""

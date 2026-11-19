@@ -8,6 +8,9 @@ SECRET_KEY_FILE ?= ${HOME}/.gluon-secret-key
 GLUON_TARGETS ?= $(shell cat targets | tr '\n' ' ')
 GLUON_AUTOUPDATER_ENABLED := 1
 
+# Release name of an untagged build. Tag the release with this name.
+GLUON_RELEASE_NEXT ?= v2026.11.1-parker4
+
 ifneq (,$(shell git describe --exact-match --tags 2>/dev/null))
 	GLUON_AUTOUPDATER_BRANCH := parker
 	GLUON_RELEASE := $(shell git describe --tags 2>/dev/null)
@@ -15,7 +18,7 @@ else
 	GLUON_AUTOUPDATER_BRANCH := parker
 	EXP_FALLBACK = $(shell date '+%Y%m%d')
 	BUILD_NUMBER ?= exp$(EXP_FALLBACK)
-	GLUON_RELEASE := $(shell git describe --tags)~$(BUILD_NUMBER)
+	GLUON_RELEASE := $(GLUON_RELEASE_NEXT)~$(BUILD_NUMBER)
 endif
 
 GLUON_SITE_VERSION := $(shell git --git-dir=.git describe --tags --always --abbrev=7 --dirty=+ 2>/dev/null || echo unknown)
