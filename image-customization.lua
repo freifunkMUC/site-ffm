@@ -69,6 +69,9 @@ if device({
     features {
         'web-cellular',
     }
+    packages {
+        'ffmuc-cellular-wan-dns',
+    }
 end
 
 pkgs_usb = {
