@@ -45,6 +45,19 @@ other over Wi-Fi and over cable.
   nodes on channel 6. On 5 GHz and over cable they mesh.
 - The old domain codes stay valid, for example `ffmuc_dlg` for Dillingen.
 
+### Selector in the config mode
+
+The selector is labelled "Wi-Fi name (SSID)". It shows each SSID once.
+
+- In each domain file, all names in `domain_names` are the SSID.
+- `hide_domain` hides all codes except the main code of the file.
+- A node that uses a hidden code keeps it. The selector shows the SSID of
+  that code once, with the code of the node as the default. The patch
+  `0023-gluon-config-mode-domain-select-show-each-name-once.patch` removes
+  the second entry with the same name.
+- To add an SSID, add a domain file. Do not add a second visible code with
+  the same SSID.
+
 ## Mesh during the change
 
 A classic node and a Parker node do not mesh: the mesh IDs are different.
