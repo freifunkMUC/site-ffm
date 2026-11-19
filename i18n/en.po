@@ -16,13 +16,11 @@ msgstr ""
 "fill out the following form and submit it."
 
 msgid "gluon-config-mode:domain"
-msgstr "Domain"
+msgstr "Wi-Fi name (SSID)"
 
 msgid "gluon-config-mode:domain-select"
 msgstr ""
-"Here you have the possibility of selecting the mesh domain in which your node "
-"is placed. Please keep in mind that your router only connects with the nodes "
-"of the selected domain"
+"Select the Wi-Fi name (SSID) that your node sends. All nodes connect in one mesh, whichever Wi-Fi name they send."
 
 msgid "gluon-config-mode:pubkey"
 msgstr ""
