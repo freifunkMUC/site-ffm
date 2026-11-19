@@ -9,5 +9,5 @@
 GLUON_SITE_FEEDS='community'
 
 PACKAGES_COMMUNITY_REPO=https://github.com/freifunkMUC/community-packages.git
-PACKAGES_COMMUNITY_COMMIT=b351af1bf5f65ed3accb73ddbdfd1dcaa6d59a3b
+PACKAGES_COMMUNITY_COMMIT=adaac6e9a1e236411ac4d363e30a6962e5d09634
 PACKAGES_COMMUNITY_BRANCH=awlx-parker-next-integration
