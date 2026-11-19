@@ -3,7 +3,7 @@ From: Annika Wickert <6527744+awlx@users.noreply.github.com>
 Date: Thu, 19 Nov 2026 10:26:53 +0100
 Subject: [PATCH] batman-adv: skip stale gateways
 
-A gateway that loses power stays selected for up to 200 s, so the mesh clients have no IPv4 uplink. The patch makes batman-adv skip a gateway without OGMs for 10 originator intervals (10 s) in the gateway election.
+A gateway that loses power stays selected for up to 200 s, so the mesh clients have no IPv4 uplink. The patch makes batman-adv skip a gateway without OGMs for 3 originator intervals (about 15 s) in the gateway election.
 ---
  .../0004-batman-adv-skip-stale-gateways.patch | 188 ++++++++++++++++++
  1 file changed, 188 insertions(+)
@@ -20,7 +20,7 @@ index 0000000..5f22520
 +Date: Thu, 19 Nov 2026 10:26:53 +0100
 +Subject: [PATCH] batman-adv: gw: skip stale gateways
 +
-+A gateway that loses power stays selected for up to 200 s (neighbor purge). Skip a gateway without an OGM for 10 originator intervals (at least 5 s) in the election.
++A gateway that loses power stays selected for up to 200 s (neighbor purge). Skip a gateway without an OGM for 3 originator intervals (at least 5 s) in the election.
 +---
 + ...03-batman-adv-gw-skip-stale-gateways.patch | 168 ++++++++++++++++++
 + 1 file changed, 168 insertions(+)
@@ -41,7 +41,7 @@ index 0000000..5f22520
 ++and the router towards it stays until the purge. In this time the clients
 ++of the mesh have no IPv4 uplink.
 ++
-++Mark a gateway as stale when no OGM of it arrived for 10 originator
+++Mark a gateway as stale when no OGM of it arrived for 3 originator
 ++intervals (at least 5 s). The election skips stale gateways, and a stale
 ++selected gateway causes a new election. A stale gateway stays selected
 ++when no other gateway has OGMs. A gateway that comes back is selected
@@ -193,7 +193,7 @@ index 0000000..5f22520
 ++  */
 ++ #define BATADV_PURGE_TIMEOUT 200000 /* 200 seconds */
 +++/* a gateway without an OGM for this many originator intervals is stale */
-+++#define BATADV_GW_STALE_INTERVALS 10
++++#define BATADV_GW_STALE_INTERVALS 3
 +++#define BATADV_GW_STALE_TIMEOUT_MIN 5000 /* 5 seconds */
 ++ #define BATADV_TT_LOCAL_TIMEOUT 600000 /* in milliseconds */
 ++ #define BATADV_TT_CLIENT_ROAM_TIMEOUT 600000 /* in milliseconds */
