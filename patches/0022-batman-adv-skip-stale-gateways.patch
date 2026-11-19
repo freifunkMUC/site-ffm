@@ -1,0 +1,208 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Annika Wickert <6527744+awlx@users.noreply.github.com>
+Date: Thu, 19 Nov 2026 10:26:53 +0100
+Subject: [PATCH] batman-adv: skip stale gateways
+
+A gateway that loses power stays selected for up to 200 s, so the mesh clients have no IPv4 uplink. The patch makes batman-adv skip a gateway without OGMs for 10 originator intervals (10 s) in the gateway election.
+---
+ .../0004-batman-adv-skip-stale-gateways.patch | 188 ++++++++++++++++++
+ 1 file changed, 188 insertions(+)
+ create mode 100644 patches/packages/routing/0004-batman-adv-skip-stale-gateways.patch
+
+diff --git a/patches/packages/routing/0004-batman-adv-skip-stale-gateways.patch b/patches/packages/routing/0004-batman-adv-skip-stale-gateways.patch
+new file mode 100644
+index 0000000..5f22520
+--- /dev/null
++++ b/patches/packages/routing/0004-batman-adv-skip-stale-gateways.patch
+@@ -0,0 +1,188 @@
++From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
++From: Annika Wickert <6527744+awlx@users.noreply.github.com>
++Date: Thu, 19 Nov 2026 10:26:53 +0100
++Subject: [PATCH] batman-adv: gw: skip stale gateways
++
++A gateway that loses power stays selected for up to 200 s (neighbor purge). Skip a gateway without an OGM for 10 originator intervals (at least 5 s) in the election.
++---
++ ...03-batman-adv-gw-skip-stale-gateways.patch | 168 ++++++++++++++++++
++ 1 file changed, 168 insertions(+)
++ create mode 100644 batman-adv/patches/2003-batman-adv-gw-skip-stale-gateways.patch
++
++diff --git a/batman-adv/patches/2003-batman-adv-gw-skip-stale-gateways.patch b/batman-adv/patches/2003-batman-adv-gw-skip-stale-gateways.patch
++new file mode 100644
++index 0000000..2e28c87
++--- /dev/null
+++++ b/batman-adv/patches/2003-batman-adv-gw-skip-stale-gateways.patch
++@@ -0,0 +1,168 @@
+++From: Annika Wickert <6527744+awlx@users.noreply.github.com>
+++Date: Thu, 19 Nov 2026 10:30:00 +0100
+++Subject: batman-adv: gw: skip stale gateways
+++
+++A gateway that loses power stays selected until the neighbor purge
+++(BATADV_PURGE_TIMEOUT, 200 s): its metric does not change without OGMs,
+++and the router towards it stays until the purge. In this time the clients
+++of the mesh have no IPv4 uplink.
+++
+++Mark a gateway as stale when no OGM of it arrived for 10 originator
+++intervals (at least 5 s). The election skips stale gateways, and a stale
+++selected gateway causes a new election. A stale gateway stays selected
+++when no other gateway has OGMs. A gateway that comes back is selected
+++again only by the normal rules (gw_sel_class), so this adds no flapping.
+++
+++Signed-off-by: Annika Wickert <6527744+awlx@users.noreply.github.com>
+++---
+++ net/batman-adv/bat_iv_ogm.c     |  3 +++
+++ net/batman-adv/bat_v.c          |  3 +++
+++ net/batman-adv/gateway_client.c | 39 ++++++++++++++++++++++++++++++++-
+++ net/batman-adv/gateway_client.h |  2 ++
+++ net/batman-adv/main.h           |  3 +++
+++ 5 files changed, 49 insertions(+), 1 deletion(-)
+++
+++diff --git a/net/batman-adv/bat_iv_ogm.c b/net/batman-adv/bat_iv_ogm.c
+++index 5dd3e1f..cacceba 100644
+++--- a/net/batman-adv/bat_iv_ogm.c
++++++ b/net/batman-adv/bat_iv_ogm.c
+++@@ -2352,6 +2352,9 @@ batadv_iv_gw_get_best_gw_node(struct batadv_priv *bat_priv)
+++ 
+++ 	rcu_read_lock();
+++ 	hlist_for_each_entry_rcu(gw_node, &bat_priv->gw.gateway_list, list) {
++++		if (batadv_gw_node_is_stale(bat_priv, gw_node))
++++			continue;
++++
+++ 		orig_node = gw_node->orig_node;
+++ 		router = batadv_orig_router_get(orig_node, BATADV_IF_DEFAULT);
+++ 		if (!router)
+++diff --git a/net/batman-adv/bat_v.c b/net/batman-adv/bat_v.c
+++index e13b391..7995c7b 100644
+++--- a/net/batman-adv/bat_v.c
++++++ b/net/batman-adv/bat_v.c
+++@@ -568,6 +568,9 @@ batadv_v_gw_get_best_gw_node(struct batadv_priv *bat_priv)
+++ 		if (!kref_get_unless_zero(&gw_node->refcount))
+++ 			continue;
+++ 
++++		if (batadv_gw_node_is_stale(bat_priv, gw_node))
++++			goto next;
++++
+++ 		if (batadv_v_gw_throughput_get(gw_node, &bw) < 0)
+++ 			goto next;
+++ 
+++diff --git a/net/batman-adv/gateway_client.c b/net/batman-adv/gateway_client.c
+++index 450a48e..65d2e97 100644
+++--- a/net/batman-adv/gateway_client.c
++++++ b/net/batman-adv/gateway_client.c
+++@@ -9,6 +9,7 @@
+++ 
+++ #include <linux/atomic.h>
+++ #include <linux/byteorder/generic.h>
++++#include <linux/compiler.h>
+++ #include <linux/container_of.h>
+++ #include <linux/errno.h>
+++ #include <linux/etherdevice.h>
+++@@ -19,8 +20,10 @@
+++ #include <linux/ip.h>
+++ #include <linux/ipv6.h>
+++ #include <linux/kref.h>
++++#include <linux/limits.h>
+++ #include <linux/list.h>
+++ #include <linux/lockdep.h>
++++#include <linux/minmax.h>
+++ #include <linux/netdevice.h>
+++ #include <linux/netlink.h>
+++ #include <linux/rculist.h>
+++@@ -191,6 +194,32 @@ void batadv_gw_check_client_stop(struct batadv_priv *bat_priv)
+++ 	batadv_gw_node_put(curr_gw);
+++ }
+++ 
++++/**
++++ * batadv_gw_node_is_stale() - check if the OGMs of a gateway stopped
++++ * @bat_priv: the bat priv with all the soft interface information
++++ * @gw_node: the gateway node to check
++++ *
++++ * The metric towards a gateway does not change without OGMs, and the router
++++ * towards it stays until the neighbor purge (BATADV_PURGE_TIMEOUT). Without
++++ * this check, a gateway that lost power stays selected for this time.
++++ *
++++ * Return: true if no OGM of the gateway arrived for
++++ *  BATADV_GW_STALE_INTERVALS originator intervals (at least
++++ *  BATADV_GW_STALE_TIMEOUT_MIN ms), false otherwise
++++ */
++++bool batadv_gw_node_is_stale(struct batadv_priv *bat_priv,
++++			     struct batadv_gw_node *gw_node)
++++{
++++	u32 timeout = atomic_read(&bat_priv->orig_interval);
++++
++++	timeout = min_t(u32, timeout, U32_MAX / BATADV_GW_STALE_INTERVALS);
++++	timeout *= BATADV_GW_STALE_INTERVALS;
++++	timeout = max_t(u32, timeout, BATADV_GW_STALE_TIMEOUT_MIN);
++++
++++	return batadv_has_timed_out(READ_ONCE(gw_node->orig_node->last_seen),
++++				    timeout);
++++}
++++
+++ /**
+++  * batadv_gw_election() - Elect the best gateway
+++  * @bat_priv: the bat priv with all the soft interface information
+++@@ -202,6 +231,7 @@ void batadv_gw_election(struct batadv_priv *bat_priv)
+++ 	struct batadv_neigh_node *router = NULL;
+++ 	struct batadv_neigh_ifinfo *router_ifinfo = NULL;
+++ 	char gw_addr[18] = { '\0' };
++++	bool curr_stale;
+++ 
+++ 	if (atomic_read(&bat_priv->gw.mode) != BATADV_GW_MODE_CLIENT)
+++ 		goto out;
+++@@ -211,7 +241,10 @@ void batadv_gw_election(struct batadv_priv *bat_priv)
+++ 
+++ 	curr_gw = batadv_gw_get_selected_gw_node(bat_priv);
+++ 
+++-	if (!batadv_atomic_dec_not_zero(&bat_priv->gw.reselect) && curr_gw)
++++	curr_stale = curr_gw && batadv_gw_node_is_stale(bat_priv, curr_gw);
++++
++++	if (!batadv_atomic_dec_not_zero(&bat_priv->gw.reselect) && curr_gw &&
++++	    !curr_stale)
+++ 		goto out;
+++ 
+++ 	/* if gw.reselect is set to 1 it means that a previous call to
+++@@ -223,6 +256,10 @@ void batadv_gw_election(struct batadv_priv *bat_priv)
+++ 	if (curr_gw == next_gw)
+++ 		goto out;
+++ 
++++	/* keep a stale gateway until a gateway with OGMs is known */
++++	if (curr_stale && !next_gw)
++++		goto out;
++++
+++ 	if (next_gw) {
+++ 		sprintf(gw_addr, "%pM", next_gw->orig_node->orig);
+++ 
+++diff --git a/net/batman-adv/gateway_client.h b/net/batman-adv/gateway_client.h
+++index 95c2ccd..53054d9 100644
+++--- a/net/batman-adv/gateway_client.h
++++++ b/net/batman-adv/gateway_client.h
+++@@ -18,6 +18,8 @@
+++ void batadv_gw_check_client_stop(struct batadv_priv *bat_priv);
+++ void batadv_gw_reselect(struct batadv_priv *bat_priv);
+++ void batadv_gw_election(struct batadv_priv *bat_priv);
++++bool batadv_gw_node_is_stale(struct batadv_priv *bat_priv,
++++			     struct batadv_gw_node *gw_node);
+++ struct batadv_orig_node *
+++ batadv_gw_get_selected_orig(struct batadv_priv *bat_priv);
+++ void batadv_gw_check_election(struct batadv_priv *bat_priv,
+++diff --git a/net/batman-adv/main.h b/net/batman-adv/main.h
+++index 97ea71a..ff42169 100644
+++--- a/net/batman-adv/main.h
++++++ b/net/batman-adv/main.h
+++@@ -32,6 +32,9 @@
+++  * -> TODO: check influence on BATADV_TQ_LOCAL_WINDOW_SIZE
+++  */
+++ #define BATADV_PURGE_TIMEOUT 200000 /* 200 seconds */
++++/* a gateway without an OGM for this many originator intervals is stale */
++++#define BATADV_GW_STALE_INTERVALS 10
++++#define BATADV_GW_STALE_TIMEOUT_MIN 5000 /* 5 seconds */
+++ #define BATADV_TT_LOCAL_TIMEOUT 600000 /* in milliseconds */
+++ #define BATADV_TT_CLIENT_ROAM_TIMEOUT 600000 /* in milliseconds */
+++ #define BATADV_TT_CLIENT_TEMP_TIMEOUT 600000 /* in milliseconds */
+++-- 
+++2.47.0
++-- 
++2.56.1
++
+-- 
+2.56.1
+
