@@ -1,0 +1,196 @@
+From 7bd0355ccc607eff68c603fee6890df39fbb19ac Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Fri, 20 Nov 2026 09:59:10 +0100
+Subject: [PATCH] patches: add the pending S18A mmc patch for testing
+
+The RTL8822CS of the NanoPi R2S Plus sets S18A on its 1.8 V bus and then
+does not answer CMD11, so the core runs it in high speed mode at 50 MHz.
+Add the pending linux-mmc patch that skips CMD11 in that case and lets
+the card use SDR104.
+
+This is a test build only. The patch is not upstream and waits for
+review on linux-mmc.
+
+Assisted-by: Claude:claude-opus-5-5
+Signed-off-by: Grische <github@grische.xyz>
+---
+ ...r-SDIO-cards-that-fail-CMD11-at-1.8V.patch | 167 ++++++++++++++++++
+ 1 file changed, 167 insertions(+)
+ create mode 100644 patches/openwrt/0028-generic-mmc-allow-UHS-I-for-SDIO-cards-that-fail-CMD11-at-1.8V.patch
+
+diff --git a/patches/openwrt/0028-generic-mmc-allow-UHS-I-for-SDIO-cards-that-fail-CMD11-at-1.8V.patch b/patches/openwrt/0028-generic-mmc-allow-UHS-I-for-SDIO-cards-that-fail-CMD11-at-1.8V.patch
+new file mode 100644
+index 00000000..4925c58c
+--- /dev/null
++++ b/patches/openwrt/0028-generic-mmc-allow-UHS-I-for-SDIO-cards-that-fail-CMD11-at-1.8V.patch
+@@ -0,0 +1,167 @@
++From: Grische <github@grische.xyz>
++Date: Tue, 17 Nov 2026 16:17:53 +0100
++Subject: generic: mmc: allow UHS-I for SDIO cards that fail CMD11 at 1.8V
++
++Add the pending linux-mmc patch "mmc: core: Allow UHS-I for SDIO cards
++that fail CMD11 at 1.8V". The RTL8822CS on the NanoPi R2S Plus sets
++S18A although its slot already signals at 1.8V, and it does not answer
++CMD11. The core then runs the card in high speed mode at 50 MHz. With
++this patch the init restarts without CMD11 and the CCCR selects UHS-I.
++If the UHS-I init fails after that, the card falls back to high speed
++mode.
++
++The patch is not upstream yet. It stays on this branch until linux-mmc
++has reviewed it.
++
++Signed-off-by: Grische <github@grische.xyz>
++Assisted-by: Claude:claude-opus-5-5
++
++diff --git a/target/linux/generic/pending-6.18/845-mmc-core-allow-UHS-I-for-SDIO-cards-that-fail-CMD11-at-1.8V.patch b/target/linux/generic/pending-6.18/845-mmc-core-allow-UHS-I-for-SDIO-cards-that-fail-CMD11-at-1.8V.patch
++new file mode 100644
++index 0000000000000000000000000000000000000000..98f2259b33c53210373fd200072c31597a294b46
++--- /dev/null
+++++ b/target/linux/generic/pending-6.18/845-mmc-core-allow-UHS-I-for-SDIO-cards-that-fail-CMD11-at-1.8V.patch
++@@ -0,0 +1,143 @@
+++From 02523197ffc16c92940b8b6436f992f3b0255dc8 Mon Sep 17 00:00:00 2001
+++From: Christian Schmidbauer <opensource@grische.xyz>
+++Date: Thu, 22 Oct 2026 19:30:00 +0200
+++Subject: [PATCH] mmc: core: Allow UHS-I for SDIO cards that fail CMD11 at 1.8V
+++
+++The NanoPi R2S Plus has an RTL8822CS SDIO Wi-Fi module on the sdmmc_ext
+++controller of the RK3328. The I/O supply of the slot is a fixed 1.8V
+++regulator, and the host is described with sd-uhs-sdr104. So the host
+++already signals at 1.8V when it powers up the card.
+++
+++Per SDIO Simplified Specification Version 3.00, section 3.1.2, a card
+++that already runs at 1.8V signaling sets S18A to 0 in the R4 response.
+++The RTL8822CS sets S18A to 1 anyway, and the core sends CMD11. Per
+++Physical Layer Simplified Specification Version 3.01, section 4.2.4.4,
+++a card whose signaling level is already 1.8V treats CMD11 as an illegal
+++command and does not respond to it. The core then power cycles the card,
+++clears R4_18V_PRESENT and initializes the card in high speed mode at
+++50 MHz. On v6.12, where this was observed, dw_mmc also logs "Unexpected
+++CMD11 timeout".
+++
+++Since commit 5fc3d80ef496 ("mmc: sdio: don't use rocr to check if the
+++card could support UHS mode"), the CCCR decides about the UHS-I mode of
+++cards that set S18A to 0 at 1.8V, without CMD11.
+++
+++Use that path also for cards that fail CMD11 at 1.8V. When CMD11 fails
+++and the host still signals at 1.8V, restart the init without CMD11 and
+++keep R4_18V_PRESENT, so that the CCCR selects the UHS-I mode. If tuning
+++or another step of the UHS-I init fails after that, warn with the error,
+++power cycle the card to reset the bus timing and clock, and restart the
+++init without R4_18V_PRESENT. The card then comes up in high speed mode.
+++The failed CMD11 and the power cycle after it still happen on every
+++initialization of such a card.
+++
+++On a reinit, such as a resume, the init continues with the card
+++structure from the first init and drops the freshly read one. If the
+++first init selected UHS-I, that structure has no high speed flag in its
+++CCCR, and the high speed retry would leave the card in default speed
+++while clocking it at the maximum rate from the CIS. On the high speed
+++retry, take over the CCCR, the switch capabilities and the SCR
+++sda_spec3 flag that sdio_read_cccr() has just read.
+++
+++Cards that accept CMD11 are not affected. Hosts that power up at 3.3V
+++are not affected either, because they signal at 3.3V after a failed
+++CMD11.
+++
+++The resulting init path, UHS-I from the CCCR without CMD11, was tested
+++on the NanoPi R2S Plus with an earlier form of this patch that did not
+++send CMD11 at 1.8V. The RTL8822CS then initialized in SDR104 mode at
+++150 MHz, and tuning succeeded. In station mode the throughput rose from
+++30 to 61 Mbit/s for transmit and from about 70 to 126 Mbit/s for
+++receive.
+++
+++Signed-off-by: Christian Schmidbauer <opensource@grische.xyz>
+++---
+++ drivers/mmc/core/sdio.c | 45 ++++++++++++++++++++++++++++++++++++++++-
+++ 1 file changed, 44 insertions(+), 1 deletion(-)
+++
+++diff --git a/drivers/mmc/core/sdio.c b/drivers/mmc/core/sdio.c
+++index 83085e76486a..7debcf1e9136 100644
+++--- a/drivers/mmc/core/sdio.c
++++++ b/drivers/mmc/core/sdio.c
+++@@ -665,6 +665,7 @@ static int mmc_sdio_init_card(struct mmc_host *host, u32 ocr,
+++ 	int retries = 10;
+++ 	u32 rocr = 0;
+++ 	u32 ocr_card = ocr;
++++	bool cmd11_failed_at_1v8 = false;
+++ 
+++ 	WARN_ON(!host->claimed);
+++ 
+++@@ -738,13 +739,25 @@ static int mmc_sdio_init_card(struct mmc_host *host, u32 ocr,
+++ 	 * fails to check rocr & R4_18V_PRESENT,  but we still need to
+++ 	 * try to init uhs card. sdio_read_cccr will take over this task
+++ 	 * to make sure which speed mode should work.
++++	 *
++++	 * Some cards set S18A even if the signal voltage is already 1.8V.
++++	 * Per SD spec v3.01, section 4.2.4.4, such a card treats CMD11 as
++++	 * an illegal command and does not respond to it. If CMD11 fails
++++	 * and the host still signals at 1.8V, there is nothing to switch.
++++	 * Restart the init sequence without CMD11 but with R4_18V_PRESENT,
++++	 * so that sdio_read_cccr decides about UHS-I as described above.
+++ 	 */
+++-	if (rocr & ocr & R4_18V_PRESENT) {
++++	if (rocr & ocr & R4_18V_PRESENT && !cmd11_failed_at_1v8) {
+++ 		err = mmc_set_uhs_voltage(host, ocr_card);
+++ 		if (err == -EAGAIN) {
+++ 			mmc_sdio_pre_init(host, ocr_card, card);
+++ 			retries--;
+++ 			goto try_again;
++++		} else if (err &&
++++			   host->ios.signal_voltage == MMC_SIGNAL_VOLTAGE_180) {
++++			cmd11_failed_at_1v8 = true;
++++			mmc_sdio_pre_init(host, ocr_card, card);
++++			goto try_again;
+++ 		} else if (err) {
+++ 			ocr &= ~R4_18V_PRESENT;
+++ 		}
+++@@ -833,6 +846,19 @@ static int mmc_sdio_init_card(struct mmc_host *host, u32 ocr,
+++ 	if (oldcard) {
+++ 		if (card->cis.vendor == oldcard->cis.vendor &&
+++ 		    card->cis.device == oldcard->cis.device) {
++++			/*
++++			 * In the high speed retry after a failed UHS-I init,
++++			 * see below, oldcard may still describe UHS-I, with
++++			 * cccr.high_speed unset. Take over what
++++			 * sdio_read_cccr() has just read. Of the SCR it only
++++			 * sets sda_spec3. The rest of the SCR of a combo card
++++			 * is read on the first init only, so keep it.
++++			 */
++++			if (cmd11_failed_at_1v8 && !(ocr & R4_18V_PRESENT)) {
++++				oldcard->cccr = card->cccr;
++++				oldcard->sw_caps = card->sw_caps;
++++				oldcard->scr.sda_spec3 = card->scr.sda_spec3;
++++			}
+++ 			mmc_remove_card(card);
+++ 			card = oldcard;
+++ 		} else {
+++@@ -867,6 +893,23 @@ static int mmc_sdio_init_card(struct mmc_host *host, u32 ocr,
+++ 	/* Only if card supports 1.8v and UHS signaling */
+++ 	if ((ocr & R4_18V_PRESENT) && card->sw_caps.sd3_bus_mode) {
+++ 		err = mmc_sdio_init_uhs_card(card);
++++		if (err && cmd11_failed_at_1v8) {
++++			/*
++++			 * UHS-I was selected without CMD11, see above. Power
++++			 * cycle to reset the bus timing and clock, and retry
++++			 * the init sequence without R4_18V_PRESENT, that is
++++			 * in high speed mode. The retry neither sends CMD11
++++			 * nor gets here again.
++++			 */
++++			pr_warn("%s: UHS-I init failed (%d), retrying in high speed mode\n",
++++				mmc_hostname(host), err);
++++			if (oldcard != card)
++++				mmc_remove_card(card);
++++			mmc_power_cycle(host, ocr_card);
++++			mmc_sdio_pre_init(host, ocr_card, NULL);
++++			ocr &= ~R4_18V_PRESENT;
++++			goto try_again;
++++		}
+++ 		if (err)
+++ 			goto remove;
+++ 	} else {
+++-- 
+++2.54.0
+++
+-- 
+2.54.0
+
