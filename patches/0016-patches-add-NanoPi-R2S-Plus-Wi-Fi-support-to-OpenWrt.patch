@@ -1,0 +1,1411 @@
+From 37986d8cf334afbf8b682265e40d1e8544cbbf3b Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Fri, 20 Nov 2026 01:02:10 +0100
+Subject: [PATCH] patches: add NanoPi R2S Plus Wi-Fi support to OpenWrt
+
+FriendlyElec offers an RTL8822CS SDIO module for the M.2 slot of the
+NanoPi R2S Plus. OpenWrt does not support it yet. Add the seven OpenWrt
+commits that make it work as Gluon OpenWrt patches.
+
+The first three fix the IO domain supplies of the R2S Plus, raise the
+drive strength of the RK3328 sdmmc0ext pins to 8 mA and describe the
+Wi-Fi module in the device tree. At 4 mA the SDIO link has round trip
+times of up to 210 ms.
+
+The next two fix an AP mode stall of rtw88. rtw88 queues every
+broadcast and multicast frame for delivery after the DTIM beacon. On
+SDIO these frames use up the TX pages, and the beacon download fails.
+The first patch backports the fix of rtw-next for USB. The second
+applies the same mapping to SDIO and PCIe.
+
+The last two add 802.11s mesh point support to rtw88. rtw88 has one
+beacon slot only, so the radio runs either a mesh or an AP interface.
+Gluon's default of mesh and client AP on one radio does not work on
+this module.
+
+OpenWrt added two rtw88 patches since the Wi-Fi patches were written.
+The rtw88 patches are therefore renumbered to rtl/004 to rtl/010, and
+three of them are refreshed. The patches apply on the OpenWrt commit
+Gluon uses. They were tested on the R2S Plus with OpenWrt main r37622
+(Linux 6.18.55, backports 7.2).
+
+Assisted-by: Claude:claude-fable-5-1 Claude:claude-fable-5-2 Claude:claude-opus-5-5
+Signed-off-by: Grische <github@grische.xyz>
+---
+ ...O-domain-supplies-of-NanoPi-R2S-Plus.patch |  63 +++
+ ...e-sdmmc0ext-drive-strength-on-RK3328.patch |  84 ++++
+ ...dd-Wi-Fi-support-for-NanoPi-R2S-Plus.patch | 134 ++++++
+ ...backport-AP-mode-fixes-from-rtw-next.patch | 386 ++++++++++++++++
+ ...8-fix-AP-mode-stall-on-SDIO-and-PCIe.patch | 132 ++++++
+ ...rtw88-add-802.11s-mesh-point-support.patch | 412 ++++++++++++++++++
+ ...a-secured-mesh-work-on-backports-7.2.patch | 105 +++++
+ 7 files changed, 1316 insertions(+)
+ create mode 100644 patches/openwrt/0021-rockchip-fix-IO-domain-supplies-of-NanoPi-R2S-Plus.patch
+ create mode 100644 patches/openwrt/0022-rockchip-raise-sdmmc0ext-drive-strength-on-RK3328.patch
+ create mode 100644 patches/openwrt/0023-rockchip-add-Wi-Fi-support-for-NanoPi-R2S-Plus.patch
+ create mode 100644 patches/openwrt/0024-mac80211-rtw88-backport-AP-mode-fixes-from-rtw-next.patch
+ create mode 100644 patches/openwrt/0025-mac80211-rtw88-fix-AP-mode-stall-on-SDIO-and-PCIe.patch
+ create mode 100644 patches/openwrt/0026-mac80211-rtw88-add-802.11s-mesh-point-support.patch
+ create mode 100644 patches/openwrt/0027-mac80211-rtw88-make-a-secured-mesh-work-on-backports-7.2.patch
+
+diff --git a/patches/openwrt/0021-rockchip-fix-IO-domain-supplies-of-NanoPi-R2S-Plus.patch b/patches/openwrt/0021-rockchip-fix-IO-domain-supplies-of-NanoPi-R2S-Plus.patch
+new file mode 100644
+index 00000000..5fdaeb7e
+--- /dev/null
++++ b/patches/openwrt/0021-rockchip-fix-IO-domain-supplies-of-NanoPi-R2S-Plus.patch
+@@ -0,0 +1,63 @@
++From: Grische <github@grische.xyz>
++Date: Fri, 23 Oct 2026 13:28:05 +0200
++Subject: rockchip: fix IO domain supplies of NanoPi R2S Plus
++
++The NanoPi R2S Plus device tree inherits the IO domain supplies of the
++NanoPi R2S. On the R2S Plus two of them are wired differently. VCCIO4
++feeds the RGMII pins of the RTL8211F and is supplied by vcc_io_33.
++VCCIO6 feeds the M.2 Wi-Fi slot and is supplied by vcc_18. The GRF
++therefore configured the GMAC pins for 1.8 V while they are powered
++from 3.3 V.
++
++Describe the actual supplies.
++
++Signed-off-by: Grische <github@grische.xyz>
++Assisted-by: Claude:claude-opus-5-5
++
++diff --git a/target/linux/rockchip/patches-6.18/166-arm64-dts-rockchip-fix-IO-domain-supplies-of-NanoPi-R2S-Plus.patch b/target/linux/rockchip/patches-6.18/166-arm64-dts-rockchip-fix-IO-domain-supplies-of-NanoPi-R2S-Plus.patch
++new file mode 100644
++index 0000000000000000000000000000000000000000..37905892ca783fce8e97f5d8faf2a8a2188c0e3d
++--- /dev/null
+++++ b/target/linux/rockchip/patches-6.18/166-arm64-dts-rockchip-fix-IO-domain-supplies-of-NanoPi-R2S-Plus.patch
++@@ -0,0 +1,41 @@
+++From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+++From: Grische <github@grische.xyz>
+++Date: Thu, 22 Oct 2026 09:47:59 +0200
+++Subject: [PATCH] arm64: dts: rockchip: fix IO domain supplies of NanoPi R2S
+++ Plus
+++
+++The NanoPi R2S Plus inherits the IO domain supplies of the NanoPi R2S,
+++but its board wires two of them differently. On the R2S Plus schematic
+++(revision 2309, sheet 6) the VCCIO4 ball is tied to VCC_IO_33 and the
+++VCCIO6 ball to VCC_18. On the R2S the same balls are tied to the PHY
+++I/O rail and to VCC_IO_33.
+++
+++VCCIO4 powers the GPIO1 B, C and D pins that carry the RGMII signals.
+++The R2S Plus uses an RTL8211F-CG whose RGMII I/O supply is fed from
+++the 3.3 V rail (sheet 11), while the R2S uses an RTL8211E. VCCIO6
+++powers the GPIO3 A and B pins that carry the SDIO bus and the control
+++lines of the M.2 Wi-Fi slot at 1.8 V. The vendor device tree describes
+++the same two supplies.
+++
+++With the inherited supplies the io-domain driver selects 1.8 V for
+++the GMAC pins while they are powered from 3.3 V. On the board the GRF
+++showed the 1.8 V setting before this change and the 3.3 V setting
+++after it. Describe the actual supplies.
+++
+++Fixes: b8c028782922 ("arm64: dts: rockchip: Add DTS for FriendlyARM NanoPi R2S Plus")
+++Signed-off-by: Grische <github@grische.xyz>
+++---
+++ arch/arm64/boot/dts/rockchip/rk3328-nanopi-r2s-plus.dts | 5 +++++
+++ 1 file changed, 5 insertions(+)
+++
+++--- a/arch/arm64/boot/dts/rockchip/rk3328-nanopi-r2s-plus.dts
++++++ b/arch/arm64/boot/dts/rockchip/rk3328-nanopi-r2s-plus.dts
+++@@ -46,3 +46,8 @@
+++ 		};
+++ 	};
+++ };
++++
++++&io_domains {
++++	vccio4-supply = <&vcc_io_33>;
++++	vccio6-supply = <&vcc_18>;
++++};
+diff --git a/patches/openwrt/0022-rockchip-raise-sdmmc0ext-drive-strength-on-RK3328.patch b/patches/openwrt/0022-rockchip-raise-sdmmc0ext-drive-strength-on-RK3328.patch
+new file mode 100644
+index 00000000..653bf059
+--- /dev/null
++++ b/patches/openwrt/0022-rockchip-raise-sdmmc0ext-drive-strength-on-RK3328.patch
+@@ -0,0 +1,84 @@
++From: Grische <github@grische.xyz>
++Date: Fri, 23 Oct 2026 13:45:58 +0200
++Subject: rockchip: raise sdmmc0ext drive strength on RK3328
++
++rk3328.dtsi configures the sdmmc0ext pins with 4 mA. The sdmmc0 pins
++use 8 mA, and so does the vendor kernel for the sdmmc0ext clock, command
++and 4-bit data pins. No in-tree board uses sdmmc_ext. On the NanoPi R2S
++Plus the RTL8822CS on sdmmc_ext fails SDR104 tuning at 4 mA. In high
++speed mode the link is barely usable with round trip times of 90 to
++210 ms.
++
++Use 8 mA like sdmmc0. Tuning passes and the round trip time drops to
++about 3 ms.
++
++Signed-off-by: Grische <github@grische.xyz>
++Assisted-by: Claude:claude-fable-5-1
++
++diff --git a/target/linux/rockchip/patches-6.18/167-arm64-dts-rockchip-raise-sdmmc0ext-drive-strength-on-RK3328.patch b/target/linux/rockchip/patches-6.18/167-arm64-dts-rockchip-raise-sdmmc0ext-drive-strength-on-RK3328.patch
++new file mode 100644
++index 0000000000000000000000000000000000000000..21596ed314aca2df4e7c7a9f7a79fd6baa375c15
++--- /dev/null
+++++ b/target/linux/rockchip/patches-6.18/167-arm64-dts-rockchip-raise-sdmmc0ext-drive-strength-on-RK3328.patch
++@@ -0,0 +1,61 @@
+++From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+++From: Grische <github@grische.xyz>
+++Date: Thu, 22 Oct 2026 19:08:24 +0200
+++Subject: [PATCH] arm64: dts: rockchip: raise sdmmc0ext drive strength on
+++ RK3328
+++
+++The RK3328 sdmmc0ext pinctrl entries use a drive strength of 4 mA. The
+++sdmmc0 entries for the same pin roles use 8 mA. The vendor kernel uses
+++8 mA for the sdmmc0ext clock, command and 4-bit data pins as well. No
+++in-tree board uses sdmmc_ext so far.
+++
+++On the NanoPi R2S Plus an RTL8822CS SDIO module sits on sdmmc_ext. At
+++4 mA the host fails SDR104 tuning on this card. In high speed mode the
+++link is barely usable with round trip times of 90 to 210 ms.
+++
+++Raise the sdmmc0ext clock, command and data pins to 8 mA like sdmmc0.
+++Leave the card detect and write protect pins at 4 mA like sdmmc0.
+++With 8 mA SDR104 tuning passes and the link works fine.
+++
+++Signed-off-by: Grische <github@grische.xyz>
+++---
+++ arch/arm64/boot/dts/rockchip/rk3328.dtsi | 14 +++++++-------
+++ 1 file changed, 7 insertions(+), 7 deletions(-)
+++
+++--- a/arch/arm64/boot/dts/rockchip/rk3328.dtsi
++++++ b/arch/arm64/boot/dts/rockchip/rk3328.dtsi
+++@@ -1690,11 +1690,11 @@
+++ 
+++ 		sdmmc0ext {
+++ 			sdmmc0ext_clk: sdmmc0ext-clk {
+++-				rockchip,pins = <3 RK_PA2 3 &pcfg_pull_none_4ma>;
++++				rockchip,pins = <3 RK_PA2 3 &pcfg_pull_none_8ma>;
+++ 			};
+++ 
+++ 			sdmmc0ext_cmd: sdmmc0ext-cmd {
+++-				rockchip,pins = <3 RK_PA0 3 &pcfg_pull_up_4ma>;
++++				rockchip,pins = <3 RK_PA0 3 &pcfg_pull_up_8ma>;
+++ 			};
+++ 
+++ 			sdmmc0ext_wrprt: sdmmc0ext-wrprt {
+++@@ -1706,15 +1706,15 @@
+++ 			};
+++ 
+++ 			sdmmc0ext_bus1: sdmmc0ext-bus1 {
+++-				rockchip,pins = <3 RK_PA4 3 &pcfg_pull_up_4ma>;
++++				rockchip,pins = <3 RK_PA4 3 &pcfg_pull_up_8ma>;
+++ 			};
+++ 
+++ 			sdmmc0ext_bus4: sdmmc0ext-bus4 {
+++ 				rockchip,pins =
+++-					<3 RK_PA4 3 &pcfg_pull_up_4ma>,
+++-					<3 RK_PA5 3 &pcfg_pull_up_4ma>,
+++-					<3 RK_PA6 3 &pcfg_pull_up_4ma>,
+++-					<3 RK_PA7 3 &pcfg_pull_up_4ma>;
++++					<3 RK_PA4 3 &pcfg_pull_up_8ma>,
++++					<3 RK_PA5 3 &pcfg_pull_up_8ma>,
++++					<3 RK_PA6 3 &pcfg_pull_up_8ma>,
++++					<3 RK_PA7 3 &pcfg_pull_up_8ma>;
+++ 			};
+++ 
+++ 			sdmmc0ext_pins: sdmmc0ext-pins {
+diff --git a/patches/openwrt/0023-rockchip-add-Wi-Fi-support-for-NanoPi-R2S-Plus.patch b/patches/openwrt/0023-rockchip-add-Wi-Fi-support-for-NanoPi-R2S-Plus.patch
+new file mode 100644
+index 00000000..8016f0e7
+--- /dev/null
++++ b/patches/openwrt/0023-rockchip-add-Wi-Fi-support-for-NanoPi-R2S-Plus.patch
+@@ -0,0 +1,134 @@
++From: Grische <github@grische.xyz>
++Date: Fri, 23 Oct 2026 13:45:58 +0200
++Subject: rockchip: add Wi-Fi support for NanoPi R2S Plus
++
++FriendlyElec offers an RTL8822CS SDIO module as an option for the M.2
++E-key slot of the NanoPi R2S Plus. The slot is wired to sdmmc_ext and
++signals at 1.8 V from the VCCIO6 domain. Describe the slot, its power
++sequence and its supplies in the device tree, and ship the rtw88 SDIO
++driver and wpad with the image.
++
++The card runs in high speed mode because it sets S18A on the already
++1.8 V bus and then fails the CMD11 voltage switch. A separate mmc core
++change enables SDR104 and goes to linux-mmc first. Measured in high
++speed mode against an ath10k access point: about 3 ms round trip time,
++30 Mbit/s up and 65 Mbit/s down.
++
++Signed-off-by: Grische <github@grische.xyz>
++Assisted-by: Claude:claude-opus-5-5
++
++diff --git a/target/linux/rockchip/image/armv8.mk b/target/linux/rockchip/image/armv8.mk
++index 3e973b8202da836217ced3af81d2ecc2f5ab7ffb..9d26b336af0abc74a855df7c0aa93420f0628674 100644
++--- a/target/linux/rockchip/image/armv8.mk
+++++ b/target/linux/rockchip/image/armv8.mk
++@@ -124,7 +124,7 @@ define Device/friendlyarm_nanopi-r2s-plus
++   $(Device/rk3328)
++   DEVICE_VENDOR := FriendlyARM
++   DEVICE_MODEL := NanoPi R2S Plus
++-  DEVICE_PACKAGES := kmod-usb-net-rtl8152
+++  DEVICE_PACKAGES := kmod-rtw88-8822cs kmod-usb-net-rtl8152 wpad-basic-mbedtls
++ endef
++ TARGET_DEVICES += friendlyarm_nanopi-r2s-plus
++ 
++diff --git a/target/linux/rockchip/patches-6.18/168-arm64-dts-rockchip-add-Wi-Fi-to-NanoPi-R2S-Plus.patch b/target/linux/rockchip/patches-6.18/168-arm64-dts-rockchip-add-Wi-Fi-to-NanoPi-R2S-Plus.patch
++new file mode 100644
++index 0000000000000000000000000000000000000000..3b4aeef3ac7e62ae34b26b2ae27619cb652fb762
++--- /dev/null
+++++ b/target/linux/rockchip/patches-6.18/168-arm64-dts-rockchip-add-Wi-Fi-to-NanoPi-R2S-Plus.patch
++@@ -0,0 +1,96 @@
+++From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+++From: Grische <github@grische.xyz>
+++Date: Thu, 22 Oct 2026 09:48:14 +0200
+++Subject: [PATCH] arm64: dts: rockchip: add Wi-Fi to NanoPi R2S Plus
+++
+++The NanoPi R2S Plus has an M.2 E-key slot that FriendlyElec populates
+++with an RTL8822CS SDIO Wi-Fi module as an option. The slot is wired to
+++the sdmmc_ext controller. Its SDIO bus and control lines sit on GPIO3 A
+++and B, which belong to the VCCIO6 domain. The board feeds that domain
+++with 1.8 V, as described by the preceding IO domain fix, so the slot
+++signals at 1.8 V. WL_REG_ON is on GPIO3_B0, WL_HOST_WAKE on GPIO3_A1
+++and SUSCLK is fed by the 32.768 kHz clock output of the RK805. A
+++dedicated buck converter powers the module with 3.3 V whenever
+++vcc_io_33 is up.
+++
+++Describe the slot in the board device tree, as the vendor device tree
+++does. A board without the module only logs that the non-removable
+++card failed to initialise.
+++
+++Signed-off-by: Grische <github@grische.xyz>
+++---
+++ .../dts/rockchip/rk3328-nanopi-r2s-plus.dts   | 59 +++++++++++++++++++
+++ 1 file changed, 59 insertions(+)
+++
+++--- a/arch/arm64/boot/dts/rockchip/rk3328-nanopi-r2s-plus.dts
++++++ b/arch/arm64/boot/dts/rockchip/rk3328-nanopi-r2s-plus.dts
+++@@ -17,6 +17,25 @@
+++ 	aliases {
+++ 		mmc1 = &emmc;
+++ 	};
++++
++++	vdd_wifi_3v3: regulator-vdd-wifi-3v3 {
++++		compatible = "regulator-fixed";
++++		regulator-name = "vdd_wifi_3v3";
++++		regulator-always-on;
++++		regulator-boot-on;
++++		regulator-min-microvolt = <3300000>;
++++		regulator-max-microvolt = <3300000>;
++++		vin-supply = <&vdd_5v>;
++++	};
++++
++++	sdio_pwrseq: sdio-pwrseq {
++++		compatible = "mmc-pwrseq-simple";
++++		clocks = <&rk805 1>;
++++		clock-names = "ext_clock";
++++		pinctrl-names = "default";
++++		pinctrl-0 = <&wifi_reg_on_h>;
++++		reset-gpios = <&gpio3 RK_PB0 GPIO_ACTIVE_LOW>;
++++	};
+++ };
+++ 
+++ &emmc {
+++@@ -51,3 +70,43 @@
+++ 	vccio4-supply = <&vcc_io_33>;
+++ 	vccio6-supply = <&vcc_18>;
+++ };
++++
++++&pinctrl {
++++	wifi {
++++		wifi_host_wake_h: wifi-host-wake-h {
++++			rockchip,pins = <3 RK_PA1 RK_FUNC_GPIO &pcfg_pull_down>;
++++		};
++++
++++		wifi_reg_on_h: wifi-reg-on-h {
++++			rockchip,pins = <3 RK_PB0 RK_FUNC_GPIO &pcfg_pull_none>;
++++		};
++++	};
++++};
++++
++++&sdmmc_ext {
++++	#address-cells = <1>;
++++	#size-cells = <0>;
++++	bus-width = <4>;
++++	cap-sd-highspeed;
++++	cap-sdio-irq;
++++	keep-power-in-suspend;
++++	mmc-pwrseq = <&sdio_pwrseq>;
++++	no-mmc;
++++	no-sd;
++++	non-removable;
++++	pinctrl-names = "default";
++++	pinctrl-0 = <&sdmmc0ext_clk &sdmmc0ext_cmd &sdmmc0ext_bus4>;
++++	sd-uhs-sdr104;
++++	vmmc-supply = <&vdd_wifi_3v3>;
++++	vqmmc-supply = <&vcc_18>;
++++	status = "okay";
++++
++++	rtl8822cs: wifi@1 {
++++		reg = <1>;
++++		interrupt-parent = <&gpio3>;
++++		interrupts = <RK_PA1 IRQ_TYPE_LEVEL_HIGH>;
++++		interrupt-names = "host-wake";
++++		pinctrl-names = "default";
++++		pinctrl-0 = <&wifi_host_wake_h>;
++++	};
++++};
+diff --git a/patches/openwrt/0024-mac80211-rtw88-backport-AP-mode-fixes-from-rtw-next.patch b/patches/openwrt/0024-mac80211-rtw88-backport-AP-mode-fixes-from-rtw-next.patch
+new file mode 100644
+index 00000000..22a1ef22
+--- /dev/null
++++ b/patches/openwrt/0024-mac80211-rtw88-backport-AP-mode-fixes-from-rtw-next.patch
+@@ -0,0 +1,386 @@
++From: Grische <github@grische.xyz>
++Date: Fri, 23 Oct 2026 13:45:58 +0200
++Subject: mac80211: rtw88: backport AP mode fixes from rtw-next
++
++In AP mode rtw88 routes every broadcast and multicast data frame
++through the chip's after-DTIM queue. The queue drains only a few frames
++per DTIM, so ordinary multicast chatter fills the shared TX page pool
++and the beacon download fails. rtw-next fixed this for USB and widened
++the ATIM window for all buses.
++
++Backport the four commits: c710c7c2e038 ("wifi: rtw88: usb: route bmc
++frames via the high queue only for DTIM delivery"), 04cc8c59a3d7
++("wifi: rtw88: usb: bound what the driver feeds the after-DTIM queue"),
++185971f1b4eb ("wifi: rtw88: usb: only let the frames a dozing station
++needs use the after-DTIM queue") and cf8b516f6765 ("wifi: rtw88: widen
++the ATIM window while an AP interface is up").
++
++Signed-off-by: Grische <github@grische.xyz>
++Assisted-by: Claude:claude-fable-5-1
++
++diff --git a/package/kernel/mac80211/Makefile b/package/kernel/mac80211/Makefile
++index 40aac6fd26bbc3f17b1a2b29ec532e537f405fc0..04af0748d98dd030f5f020f463d3cfdda6b96e8d 100644
++--- a/package/kernel/mac80211/Makefile
+++++ b/package/kernel/mac80211/Makefile
++@@ -12,7 +12,7 @@ PKG_NAME:=mac80211
++ 
++ PKG_SOURCE_VERSION:=7.2
++ PKG_VERSION:=$(subst -,_,$(PKG_SOURCE_VERSION))
++-PKG_RELEASE:=13
+++PKG_RELEASE:=14
++ PKG_LICENSE:=GPL-2.0-only
++ PKG_LICENSE_FILES:=COPYING
++ 
++diff --git a/package/kernel/mac80211/patches/rtl/004-wifi-rtw88-usb-route-bmc-frames-via-the-high-queue-only-for-DTIM-delivery.patch b/package/kernel/mac80211/patches/rtl/004-wifi-rtw88-usb-route-bmc-frames-via-the-high-queue-only-for-DTIM-delivery.patch
++new file mode 100644
++index 0000000000000000000000000000000000000000..3a542d88e2bacedf6bc547ad75ee5ba3edaaba3d
++--- /dev/null
+++++ b/package/kernel/mac80211/patches/rtl/004-wifi-rtw88-usb-route-bmc-frames-via-the-high-queue-only-for-DTIM-delivery.patch
++@@ -0,0 +1,63 @@
+++From c710c7c2e0380d7c0eeb33b686262edcaef7cb07 Mon Sep 17 00:00:00 2001
+++From: Mehmet Fide <mehmet.fide@screeningeagle.com>
+++Date: Fri, 14 Aug 2026 07:34:26 +0200
+++Subject: [PATCH] wifi: rtw88: usb: route bmc frames via the high queue only
+++ for DTIM delivery
+++
+++In AP mode every broadcast and multicast data frame is routed to
+++TX_DESC_QSEL_HIGH, the after-DTIM queue, whether or not anybody is
+++asleep. The firmware drains that queue at beacon pace, a dozen or so
+++frames per second measured on RTL8822BU, while one associated client's
+++mDNS/SSDP chatter alone exceeds that. The excess accumulates inside
+++the chip until the shared TX page pool is exhausted (measured: 14 of
+++1803 pages left). From that point every host-sourced frame queues
+++behind the backlog: authentication responses reach the air seconds
+++after the client has given up, so no station can associate anymore,
+++and the beacon reserved-page download fails the BCN_VALID poll
+++("error beacon valid") because it needs pages from the same pool. The
+++AP keeps beaconing, so the failure looks like a silent RX stall and
+++only a reboot recovers.
+++
+++mac80211 already decides when after-DTIM delivery is needed: it sets
+++IEEE80211_TX_CTL_SEND_AFTER_DTIM on bmc frames only while at least one
+++station is actually dozing. Honor that instead of routing
+++unconditionally: flagged frames keep going through the high queue with
+++the MORE_DATA and HGQMD handling introduced by commit 076f786a0ae1
+++("wifi: rtw88: Fix AP mode incorrect DTIM behavior"), everything else
+++leaves at line rate through the AC queues. This partially reverts the
+++usb.c hunk of that commit, whose unconditional routing is what lets
+++the backlog build up.
+++
+++On a bench AP (USB2, 20 MHz, WPA2, hostapd, a Windows client driven
+++through disconnect/reconnect cycles): reconnects fail 0/5 on RTL8822BU
+++and 0/3 on RTL8821CU before this change, and pass 10/10 and 5/5 with
+++it, with the page pool staying healthy and no beacon errors logged.
+++
+++Signed-off-by: Mehmet Fide <mehmet.fide@screeningeagle.com>
+++Acked-by: Ping-Ke Shih <pkshih@realtek.com>
+++Signed-off-by: Ping-Ke Shih <pkshih@realtek.com>
+++Link: https://patch.msgid.link/20260814053426.2473247-1-mehmet.fide@gmail.com
+++---
+++ drivers/net/wireless/realtek/rtw88/usb.c | 4 +++-
+++ 1 file changed, 3 insertions(+), 1 deletion(-)
+++
+++--- a/drivers/net/wireless/realtek/rtw88/usb.c
++++++ b/drivers/net/wireless/realtek/rtw88/usb.c
+++@@ -610,6 +610,7 @@ static int rtw_usb_write_data_h2c(struct
+++ static u8 rtw_usb_tx_queue_mapping_to_qsel(struct sk_buff *skb)
+++ {
+++ 	struct ieee80211_hdr *hdr = (struct ieee80211_hdr *)skb->data;
++++	struct ieee80211_tx_info *info = IEEE80211_SKB_CB(skb);
+++ 	__le16 fc = hdr->frame_control;
+++ 	u8 qsel;
+++ 
+++@@ -617,7 +618,8 @@ static u8 rtw_usb_tx_queue_mapping_to_qs
+++ 		qsel = TX_DESC_QSEL_MGMT;
+++ 	else if (is_broadcast_ether_addr(hdr->addr1) ||
+++ 		 is_multicast_ether_addr(hdr->addr1))
+++-		qsel = TX_DESC_QSEL_HIGH;
++++		qsel = (info->flags & IEEE80211_TX_CTL_SEND_AFTER_DTIM) ?
++++		       TX_DESC_QSEL_HIGH : skb->priority;
+++ 	else if (skb_get_queue_mapping(skb) <= IEEE80211_AC_BK)
+++ 		qsel = skb->priority;
+++ 	else
++diff --git a/package/kernel/mac80211/patches/rtl/005-wifi-rtw88-usb-bound-what-the-driver-feeds-the-after-DTIM-queue.patch b/package/kernel/mac80211/patches/rtl/005-wifi-rtw88-usb-bound-what-the-driver-feeds-the-after-DTIM-queue.patch
++new file mode 100644
++index 0000000000000000000000000000000000000000..53006b80df55aadfa628d1d87024a6148eaa32c1
++--- /dev/null
+++++ b/package/kernel/mac80211/patches/rtl/005-wifi-rtw88-usb-bound-what-the-driver-feeds-the-after-DTIM-queue.patch
++@@ -0,0 +1,119 @@
+++From 04cc8c59a3d79ef7ec2341f1c7aef1d40a0ce7df Mon Sep 17 00:00:00 2001
+++From: Mehmet Fide <mehmet.fide@screeningeagle.com>
+++Date: Thu, 10 Sep 2026 10:17:14 +0200
+++Subject: [PATCH] wifi: rtw88: usb: bound what the driver feeds the after-DTIM
+++ queue
+++
+++Frames routed to the high queue are transmitted right after DTIM beacons
+++only, inside the ATIM window, while they wait in the shared TX page pool.
+++The driver puts no limit on how many it hands over, so as long as one
+++station dozes, any sustained broadcast or multicast traffic outruns the
+++drain and empties the pool: measured on an RTL8822BU AP with a single
+++client in power save and ~40 frames/s of mDNS chatter, the free page
+++count at 0x240 goes from 1803 to 16 in about 100 seconds and stays there
+++for as long as the traffic lasts. From that point every other transmit
+++queues behind the backlog, authentication responses arrive too late for
+++anyone to join, and the reserved page download fails ("error beacon
+++valid"). The AP keeps beaconing and only a reboot recovers.
+++
+++Feed the high queue through a small budget that refills below the
+++measured drain rate (about 3 frames per DTIM, ~15/s at dtim_period 2 on
+++the default 2 TU ATIM window); whatever exceeds the budget leaves on its
+++access category queue right away. The high queue backlog is now bounded
+++by the burst size under any load, so the page pool cannot run dry, at
+++the price that a dozing station may miss part of a broadcast storm.
+++
+++Signed-off-by: Mehmet Fide <mehmet.fide@screeningeagle.com>
+++Acked-by: Ping-Ke Shih <pkshih@realtek.com>
+++Signed-off-by: Ping-Ke Shih <pkshih@realtek.com>
+++Link: https://patch.msgid.link/20260910081716.769081-2-mehmet.fide@gmail.com
+++---
+++ drivers/net/wireless/realtek/rtw88/usb.c | 41 ++++++++++++++++++++++--
+++ drivers/net/wireless/realtek/rtw88/usb.h |  5 +++
+++ 2 files changed, 43 insertions(+), 3 deletions(-)
+++
+++--- a/drivers/net/wireless/realtek/rtw88/usb.c
++++++ b/drivers/net/wireless/realtek/rtw88/usb.c
+++@@ -607,7 +607,37 @@ static int rtw_usb_write_data_h2c(struct
+++ 	return rtw_usb_write_data(rtwdev, &pkt_info, buf, false);
+++ }
+++ 
+++-static u8 rtw_usb_tx_queue_mapping_to_qsel(struct sk_buff *skb)
++++#define RTW_USB_HIQ_REFILL_INTERVAL	(HZ / 10)	/* one unit of budget per 100 ms */
++++#define RTW_USB_HIQ_BUDGET_MAX		16
++++
++++static bool rtw_usb_hiq_take_budget(struct rtw_usb *rtwusb)
++++{
++++	unsigned long flags, elapsed, add;
++++	bool ok;
++++
++++	spin_lock_irqsave(&rtwusb->hiq_lock, flags);
++++
++++	elapsed = jiffies - rtwusb->hiq_refill;
++++	add = elapsed / RTW_USB_HIQ_REFILL_INTERVAL;
++++	if (add) {
++++		rtwusb->hiq_budget = min_t(unsigned long, rtwusb->hiq_budget + add,
++++					   RTW_USB_HIQ_BUDGET_MAX);
++++
++++		/* keep the unfinished part of the interval for the next unit */
++++		rtwusb->hiq_refill = jiffies - elapsed % RTW_USB_HIQ_REFILL_INTERVAL;
++++	}
++++
++++	ok = rtwusb->hiq_budget > 0;
++++	if (ok)
++++		rtwusb->hiq_budget--;
++++
++++	spin_unlock_irqrestore(&rtwusb->hiq_lock, flags);
++++
++++	return ok;
++++}
++++
++++static u8 rtw_usb_tx_queue_mapping_to_qsel(struct rtw_usb *rtwusb,
++++					   struct sk_buff *skb)
+++ {
+++ 	struct ieee80211_hdr *hdr = (struct ieee80211_hdr *)skb->data;
+++ 	struct ieee80211_tx_info *info = IEEE80211_SKB_CB(skb);
+++@@ -618,7 +648,8 @@ static u8 rtw_usb_tx_queue_mapping_to_qs
+++ 		qsel = TX_DESC_QSEL_MGMT;
+++ 	else if (is_broadcast_ether_addr(hdr->addr1) ||
+++ 		 is_multicast_ether_addr(hdr->addr1))
+++-		qsel = (info->flags & IEEE80211_TX_CTL_SEND_AFTER_DTIM) ?
++++		qsel = (info->flags & IEEE80211_TX_CTL_SEND_AFTER_DTIM) &&
++++		       rtw_usb_hiq_take_budget(rtwusb) ?
+++ 		       TX_DESC_QSEL_HIGH : skb->priority;
+++ 	else if (skb_get_queue_mapping(skb) <= IEEE80211_AC_BK)
+++ 		qsel = skb->priority;
+++@@ -638,7 +669,7 @@ static int rtw_usb_tx_write(struct rtw_d
+++ 	u8 *pkt_desc;
+++ 	int ep;
+++ 
+++-	pkt_info->qsel = rtw_usb_tx_queue_mapping_to_qsel(skb);
++++	pkt_info->qsel = rtw_usb_tx_queue_mapping_to_qsel(rtwusb, skb);
+++ 	pkt_desc = skb_push(skb, chip->tx_pkt_desc_sz);
+++ 	memset(pkt_desc, 0, chip->tx_pkt_desc_sz);
+++ 	ep = qsel_to_ep(rtwusb, pkt_info->qsel);
+++@@ -1079,6 +1110,10 @@ static int rtw_usb_init_tx(struct rtw_de
+++ 	struct rtw_usb *rtwusb = rtw_get_usb_priv(rtwdev);
+++ 	int i;
+++ 
++++	spin_lock_init(&rtwusb->hiq_lock);
++++	rtwusb->hiq_budget = RTW_USB_HIQ_BUDGET_MAX;
++++	rtwusb->hiq_refill = jiffies;
++++
+++ 	rtwusb->txwq = create_singlethread_workqueue("rtw88_usb: tx wq");
+++ 	if (!rtwusb->txwq) {
+++ 		rtw_err(rtwdev, "failed to create TX work queue\n");
+++--- a/drivers/net/wireless/realtek/rtw88/usb.h
++++++ b/drivers/net/wireless/realtek/rtw88/usb.h
+++@@ -75,6 +75,11 @@ struct rtw_usb {
+++ 	u8 out_ep[RTW_USB_EP_MAX];
+++ 	int qsel_to_ep[TX_DESC_QSEL_MAX];
+++ 
++++	/* protects hiq_budget and hiq_refill */
++++	spinlock_t hiq_lock;
++++	u32 hiq_budget;
++++	unsigned long hiq_refill;
++++
+++ 	struct workqueue_struct *txwq, *rxwq;
+++ 
+++ 	struct sk_buff_head tx_queue[RTW_USB_EP_MAX];
++diff --git a/package/kernel/mac80211/patches/rtl/006-wifi-rtw88-usb-only-let-the-frames-a-dozing-station-needs-use-the-after-DTIM-queue.patch b/package/kernel/mac80211/patches/rtl/006-wifi-rtw88-usb-only-let-the-frames-a-dozing-station-needs-use-the-after-DTIM-queue.patch
++new file mode 100644
++index 0000000000000000000000000000000000000000..2c3ca894a9007ee7a032a3f414757b7be039cca2
++--- /dev/null
+++++ b/package/kernel/mac80211/patches/rtl/006-wifi-rtw88-usb-only-let-the-frames-a-dozing-station-needs-use-the-after-DTIM-queue.patch
++@@ -0,0 +1,88 @@
+++From 185971f1b4eb4ea9059d76cf1a18f992eef998c1 Mon Sep 17 00:00:00 2001
+++From: Mehmet Fide <mehmet.fide@screeningeagle.com>
+++Date: Thu, 10 Sep 2026 10:17:15 +0200
+++Subject: [PATCH] wifi: rtw88: usb: only let the frames a dozing station needs
+++ use the after-DTIM queue
+++
+++With the budget in place the high queue can no longer take the chip
+++down, but ordinary chatter still competes with the frames a sleeping
+++station actually needs. mac80211 marks every broadcast and multicast
+++frame with IEEE80211_TX_CTL_SEND_AFTER_DTIM while a station dozes,
+++mDNS and SSDP included, so under normal traffic the budget is spent on
+++frames nobody waits for.
+++
+++Do what the vendor driver does with its default "allow special" high
+++queue filter: admit only ARP, EAPOL and DHCP to the after-DTIM path,
+++the frames a station coming out of power save has to see; everything
+++else goes out on its access category queue at line rate. The frames
+++are classified the way rtw89_core_tx_btc_spec_pkt_notify() does it,
+++from skb->protocol and the network and transport header offsets that
+++mac80211 keeps from the netdev path; EAPOL is the control port flag.
+++Frames the AP relays between its own stations arrive as ETH_P_802_3
+++and are not inspected, they leave on the access category queue.
+++
+++With the filter in place the page pool stays at 1803 through the same
+++180 second storm, a DHCP flood still takes the after-DTIM path (and is
+++then held by the budget), and join/ping cycling without power save is
+++unchanged (10/10).
+++
+++Signed-off-by: Mehmet Fide <mehmet.fide@screeningeagle.com>
+++Acked-by: Ping-Ke Shih <pkshih@realtek.com>
+++Signed-off-by: Ping-Ke Shih <pkshih@realtek.com>
+++Link: https://patch.msgid.link/20260910081716.769081-3-mehmet.fide@gmail.com
+++---
+++ drivers/net/wireless/realtek/rtw88/usb.c | 27 ++++++++++++++++++++++--
+++ 1 file changed, 25 insertions(+), 2 deletions(-)
+++
+++--- a/drivers/net/wireless/realtek/rtw88/usb.c
++++++ b/drivers/net/wireless/realtek/rtw88/usb.c
+++@@ -2,9 +2,11 @@
+++ /* Copyright(c) 2018-2019  Realtek Corporation
+++  */
+++ 
++++#include <linux/ip.h>
+++ #include <linux/module.h>
+++-#include <linux/usb.h>
+++ #include <linux/mutex.h>
++++#include <linux/udp.h>
++++#include <linux/usb.h>
+++ #include "main.h"
+++ #include "debug.h"
+++ #include "mac.h"
+++@@ -607,6 +609,27 @@ static int rtw_usb_write_data_h2c(struct
+++ 	return rtw_usb_write_data(rtwdev, &pkt_info, buf, false);
+++ }
+++ 
++++static bool rtw_usb_bmc_needs_dtim(struct sk_buff *skb)
++++{
++++	struct ieee80211_tx_info *info = IEEE80211_SKB_CB(skb);
++++	struct udphdr *udphdr;
++++
++++	if (info->control.flags & IEEE80211_TX_CTRL_PORT_CTRL_PROTO)
++++		return true;
++++
++++	if (skb->protocol == htons(ETH_P_ARP))
++++		return true;
++++
++++	if (skb->protocol == htons(ETH_P_IP) &&
++++	    ip_hdr(skb)->protocol == IPPROTO_UDP) {
++++		udphdr = udp_hdr(skb);
++++
++++		return udphdr->dest == htons(67) || udphdr->dest == htons(68);
++++	}
++++
++++	return false;
++++}
++++
+++ #define RTW_USB_HIQ_REFILL_INTERVAL	(HZ / 10)	/* one unit of budget per 100 ms */
+++ #define RTW_USB_HIQ_BUDGET_MAX		16
+++ 
+++@@ -649,7 +672,7 @@ static u8 rtw_usb_tx_queue_mapping_to_qs
+++ 	else if (is_broadcast_ether_addr(hdr->addr1) ||
+++ 		 is_multicast_ether_addr(hdr->addr1))
+++ 		qsel = (info->flags & IEEE80211_TX_CTL_SEND_AFTER_DTIM) &&
+++-		       rtw_usb_hiq_take_budget(rtwusb) ?
++++		       rtw_usb_bmc_needs_dtim(skb) && rtw_usb_hiq_take_budget(rtwusb) ?
+++ 		       TX_DESC_QSEL_HIGH : skb->priority;
+++ 	else if (skb_get_queue_mapping(skb) <= IEEE80211_AC_BK)
+++ 		qsel = skb->priority;
++diff --git a/package/kernel/mac80211/patches/rtl/007-wifi-rtw88-widen-the-ATIM-window-while-an-AP-interface-is-up.patch b/package/kernel/mac80211/patches/rtl/007-wifi-rtw88-widen-the-ATIM-window-while-an-AP-interface-is-up.patch
++new file mode 100644
++index 0000000000000000000000000000000000000000..e1da9137075eb74ec388e352d9dc369906b08acd
++--- /dev/null
+++++ b/package/kernel/mac80211/patches/rtl/007-wifi-rtw88-widen-the-ATIM-window-while-an-AP-interface-is-up.patch
++@@ -0,0 +1,59 @@
+++From cf8b516f67652f550e040951b88a2040b375afcf Mon Sep 17 00:00:00 2001
+++From: Mehmet Fide <mehmet.fide@screeningeagle.com>
+++Date: Thu, 10 Sep 2026 10:17:16 +0200
+++Subject: [PATCH] wifi: rtw88: widen the ATIM window while an AP interface is
+++ up
+++
+++The frames held for dozing stations go out right after the DTIM beacon
+++and only for the duration of the ATIM window. The chips come up with a
+++2 TU window (the two that program it set 0x2 at init), which drains
+++about three frames per DTIM; the vendor driver sets 0xa or 0xc in AP
+++mode instead. With the 2 TU window the measured page pool exhaustion
+++takes ~100 s of ordinary multicast chatter; at 0x4 the same storm
+++already drains, so 0xa leaves comfortable headroom.
+++
+++Program 0xa when an AP interface starts and put the default back when
+++it stops, since most chips never initialize the register themselves.
+++The bound and the filter of the previous patches still apply: the
+++window adds drain capacity, the budget protects the pool when that is
+++not enough, the filter keeps chatter off the beacon-paced path.
+++
+++Suggested-by: Ping-Ke Shih <pkshih@realtek.com>
+++Signed-off-by: Mehmet Fide <mehmet.fide@screeningeagle.com>
+++Acked-by: Ping-Ke Shih <pkshih@realtek.com>
+++Signed-off-by: Ping-Ke Shih <pkshih@realtek.com>
+++Link: https://patch.msgid.link/20260910081716.769081-4-mehmet.fide@gmail.com
+++---
+++ drivers/net/wireless/realtek/rtw88/mac80211.c | 2 ++
+++ drivers/net/wireless/realtek/rtw88/reg.h      | 2 ++
+++ 2 files changed, 4 insertions(+)
+++
+++--- a/drivers/net/wireless/realtek/rtw88/mac80211.c
++++++ b/drivers/net/wireless/realtek/rtw88/mac80211.c
+++@@ -468,6 +468,7 @@ static int rtw_ops_start_ap(struct ieee8
+++ 
+++ 	mutex_lock(&rtwdev->mutex);
+++ 	rtw_write32_set(rtwdev, REG_TCR, BIT_TCR_UPDATE_HGQMD);
++++	rtw_write16(rtwdev, REG_ATIMWND, ATIMWND_AP);
+++ 	rtwdev->ap_active = true;
+++ 	rtw_store_op_chan(rtwdev, true);
+++ 	chip->ops->phy_calibration(rtwdev);
+++@@ -484,6 +485,7 @@ static void rtw_ops_stop_ap(struct ieee8
+++ 
+++ 	mutex_lock(&rtwdev->mutex);
+++ 	rtw_write32_clr(rtwdev, REG_TCR, BIT_TCR_UPDATE_HGQMD);
++++	rtw_write16(rtwdev, REG_ATIMWND, ATIMWND_DEFAULT);
+++ 	rtwdev->ap_active = false;
+++ 	if (!rtw_core_check_sta_active(rtwdev))
+++ 		rtw_clear_op_chan(rtwdev);
+++--- a/drivers/net/wireless/realtek/rtw88/reg.h
++++++ b/drivers/net/wireless/realtek/rtw88/reg.h
+++@@ -483,6 +483,8 @@
+++ #define REG_DRVERLYINT		0x0558
+++ #define REG_BCNDMATIM		0x0559
+++ #define REG_ATIMWND		0x055A
++++#define ATIMWND_DEFAULT		0x2
++++#define ATIMWND_AP		0xa
+++ #define REG_USTIME_TSF		0x055C
+++ #define REG_BCN_MAX_ERR		0x055D
+++ #define REG_RXTSF_OFFSET_CCK	0x055E
+diff --git a/patches/openwrt/0025-mac80211-rtw88-fix-AP-mode-stall-on-SDIO-and-PCIe.patch b/patches/openwrt/0025-mac80211-rtw88-fix-AP-mode-stall-on-SDIO-and-PCIe.patch
+new file mode 100644
+index 00000000..f62e9030
+--- /dev/null
++++ b/patches/openwrt/0025-mac80211-rtw88-fix-AP-mode-stall-on-SDIO-and-PCIe.patch
+@@ -0,0 +1,132 @@
++From: Grische <github@grische.xyz>
++Date: Fri, 23 Oct 2026 13:45:59 +0200
++Subject: mac80211: rtw88: fix AP mode stall on SDIO and PCIe
++
++The shared queue mapping of the SDIO and PCIe paths still sends every
++broadcast and multicast frame to the after-DTIM queue. On the RTL8822CS
++of the NanoPi R2S Plus the TX page pool empties within seconds of a
++client associating, the beacon download fails every few seconds and
++the link stalls with round trip times of hundreds of milliseconds and
++hanging TCP connections.
++
++Map only frames that carry IEEE80211_TX_CTL_SEND_AFTER_DTIM to the
++after-DTIM queue, as the USB path does since the backported fix. With
++the change the page pool stays full, round trip times are 2 to 3 ms and
++TCP reaches about 60 Mbit/s in each direction in AP mode, also over a
++10 minute soak with a dozing client. The patch goes to linux-wireless.
++
++Signed-off-by: Grische <github@grische.xyz>
++Assisted-by: Claude:claude-fable-5-1
++
++diff --git a/package/kernel/mac80211/Makefile b/package/kernel/mac80211/Makefile
++index 04af0748d98dd030f5f020f463d3cfdda6b96e8d..19e7c577e48ab6dfe8c18b2e5e97b26ea7210375 100644
++--- a/package/kernel/mac80211/Makefile
+++++ b/package/kernel/mac80211/Makefile
++@@ -12,7 +12,7 @@ PKG_NAME:=mac80211
++ 
++ PKG_SOURCE_VERSION:=7.2
++ PKG_VERSION:=$(subst -,_,$(PKG_SOURCE_VERSION))
++-PKG_RELEASE:=14
+++PKG_RELEASE:=15
++ PKG_LICENSE:=GPL-2.0-only
++ PKG_LICENSE_FILES:=COPYING
++ 
++diff --git a/package/kernel/mac80211/patches/rtl/008-wifi-rtw88-honor-SEND_AFTER_DTIM-for-bmc-frames-on-SDIO-and-PCIe.patch b/package/kernel/mac80211/patches/rtl/008-wifi-rtw88-honor-SEND_AFTER_DTIM-for-bmc-frames-on-SDIO-and-PCIe.patch
++new file mode 100644
++index 0000000000000000000000000000000000000000..723d3da9c9a8777ea0da5b9815709386fe7c0e19
++--- /dev/null
+++++ b/package/kernel/mac80211/patches/rtl/008-wifi-rtw88-honor-SEND_AFTER_DTIM-for-bmc-frames-on-SDIO-and-PCIe.patch
++@@ -0,0 +1,93 @@
+++From: Grische <github@grische.xyz>
+++Date: Thu, 22 Oct 2026 20:43:03 +0200
+++Subject: [PATCH] wifi: rtw88: honor SEND_AFTER_DTIM for bmc frames on SDIO and
+++ PCIe
+++
+++rtw_tx_queue_mapping() puts every broadcast and multicast data frame
+++into RTW_TX_QUEUE_HI0. The SDIO and PCIe paths use this function. The
+++high queue is the after DTIM queue of the chip. In AP mode the hardware
+++holds these frames and sends them only right after a DTIM beacon,
+++inside the ATIM window. The default window of 2 TU drains about three
+++frames per DTIM.
+++
+++While the frames wait they occupy pages of the shared TX page pool. On
+++RTL8822CS the high queue owns 64 pages and then takes from the 1681
+++public pages. Any sustained broadcast or multicast rate above the drain
+++rate fills the pool. The beacon and reserved page download and the H2C
+++queue draw from the same pool. Once the pool is empty the SDIO free
+++page check rejects them with EBUSY. The driver then logs "failed to
+++write data to rsvd page", "failed to download drv rsvd page" and
+++"failed to download beacon" on every TIM update. The data queues lose
+++their share of the public pages as well and the link stalls. The SDIO
+++TX worker retries a starved queue a thousand times with three register
+++reads per attempt before it moves on. The stall therefore also shows up
+++as a burst of SDIO commands and long ping times.
+++
+++mac80211 already decides which frames need after DTIM delivery. It sets
+++IEEE80211_TX_CTL_SEND_AFTER_DTIM on a broadcast or multicast frame only
+++while at least one station is dozing. Map only those frames to the high
+++queue. Everything else leaves on its access category queue at line
+++rate. This is the SDIO and PCIe counterpart of
+++commit c710c7c2e038 ("wifi: rtw88: usb: route bmc frames via the high
+++queue only for DTIM delivery"). That commit made the same change in the
+++USB queue mapping. The vendor driver behaves the same way. It only
+++selects the high queue for frames it has buffered for a sleeping
+++station.
+++
+++The change has one known trade-off. Group frames that already wait in
+++the high queue when the last dozing station wakes up still leave after
+++the next DTIM, while later group frames leave at once on their access
+++category queue. Once per wake transition group frames can therefore
+++arrive out of order, bounded by what the high queue holds for one DTIM
+++interval. On a protected network the client drops the late frames as
+++replays, because the group PN is assigned in software in submission
+++order. The USB path has accepted the same trade-off since
+++commit c710c7c2e038 ("wifi: rtw88: usb: route bmc frames via the high
+++queue only for DTIM delivery"). Before this change the frames stayed
+++in order, but the link stalled.
+++
+++Observed on an RTL8822CS in a NanoPi R2S Plus running as an AP with one
+++client. Before this change the reserved page download failed every few
+++seconds, ping times reached 770 ms and TCP connections timed out.
+++With this change the same setup shows no page starvation and no
+++reserved page failure. Ping times are 2 to 3 ms with the client awake
+++and TCP throughput is about 60 Mbit/s in each direction, also during a
+++10 minute soak with the client in power save. A dozing client together
+++with about 250 group frames per second still fills the pool. That case
+++needs the budget and the filter that the USB path already has.
+++STA mode was not affected because a station never addresses data frames
+++to a group address. The PCIe path shares this mapping and was not tested
+++by the author, so Realtek may want to confirm the change on a PCIe part.
+++
+++The analysis of the stall and the first draft of this patch and its
+++changelog were produced in Claude Code sessions with the Claude model
+++claude-fable-5-1. The same sessions ran the tests on an RTL8822CS in a
+++NanoPi R2S Plus. The author reviewed the change and the results.
+++
+++Signed-off-by: Grische <github@grische.xyz>
+++---
+++ drivers/net/wireless/realtek/rtw88/tx.c | 6 ++++--
+++ 1 file changed, 4 insertions(+), 2 deletions(-)
+++
+++--- a/drivers/net/wireless/realtek/rtw88/tx.c
++++++ b/drivers/net/wireless/realtek/rtw88/tx.c
+++@@ -725,6 +725,7 @@ EXPORT_SYMBOL(rtw_tx_ac_to_hwq);
+++ enum rtw_tx_queue_type rtw_tx_queue_mapping(struct sk_buff *skb)
+++ {
+++ 	struct ieee80211_hdr *hdr = (struct ieee80211_hdr *)skb->data;
++++	struct ieee80211_tx_info *info = IEEE80211_SKB_CB(skb);
+++ 	__le16 fc = hdr->frame_control;
+++ 	u8 q_mapping = skb_get_queue_mapping(skb);
+++ 	enum rtw_tx_queue_type queue;
+++@@ -733,8 +734,9 @@ enum rtw_tx_queue_type rtw_tx_queue_mapp
+++ 		queue = RTW_TX_QUEUE_BCN;
+++ 	else if (unlikely(ieee80211_is_mgmt(fc) || ieee80211_is_ctl(fc)))
+++ 		queue = RTW_TX_QUEUE_MGMT;
+++-	else if (is_broadcast_ether_addr(hdr->addr1) ||
+++-		 is_multicast_ether_addr(hdr->addr1))
++++	else if ((is_broadcast_ether_addr(hdr->addr1) ||
++++		  is_multicast_ether_addr(hdr->addr1)) &&
++++		 (info->flags & IEEE80211_TX_CTL_SEND_AFTER_DTIM))
+++ 		queue = RTW_TX_QUEUE_HI0;
+++ 	else if (WARN_ON_ONCE(q_mapping >= ARRAY_SIZE(ac_to_hwq)))
+++ 		queue = ac_to_hwq[IEEE80211_AC_BE];
+diff --git a/patches/openwrt/0026-mac80211-rtw88-add-802.11s-mesh-point-support.patch b/patches/openwrt/0026-mac80211-rtw88-add-802.11s-mesh-point-support.patch
+new file mode 100644
+index 00000000..053ab6fb
+--- /dev/null
++++ b/patches/openwrt/0026-mac80211-rtw88-add-802.11s-mesh-point-support.patch
+@@ -0,0 +1,412 @@
++From: Grische <github@grische.xyz>
++Date: Fri, 23 Oct 2026 17:20:18 +0200
++Subject: mac80211: rtw88: add 802.11s mesh point support
++
++rtw88 does not offer the mesh point interface type. Upstream removed it
++in 2024 because it had never been made to work. The leftover mesh setup
++treats a mesh interface like an AP, but the driver never runs the AP
++start code for it, drops the beacons of mesh peers after a scan, keeps
++every peer at RSSI zero and would apply its own group key to the group
++frames of the peers.
++
++Advertise mesh point on the 8822C as the only interface on the radio,
++run the AP setup when the mesh beacon is enabled and undo it when the
++interface goes idle, keep the BSSID filter off while mesh is up, match
++peers by address for the RSSI and use software crypto for mesh keys.
++Mesh next to an AP or station interface is refused, since the driver
++beacons on one port only and the hardware finds group keys by their
++index alone.
++
++Tested on the NanoPi R2S Plus against an ath10k peer on channel 36 at
++80 MHz. An open mesh peers, also after scans and rejoins, and carries
++55 to 61 Mbit/s towards the board and 27 Mbit/s from it. AP and station
++mode perform as without the patch. An earlier form also ran broadcast
++floods, a 10 minute soak and batman-adv. The patch goes to
++linux-wireless.
++
++Signed-off-by: Grische <github@grische.xyz>
++Assisted-by: Claude:claude-fable-5-2 Claude:claude-opus-5-5
++
++diff --git a/package/kernel/mac80211/Makefile b/package/kernel/mac80211/Makefile
++index 19e7c577e48ab6dfe8c18b2e5e97b26ea7210375..eb01ab45df0a1be63fe44745c7b2b32d12406028 100644
++--- a/package/kernel/mac80211/Makefile
+++++ b/package/kernel/mac80211/Makefile
++@@ -12,7 +12,7 @@ PKG_NAME:=mac80211
++ 
++ PKG_SOURCE_VERSION:=7.2
++ PKG_VERSION:=$(subst -,_,$(PKG_SOURCE_VERSION))
++-PKG_RELEASE:=15
+++PKG_RELEASE:=16
++ PKG_LICENSE:=GPL-2.0-only
++ PKG_LICENSE_FILES:=COPYING
++ 
++diff --git a/package/kernel/mac80211/patches/rtl/009-wifi-rtw88-add-802.11s-mesh-point-support.patch b/package/kernel/mac80211/patches/rtl/009-wifi-rtw88-add-802.11s-mesh-point-support.patch
++new file mode 100644
++index 0000000000000000000000000000000000000000..03020d247859c521c5ed5924900624d102f6c88b
++--- /dev/null
+++++ b/package/kernel/mac80211/patches/rtl/009-wifi-rtw88-add-802.11s-mesh-point-support.patch
++@@ -0,0 +1,364 @@
+++From: Christian Schmidbauer <opensource@grische.xyz>
+++Date: Fri, 23 Oct 2026 16:00:28 +0200
+++Subject: [PATCH] wifi: rtw88: add 802.11s mesh point support
+++
+++Commit 2ccb8e6ce8a4 ("wifi: rtw88: remove unsupported interface type
+++of mesh point") removed the mesh point interface type from rtw88. The
+++mesh code had never been made to work. Parts of the mesh setup are still
+++in place. A mesh interface gets the AP net type, the beacon function and
+++a beacon in the reserved page, just like an AP interface. Several pieces
+++are missing.
+++
+++mac80211 does not call start_ap and stop_ap for a mesh interface. It
+++enables the beacon when it joins a mesh and disables it when it leaves.
+++The driver therefore never sets ap_active for mesh, never widens the
+++ATIM window and never runs the calibration. The reserved page code also
+++gathers the beacon of a mesh interface before it joins a mesh. mac80211
+++has no beacon for it at that point, so the reserved page download fails.
+++mac80211 also disables the beacon for off-channel work, such as a
+++software scan or a remain-on-channel, and enables it again afterwards.
+++These calls alone therefore do not tell when a mesh starts and ends.
+++
+++Only port 0 sends beacons. The driver moves an AP interface to port 0,
+++but not a mesh interface. A mesh interface that is the only interface
+++gets port 0 anyway.
+++
+++A mesh peer puts its own address into the BSSID field of its beacons.
+++The driver sets BIT_CBSSID_BCN after every scan. The hardware then drops
+++the beacons of the peers. mac80211 needs them to discover peers and to
+++learn their capabilities. mac80211 sets FIF_OTHER_BSS while a mesh
+++interface is joined. The Realtek vendor driver clears the BSSID check
+++while a mesh interface is up as well.
+++
+++The RX path updates the RSSI of a station only for frames that carry
+++the BSSID of the interface. A mesh interface has no BSSID, so the RSSI
+++of every peer stays at zero. The firmware rate adaptation and DIG work
+++with that value. The CFO tracking matches frames by BSSID as well, so it
+++never adjusts the crystal for mesh peers. Without the BSSID check, on
+++the other hand, the beacons of all networks on the channel would count
+++as beacons of the interface.
+++
+++The security CAM finds group keys only by their key index. Each mesh
+++peer protects its group frames with its own group key. mac80211 already
+++handles these peer keys in software, because rtw88 does not support per
+++station group keys. The group key of the local mesh interface would
+++still sit in the CAM, and the hardware would apply it to the group
+++frames of the peers. The group key of a station interface on the same
+++radio would be applied to them in the same way.
+++
+++Advertise NL80211_IFTYPE_MESH_POINT on the 8822C, which is the only
+++chip this was tested on. Leave it out of the interface combination, so
+++that cfg80211 allows a mesh interface only as the single interface on
+++the radio, as it does for IBSS. Use software crypto for all keys of a
+++mesh interface.
+++
+++Do the AP setup when mac80211 enables the beacon of a mesh interface.
+++Keep it while the beacon is paused for off-channel work, as for an AP
+++interface, and only download the beacon again when the pause ends. Undo
+++the AP setup when the mesh interface becomes idle, which it does when
+++mac80211 releases the channel after leaving the mesh, also during a
+++scan. Until then ap_active stays set without a beacon, which is the same
+++short window an AP interface has before stop_ap. A restart of the
+++hardware resets the AP setup, so clear ap_active when mac80211 starts
+++the hardware. The setup is then repeated when the beacon is enabled
+++again, also when a pause delays that until after the restart. Treat a
+++mesh interface like an AP interface for the port switch and the reserved
+++page.
+++
+++Keep the BSSID check off while FIF_OTHER_BSS is set, also at the end of
+++a hardware or software scan. When mac80211 drops FIF_OTHER_BSS after
+++leaving the mesh, turn the beacon BSSID check back on, unless
+++FIF_BCN_PRBRESP_PROMISC is still set. For a mesh interface, use only
+++the frames of known peers for the RX statistics, the RSSI and the CFO
+++tracking.
+++
+++This makes 802.11s mesh point available on the 8822C. A mesh interface
+++next to an AP interface would need a second beacon, but the driver
+++keeps a single beacon in the reserved page and beacons only on port 0.
+++
+++This was tested on a NanoPi R2S Plus with an RTL8822CS on SDIO at
+++50 MHz, with the driver from backports 7.2 and an ath10k peer on
+++channel 36 at 80 MHz. An open mesh reached ESTAB on both sides, also
+++after scans and after each of eight leave and join cycles. Ping took
+++2 to 10 ms, and iperf3 reached 55 to 61 Mbit/s towards the board and
+++27 Mbit/s from it. A mesh with SAE reached 46 Mbit/s towards the
+++board and 28 Mbit/s from it with all keys in software. cfg80211 in
+++backports 7.2 predates commit 8ff047b9c7b2 ("wifi: cfg80211: clarify
+++and tighten key checks"), so that run needed WIPHY_FLAG_IBSS_RSN for
+++the group keys of the peer. A station or AP interface next to the
+++mesh interface was refused in either order. The mesh recovered from a
+++firmware restart. After a restart during a remain-on-channel the AP
+++setup was repeated when the pause ended, which it was not without the
+++ap_active change. Since mac80211 currently loses the end of a
+++software remain-on-channel over a restart, a second remain-on-channel
+++request was used to bring it back. AP and station mode performed as
+++without the patch.
+++
+++An earlier form of this patch also ran floods of 50 and 200 broadcast
+++frames per second, a 10 minute soak and batman-adv with BATMAN_V
+++without TX page shortage, beacon download failure or lost peering.
+++
+++Signed-off-by: Christian Schmidbauer <opensource@grische.xyz>
+++---
+++ drivers/net/wireless/realtek/rtw88/fw.c       | 11 ++-
+++ drivers/net/wireless/realtek/rtw88/mac80211.c | 87 ++++++++++++++++---
+++ drivers/net/wireless/realtek/rtw88/main.c     | 11 ++-
+++ drivers/net/wireless/realtek/rtw88/phy.c      | 11 ++-
+++ drivers/net/wireless/realtek/rtw88/rx.c       | 12 ++-
+++ 5 files changed, 112 insertions(+), 20 deletions(-)
+++
+++--- a/drivers/net/wireless/realtek/rtw88/fw.c
++++++ b/drivers/net/wireless/realtek/rtw88/fw.c
+++@@ -1576,8 +1576,9 @@ static void rtw_build_rsvd_page_iter(voi
+++ 	struct rtw_vif *rtwvif = (struct rtw_vif *)vif->drv_priv;
+++ 	struct rtw_rsvd_page *rsvd_pkt;
+++ 
+++-	/* AP not yet started, don't gather its rsvd pages */
+++-	if (vif->type == NL80211_IFTYPE_AP && !rtwdev->ap_active)
++++	/* AP or mesh not yet started, don't gather its rsvd pages */
++++	if ((vif->type == NL80211_IFTYPE_AP ||
++++	     vif->type == NL80211_IFTYPE_MESH_POINT) && !rtwdev->ap_active)
+++ 		return;
+++ 
+++ 	list_for_each_entry(rsvd_pkt, &rtwvif->rsvd_page_list, vif_list) {
+++@@ -2278,7 +2279,11 @@ void rtw_hw_scan_complete(struct rtw_dev
+++ 	if (!vif)
+++ 		return;
+++ 
+++-	rtwdev->hal.rcr |= BIT_CBSSID_BCN;
++++	/* BIT_AAP is set while mac80211 asks for FIF_OTHER_BSS, which
++++	 * a mesh interface does to receive the beacons of its peers.
++++	 */
++++	if (!(rtwdev->hal.rcr & BIT_AAP))
++++		rtwdev->hal.rcr |= BIT_CBSSID_BCN;
+++ 	rtw_write32(rtwdev, REG_RCR, rtwdev->hal.rcr);
+++ 
+++ 	rtw_core_scan_complete(rtwdev, vif, true);
+++--- a/drivers/net/wireless/realtek/rtw88/mac80211.c
++++++ b/drivers/net/wireless/realtek/rtw88/mac80211.c
+++@@ -56,6 +56,11 @@ static int rtw_ops_start(struct ieee8021
+++ 	int ret;
+++ 
+++ 	mutex_lock(&rtwdev->mutex);
++++	/* Powering off the chip resets the AP setup. After a restart or a
++++	 * resume, mac80211 calls start_ap again for an AP interface, and a
++++	 * mesh interface repeats the setup when its beacon is enabled.
++++	 */
++++	rtwdev->ap_active = false;
+++ 	ret = rtw_core_start(rtwdev);
+++ 	mutex_unlock(&rtwdev->mutex);
+++ 
+++@@ -305,8 +310,13 @@ static void rtw_ops_configure_filter(str
+++ 		else
+++ 			rtwdev->hal.rcr &= ~(BIT_AAP);
+++ 	}
+++-	if (changed_flags & FIF_BCN_PRBRESP_PROMISC) {
+++-		if (*new_flags & FIF_BCN_PRBRESP_PROMISC)
++++	/* mac80211 sets FIF_OTHER_BSS while a mesh interface is joined.
++++	 * Mesh peers put their own address into the BSSID field, so do
++++	 * not filter by BSSID then. Check the BSSID of beacons again once
++++	 * neither flag is set.
++++	 */
++++	if (changed_flags & (FIF_BCN_PRBRESP_PROMISC | FIF_OTHER_BSS)) {
++++		if (*new_flags & (FIF_BCN_PRBRESP_PROMISC | FIF_OTHER_BSS))
+++ 			rtwdev->hal.rcr &= ~(BIT_CBSSID_BCN | BIT_CBSSID_DATA);
+++ 		else
+++ 			rtwdev->hal.rcr |= BIT_CBSSID_BCN;
+++@@ -369,6 +379,26 @@ static void rtw_conf_tx(struct rtw_dev *
+++ 		__rtw_conf_tx(rtwdev, rtwvif, ac);
+++ }
+++ 
++++static void __rtw_start_ap(struct rtw_dev *rtwdev)
++++{
++++	const struct rtw_chip_info *chip = rtwdev->chip;
++++
++++	rtw_write32_set(rtwdev, REG_TCR, BIT_TCR_UPDATE_HGQMD);
++++	rtw_write16(rtwdev, REG_ATIMWND, ATIMWND_AP);
++++	rtwdev->ap_active = true;
++++	rtw_store_op_chan(rtwdev, true);
++++	chip->ops->phy_calibration(rtwdev);
++++}
++++
++++static void __rtw_stop_ap(struct rtw_dev *rtwdev)
++++{
++++	rtw_write32_clr(rtwdev, REG_TCR, BIT_TCR_UPDATE_HGQMD);
++++	rtw_write16(rtwdev, REG_ATIMWND, ATIMWND_DEFAULT);
++++	rtwdev->ap_active = false;
++++	if (!rtw_core_check_sta_active(rtwdev))
++++		rtw_clear_op_chan(rtwdev);
++++}
++++
+++ static void rtw_ops_bss_info_changed(struct ieee80211_hw *hw,
+++ 				     struct ieee80211_vif *vif,
+++ 				     struct ieee80211_bss_conf *conf,
+++@@ -384,6 +414,38 @@ static void rtw_ops_bss_info_changed(str
+++ 
+++ 	rtw_leave_lps_deep(rtwdev);
+++ 
++++	/* mac80211 does not call start_ap and stop_ap for mesh.
++++	 *
++++	 * Joining a mesh enables the beacon together with
++++	 * BSS_CHANGED_BEACON, and so does a restart of the hardware. Do
++++	 * the AP setup then, before the beacon is downloaded below.
++++	 *
++++	 * Off-channel work, such as a software scan or a remain-on-channel,
++++	 * disables the beacon and enables it again without
++++	 * BSS_CHANGED_BEACON. Keep the AP setup, like for an AP interface,
++++	 * for which only BIT_EN_BCNQ_DL is toggled below. Download the
++++	 * beacon again on return. If the hardware was restarted in the
++++	 * meantime, rtw_ops_start() has cleared ap_active, and the AP
++++	 * setup is done again as well.
++++	 *
++++	 * Leaving the mesh disables the beacon and then releases the
++++	 * channel. Mesh is the only interface on the radio, so the
++++	 * interface becomes idle then. Undo the AP setup at that point,
++++	 * if it was done. Until then ap_active stays set, although
++++	 * mac80211 has already dropped the beacon. An AP interface has
++++	 * the same short window, because mac80211 drops and disables its
++++	 * beacon before it calls stop_ap.
++++	 */
++++	if (vif->type == NL80211_IFTYPE_MESH_POINT &&
++++	    changed & BSS_CHANGED_BEACON_ENABLED && conf->enable_beacon) {
++++		if (!rtwdev->ap_active || changed & BSS_CHANGED_BEACON)
++++			__rtw_start_ap(rtwdev);
++++		changed |= BSS_CHANGED_BEACON;
++++	}
++++	if (vif->type == NL80211_IFTYPE_MESH_POINT &&
++++	    changed & BSS_CHANGED_IDLE && vif->cfg.idle && rtwdev->ap_active)
++++		__rtw_stop_ap(rtwdev);
++++
+++ 	if (changed & BSS_CHANGED_ASSOC) {
+++ 		rtw_vif_assoc_changed(rtwvif, conf);
+++ 		if (vif->cfg.assoc) {
+++@@ -464,14 +526,9 @@ static int rtw_ops_start_ap(struct ieee8
+++ 			    struct ieee80211_bss_conf *link_conf)
+++ {
+++ 	struct rtw_dev *rtwdev = hw->priv;
+++-	const struct rtw_chip_info *chip = rtwdev->chip;
+++ 
+++ 	mutex_lock(&rtwdev->mutex);
+++-	rtw_write32_set(rtwdev, REG_TCR, BIT_TCR_UPDATE_HGQMD);
+++-	rtw_write16(rtwdev, REG_ATIMWND, ATIMWND_AP);
+++-	rtwdev->ap_active = true;
+++-	rtw_store_op_chan(rtwdev, true);
+++-	chip->ops->phy_calibration(rtwdev);
++++	__rtw_start_ap(rtwdev);
+++ 	mutex_unlock(&rtwdev->mutex);
+++ 
+++ 	return 0;
+++@@ -484,11 +541,7 @@ static void rtw_ops_stop_ap(struct ieee8
+++ 	struct rtw_dev *rtwdev = hw->priv;
+++ 
+++ 	mutex_lock(&rtwdev->mutex);
+++-	rtw_write32_clr(rtwdev, REG_TCR, BIT_TCR_UPDATE_HGQMD);
+++-	rtw_write16(rtwdev, REG_ATIMWND, ATIMWND_DEFAULT);
+++-	rtwdev->ap_active = false;
+++-	if (!rtw_core_check_sta_active(rtwdev))
+++-		rtw_clear_op_chan(rtwdev);
++++	__rtw_stop_ap(rtwdev);
+++ 	mutex_unlock(&rtwdev->mutex);
+++ }
+++ 
+++@@ -560,6 +613,14 @@ static int rtw_ops_set_key(struct ieee80
+++ 	u8 hw_key_idx;
+++ 	int ret = 0;
+++ 
++++	/* The CAM finds group keys by key index only. On a mesh
++++	 * interface our own group key would be used to decrypt the
++++	 * group frames of the peers, which use their own group keys.
++++	 * Leave all mesh keys to software crypto.
++++	 */
++++	if (vif->type == NL80211_IFTYPE_MESH_POINT)
++++		return -EOPNOTSUPP;
++++
+++ 	switch (key->cipher) {
+++ 	case WLAN_CIPHER_SUITE_WEP40:
+++ 		hw_key_type = RTW_CAM_WEP40;
+++--- a/drivers/net/wireless/realtek/rtw88/main.c
++++++ b/drivers/net/wireless/realtek/rtw88/main.c
+++@@ -104,6 +104,11 @@ static struct ieee80211_rate rtw_ratetab
+++ 	{.bitrate = 540, .hw_value = 0x0b,},
+++ };
+++ 
++++/* Mesh point is left out on purpose, so that cfg80211 allows a mesh
++++ * interface only as the single interface on the radio. The security CAM
++++ * finds group keys by key index only and would apply the group key of a
++++ * station interface to the group frames of the mesh peers.
++++ */
+++ static const struct ieee80211_iface_limit rtw_iface_limits[] = {
+++ 	{
+++ 		.max = 1,
+++@@ -2299,6 +2304,8 @@ int rtw_register_hw(struct rtw_dev *rtwd
+++ 	if (rtwdev->chip->id == RTW_CHIP_TYPE_8822C) {
+++ 		hw->wiphy->iface_combinations = rtw_iface_combs;
+++ 		hw->wiphy->n_iface_combinations = ARRAY_SIZE(rtw_iface_combs);
++++		/* Mesh point was tested on this chip only. */
++++		hw->wiphy->interface_modes |= BIT(NL80211_IFTYPE_MESH_POINT);
+++ 	}
+++ 
+++ 	wiphy_ext_feature_set(hw->wiphy, NL80211_EXT_FEATURE_CAN_REPLACE_PTK0);
+++@@ -2431,7 +2438,9 @@ void rtw_core_port_switch(struct rtw_dev
+++ 	struct rtw_vif *rtwvif = (struct rtw_vif *)vif->drv_priv;
+++ 	struct rtw_iter_port_switch_data iter_data;
+++ 
+++-	if (vif->type != NL80211_IFTYPE_AP || rtwvif->port == RTW_PORT_0)
++++	if ((vif->type != NL80211_IFTYPE_AP &&
++++	     vif->type != NL80211_IFTYPE_MESH_POINT) ||
++++	    rtwvif->port == RTW_PORT_0)
+++ 		return;
+++ 
+++ 	iter_data.rtwdev = rtwdev;
+++--- a/drivers/net/wireless/realtek/rtw88/phy.c
++++++ b/drivers/net/wireless/realtek/rtw88/phy.c
+++@@ -687,11 +687,20 @@ static void rtw_phy_parsing_cfo_iter(voi
+++ 	struct rtw_rx_pkt_stat *pkt_stat = iter_data->pkt_stat;
+++ 	struct rtw_dm_info *dm_info = &rtwdev->dm_info;
+++ 	struct rtw_cfo_track *cfo = &dm_info->cfo_track;
++++	struct ieee80211_hdr *hdr = iter_data->hdr;
+++ 	u8 *bssid = iter_data->bssid;
+++ 	u8 i;
+++ 
+++-	if (!ether_addr_equal(vif->bss_conf.bssid, bssid))
++++	/* A mesh interface has no BSSID to match. Use the frames of its
++++	 * known peers instead.
++++	 */
++++	if (vif->type == NL80211_IFTYPE_MESH_POINT) {
++++		if (!ieee80211_find_sta_by_ifaddr(rtwdev->hw, hdr->addr2,
++++						  vif->addr))
++++			return;
++++	} else if (!ether_addr_equal(vif->bss_conf.bssid, bssid)) {
+++ 		return;
++++	}
+++ 
+++ 	for (i = 0; i < rtwdev->hal.rf_path_num; i++) {
+++ 		cfo->cfo_tail[i] += pkt_stat->cfo_tail[i];
+++--- a/drivers/net/wireless/realtek/rtw88/rx.c
++++++ b/drivers/net/wireless/realtek/rtw88/rx.c
+++@@ -110,17 +110,25 @@ static void rtw_rx_addr_match_iter(void
+++ 	struct rtw_sta_info *si;
+++ 	struct rtw_rx_pkt_stat *pkt_stat = iter_data->pkt_stat;
+++ 	u8 *bssid = iter_data->bssid;
++++	bool mesh = vif->type == NL80211_IFTYPE_MESH_POINT;
+++ 
+++-	if (!ether_addr_equal(vif->bss_conf.bssid, bssid))
++++	/* A mesh interface has no BSSID to match. Mesh peers put their
++++	 * own address into the BSSID field of their beacons. For a mesh
++++	 * interface, use only the frames of known peers.
++++	 */
++++	if (!mesh && !ether_addr_equal(vif->bss_conf.bssid, bssid))
+++ 		return;
+++ 
+++ 	if (!(ether_addr_equal(vif->addr, hdr->addr1) ||
+++ 	      ieee80211_is_beacon(hdr->frame_control)))
+++ 		return;
+++ 
+++-	rtw_rx_phy_stat(rtwdev, pkt_stat, hdr);
+++ 	sta = ieee80211_find_sta_by_ifaddr(rtwdev->hw, hdr->addr2,
+++ 					   vif->addr);
++++	if (mesh && !sta)
++++		return;
++++
++++	rtw_rx_phy_stat(rtwdev, pkt_stat, hdr);
+++ 	if (!sta)
+++ 		return;
+++ 
+diff --git a/patches/openwrt/0027-mac80211-rtw88-make-a-secured-mesh-work-on-backports-7.2.patch b/patches/openwrt/0027-mac80211-rtw88-make-a-secured-mesh-work-on-backports-7.2.patch
+new file mode 100644
+index 00000000..6bb717c6
+--- /dev/null
++++ b/patches/openwrt/0027-mac80211-rtw88-make-a-secured-mesh-work-on-backports-7.2.patch
+@@ -0,0 +1,105 @@
++From: Grische <github@grische.xyz>
++Date: Fri, 13 Nov 2026 23:11:54 +0100
++Subject: mac80211: rtw88: make a secured mesh work on backports 7.2
++
++cfg80211 of backports 7.2 refuses the group key of a mesh peer unless
++the driver sets WIPHY_FLAG_IBSS_RSN, so a mesh with SAE on rtw88 peers
++but passes no traffic. Upstream dropped that requirement for mesh in
++7.3.
++
++Add a patch that sets the flag on the 8822C. The flag also allows RSN
++in an IBSS, where the group key of the interface would sit in the CAM
++and be applied to the group frames of the peers. The patch therefore
++leaves the group keys of an IBSS interface to software crypto, as
++ath9k and mt76 do. It is not meant for upstream and can be dropped
++once backports is at 7.3 or newer.
++
++Tested on the NanoPi R2S Plus against an ath10k peer. A mesh with SAE
++carries 48 Mbit/s towards the board and 27 Mbit/s from it, with all
++mesh keys in software. In an IBSS with WPA2 ARP resolves in both
++directions, while with the flag alone the ARP requests of the peer get
++no answer. AP and station mode perform as before. Joining an IBSS
++fails in some attempts, with and without this patch and also without
++encryption. The radio then sits on another channel than mac80211
++reports.
++
++Signed-off-by: Grische <github@grische.xyz>
++Assisted-by: Claude:claude-fable-5-2 Claude:claude-opus-5-5
++
++diff --git a/package/kernel/mac80211/Makefile b/package/kernel/mac80211/Makefile
++index eb01ab45df0a1be63fe44745c7b2b32d12406028..8fbe002df5b0887ee2f5677c71bdf6284f0dc77e 100644
++--- a/package/kernel/mac80211/Makefile
+++++ b/package/kernel/mac80211/Makefile
++@@ -12,7 +12,7 @@ PKG_NAME:=mac80211
++ 
++ PKG_SOURCE_VERSION:=7.2
++ PKG_VERSION:=$(subst -,_,$(PKG_SOURCE_VERSION))
++-PKG_RELEASE:=16
+++PKG_RELEASE:=17
++ PKG_LICENSE:=GPL-2.0-only
++ PKG_LICENSE_FILES:=COPYING
++ 
++diff --git a/package/kernel/mac80211/patches/rtl/010-wifi-rtw88-accept-the-group-keys-of-mesh-peers-before-7.3.patch b/package/kernel/mac80211/patches/rtl/010-wifi-rtw88-accept-the-group-keys-of-mesh-peers-before-7.3.patch
++new file mode 100644
++index 0000000000000000000000000000000000000000..a1ce2a1ffc6cd26ac3488be3a8b2816eda10f66b
++--- /dev/null
+++++ b/package/kernel/mac80211/patches/rtl/010-wifi-rtw88-accept-the-group-keys-of-mesh-peers-before-7.3.patch
++@@ -0,0 +1,58 @@
+++From: Grische <github@grische.xyz>
+++Date: Fri, 13 Nov 2026 23:10:39 +0100
+++Subject: [PATCH] wifi: rtw88: accept the group keys of mesh peers on cfg80211 before 7.3
+++
+++cfg80211 before commit 8ff047b9c7b2 ("wifi: cfg80211: clarify and
+++tighten key checks") refuses a group key with a peer address unless the
+++driver sets WIPHY_FLAG_IBSS_RSN. A secured mesh installs such a key for
+++every peer. Without it the peering still completes, but the group
+++frames of the peers cannot be decrypted, so no path is found and no
+++traffic passes.
+++
+++Set the flag on the 8822C, where mesh point is advertised. The flag
+++also lets an IBSS use RSN. The CAM finds group keys by their key index
+++only, so the own group key of an IBSS interface would be applied to the
+++group frames of every peer. Leave the TKIP and CCMP group keys of an
+++IBSS interface to software crypto, as is done for mesh.
+++
+++This patch is for backports before 7.3 only and is not meant for
+++upstream. With 8ff047b9c7b2 a mesh no longer needs the flag.
+++
+++Signed-off-by: Grische <github@grische.xyz>
+++---
+++ drivers/net/wireless/realtek/rtw88/mac80211.c | 10 ++++++++++
+++ drivers/net/wireless/realtek/rtw88/main.c     |  4 ++++
+++ 2 files changed, 14 insertions(+)
+++
+++--- a/drivers/net/wireless/realtek/rtw88/mac80211.c
++++++ b/drivers/net/wireless/realtek/rtw88/mac80211.c
+++@@ -621,6 +621,16 @@ static int rtw_ops_set_key(struct ieee80
+++ 	if (vif->type == NL80211_IFTYPE_MESH_POINT)
+++ 		return -EOPNOTSUPP;
+++ 
++++	/* The flag also allows RSN in an IBSS. The CAM finds group keys
++++	 * by key index only, so leave the group keys of an IBSS interface
++++	 * to software crypto as well.
++++	 */
++++	if (vif->type == NL80211_IFTYPE_ADHOC &&
++++	    (key->cipher == WLAN_CIPHER_SUITE_TKIP ||
++++	     key->cipher == WLAN_CIPHER_SUITE_CCMP) &&
++++	    !(key->flags & IEEE80211_KEY_FLAG_PAIRWISE))
++++		return -EOPNOTSUPP;
++++
+++ 	switch (key->cipher) {
+++ 	case WLAN_CIPHER_SUITE_WEP40:
+++ 		hw_key_type = RTW_CAM_WEP40;
+++--- a/drivers/net/wireless/realtek/rtw88/main.c
++++++ b/drivers/net/wireless/realtek/rtw88/main.c
+++@@ -2306,6 +2306,10 @@ int rtw_register_hw(struct rtw_dev *rtwd
+++ 		hw->wiphy->n_iface_combinations = ARRAY_SIZE(rtw_iface_combs);
+++ 		/* Mesh point was tested on this chip only. */
+++ 		hw->wiphy->interface_modes |= BIT(NL80211_IFTYPE_MESH_POINT);
++++		/* cfg80211 before 7.3 accepts the group keys of mesh peers
++++		 * only with this flag.
++++		 */
++++		hw->wiphy->flags |= WIPHY_FLAG_IBSS_RSN;
+++ 	}
+++ 
+++ 	wiphy_ext_feature_set(hw->wiphy, NL80211_EXT_FEATURE_CAN_REPLACE_PTK0);
+-- 
+2.54.0
+
