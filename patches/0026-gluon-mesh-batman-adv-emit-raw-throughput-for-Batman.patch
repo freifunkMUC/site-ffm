@@ -1,0 +1,46 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Annika Wickert <6527744+awlx@users.noreply.github.com>
+Date: Fri, 20 Nov 2026 11:36:23 +0100
+Subject: [PATCH] gluon-mesh-batman-adv: emit raw throughput for Batman V
+ neighbours
+
+The Batman V neighbour list in respondd sent a pseudo TQ value. The
+value came from the link throughput and was 255 for all links of
+54 Mbit/s and more. Thus the map showed TQ 100% and no throughput.
+
+Send the raw throughput in kbit/s in the "throughput" field instead.
+yanic with Batman V support reads this field and writes source_tp and
+target_tp to meshviewer.json.
+
+Use json_object_new_int64() because the source value is uint32.
+
+This is the gluon-parker port of the upstream change by Grische
+(freifunk-gluon/gluon#3736). gluon-parker keeps the older Batman V
+patch series, so the upstream patch does not apply.
+---
+ package/gluon-mesh-batman-adv/src/respondd-neighbours.c | 5 +----
+ 1 file changed, 1 insertion(+), 4 deletions(-)
+
+diff --git a/package/gluon-mesh-batman-adv/src/respondd-neighbours.c b/package/gluon-mesh-batman-adv/src/respondd-neighbours.c
+index 2950d1ec..0c0c9a64 100644
+--- a/package/gluon-mesh-batman-adv/src/respondd-neighbours.c
++++ b/package/gluon-mesh-batman-adv/src/respondd-neighbours.c
+@@ -59,7 +59,6 @@ static int parse_neigh_list_netlink_cb(struct nl_msg *msg, void *arg)
+ 	struct genlmsghdr *ghdr;
+ 	uint8_t *neigh;
+ 	uint32_t throughput;
+-	uint8_t tq;
+ 	uint32_t hardif;
+ 	uint32_t lastseen;
+ 	char ifname_buf[IF_NAMESIZE], *ifname;
+@@ -107,9 +106,7 @@ static int parse_neigh_list_netlink_cb(struct nl_msg *msg, void *arg)
+ 		json_object_object_add(opts->interfaces, ifname, interface);
+ 	}
+ 
+-	tq = gluonutil_get_pseudo_tq(throughput);
+-
+-	json_object_object_add(obj, "tq", json_object_new_int(tq));
++	json_object_object_add(obj, "throughput", json_object_new_int64(throughput));
+ 	json_object_object_add(obj, "lastseen", json_object_new_double(lastseen / 1000.));
+ 	json_object_object_add(obj, "best", json_object_new_boolean(nla_get_flag(attrs[BATADV_ATTR_FLAG_BEST])));
+ 	json_object_object_add(interface, mac1, obj);
