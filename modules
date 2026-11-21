@@ -11,3 +11,9 @@ GLUON_SITE_FEEDS='community'
 PACKAGES_COMMUNITY_REPO=https://github.com/freifunkMUC/community-packages.git
 PACKAGES_COMMUNITY_COMMIT=5ad880c2aa02db8b6466ca1baab16965c88f9c58
 PACKAGES_COMMUNITY_BRANCH=parker-release-2026.11
+
+# FFBS rewrote main-ffbs-next on gitli. This keeps the commit that
+# gluon-parker 029ea60 pins.
+PACKAGES_GLUON_REPO=https://github.com/freifunkMUC/gluon-packages.git
+PACKAGES_GLUON_BRANCH=ffbs-parker-b3a30be
+PACKAGES_GLUON_COMMIT=b3a30be3b84caf12d62bd2d76a93f97a636356c1
