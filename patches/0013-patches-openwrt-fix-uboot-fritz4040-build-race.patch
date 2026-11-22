@@ -1,4 +1,4 @@
-From 10b9ebd4b91e5ab2f20458f41c5d56d83a27ca9b Mon Sep 17 00:00:00 2001
+From 608434cb1a63b799dc43e4c81c5d2b0ac5fab4a5 Mon Sep 17 00:00:00 2001
 From: Grische <github@grische.xyz>
 Date: Fri, 7 Aug 2026 07:01:56 +0000
 Subject: [PATCH] patches/openwrt: fix uboot-fritz4040 build race
@@ -22,11 +22,11 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
 
 diff --git a/patches/openwrt/0020-uboot-fritz4040-fix-intermittent-parallel-build-fail.patch b/patches/openwrt/0020-uboot-fritz4040-fix-intermittent-parallel-build-fail.patch
 new file mode 100644
-index 00000000..37f76f20
+index 00000000..5b957ed3
 --- /dev/null
 +++ b/patches/openwrt/0020-uboot-fritz4040-fix-intermittent-parallel-build-fail.patch
 @@ -0,0 +1,83 @@
-+From 32f793da96f9f125ef009121028595920be5a800 Mon Sep 17 00:00:00 2001
++From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 +From: Grische <github@grische.xyz>
 +Date: Fri, 7 Aug 2026 07:01:06 +0000
 +Subject: [PATCH] uboot-fritz4040: fix intermittent parallel build failure
@@ -52,21 +52,21 @@ index 00000000..37f76f20
 + create mode 100644 package/boot/uboot-fritz4040/patches/001-Makefile-generate-generic-asm-offsets-first.patch
 +
 +diff --git a/package/boot/uboot-fritz4040/Makefile b/package/boot/uboot-fritz4040/Makefile
-+index 6fa4d14814a..ee0fc60d374 100644
++index 671d937..ffb3489 100644
 +--- a/package/boot/uboot-fritz4040/Makefile
 ++++ b/package/boot/uboot-fritz4040/Makefile
-+@@ -14,7 +14,7 @@ PKG_SOURCE_VERSION:=9d89013f9cc963eca25856c61fa066091d35f8de
-+ PKG_SOURCE_DATE:=2022-05-01
-+ PKG_MIRROR_HASH:=4e8106a7877ae6aa8da44bf95401b860d11f7d51417cc5a61ce59a353d4ee866
++@@ -14,7 +14,7 @@ PKG_SOURCE_VERSION:=056376fc703f2af0b93d673bf8ab4184689c5403
++ PKG_SOURCE_DATE:=2026-03-08
++ PKG_MIRROR_HASH:=1d7e4fe9116dc9378ee5569b48a1ce7bd41a8138928905010ebe79b8771c39dc
 + 
-+-PKG_RELEASE:=5
-++PKG_RELEASE:=6
++-PKG_RELEASE:=1
+++PKG_RELEASE:=2
 + 
 + include $(INCLUDE_DIR)/u-boot.mk
 + include $(INCLUDE_DIR)/package.mk
 +diff --git a/package/boot/uboot-fritz4040/patches/001-Makefile-generate-generic-asm-offsets-first.patch b/package/boot/uboot-fritz4040/patches/001-Makefile-generate-generic-asm-offsets-first.patch
 +new file mode 100644
-+index 00000000000..ea5e39f47d4
++index 0000000..ea5e39f
 +--- /dev/null
 ++++ b/package/boot/uboot-fritz4040/patches/001-Makefile-generate-generic-asm-offsets-first.patch
 +@@ -0,0 +1,39 @@

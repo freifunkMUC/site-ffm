@@ -1,83 +1,116 @@
-From cbb115c98fad8619471415ec90e0cc7da46d4478 Mon Sep 17 00:00:00 2001
+From 14a3b2df0f90e0cff98bed0a17b1e0b5d78d1d6a Mon Sep 17 00:00:00 2001
 From: Grische <github@grische.xyz>
-Date: Mon, 23 Nov 2026 19:02:20 +0100
+Date: Sun, 22 Nov 2026 17:03:18 +0100
 Subject: [PATCH] ipq806x: stop dwmac1000 dropping zero-UDP6-checksum frames
 
 Assisted-by: Claude:claude-opus-5-5
 ---
- ...1000-don-t-discard-frames-with-only-.patch | 133 ++++++++++++++++++
- ...1000-stop-hardware-from-dropping-che.patch | 125 ++++++++++++++++
- 2 files changed, 258 insertions(+)
- create mode 100644 patches/openwrt/0014-net-stmmac-dwmac1000-don-t-discard-frames-with-only-.patch
- create mode 100644 patches/openwrt/0015-net-stmmac-dwmac1000-stop-hardware-from-dropping-che.patch
+ ...x-backport-stmmac-UDP-checksum-fixes.patch | 161 ++++++++++++++++++
+ ...-stmmac-checksum-error-frame-deliver.patch |  96 +++++++++++
+ 2 files changed, 257 insertions(+)
+ create mode 100644 patches/openwrt/0014-ipq806x-backport-stmmac-UDP-checksum-fixes.patch
+ create mode 100644 patches/openwrt/0015-ipq806x-backport-stmmac-checksum-error-frame-deliver.patch
 
-diff --git a/patches/openwrt/0014-net-stmmac-dwmac1000-don-t-discard-frames-with-only-.patch b/patches/openwrt/0014-net-stmmac-dwmac1000-don-t-discard-frames-with-only-.patch
+diff --git a/patches/openwrt/0014-ipq806x-backport-stmmac-UDP-checksum-fixes.patch b/patches/openwrt/0014-ipq806x-backport-stmmac-UDP-checksum-fixes.patch
 new file mode 100644
-index 000000000..55f698d3e
+index 00000000..7147debc
 --- /dev/null
-+++ b/patches/openwrt/0014-net-stmmac-dwmac1000-don-t-discard-frames-with-only-.patch
-@@ -0,0 +1,133 @@
-+From 356fe08318e71ed17d1bf8b4027d7fa6d6d56303 Mon Sep 17 00:00:00 2001
-+From: Christian Schmidbauer <opensource@grische.xyz>
-+Date: Mon, 23 Nov 2026 19:01:50 +0100
-+Subject: [PATCH 14/15] net: stmmac: dwmac1000: don't discard frames with only
-+ a checksum error
++++ b/patches/openwrt/0014-ipq806x-backport-stmmac-UDP-checksum-fixes.patch
+@@ -0,0 +1,161 @@
++From e26fcb2306ebd07fd413dfe6cf78926a01b71784 Mon Sep 17 00:00:00 2001
++From: David Bauer <mail@david-bauer.net>
++Date: Sat, 21 Nov 2026 15:32:42 +0100
++Subject: [PATCH] ipq806x: backport stmmac UDP checksum fixes
 +
-+[ Upstream commit 596c9408682feba536d7f39de97959807eb3ba1c ]
++Backport fixes for stmmac which fixes packet drop on invalid UDP
++checksums.
 +
-+On dwmac1000 with enhanced descriptors, the hardware sets the Error
-+Summary (ES) bit of the Rx descriptor not only for L2 errors but also
-+for an L3/L4 checksum error. enh_desc_get_rx_status() returns
-+discard_frame whenever ES is set, and since commit 1b746ce8b397 ("net:
-+stmmac: don't overwrite discard_frame status") the checksum status is
-+only evaluated for good frames.
++Link: https://patchwork.kernel.org/project/netdevbpf/patch/20261114133640.3285413-2-opensource@grische.xyz/
 +
-+Return discard_frame only when ES comes with one of the L2 error bits.
-+A frame with only a checksum error is then reported as csum_none and
-+reaches the stack as CHECKSUM_NONE, so the stack verifies the checksum
-+itself. This matches dwmac4, whose Error Summary bit does not cover
-+checksum errors.
-+
-+RDES0 bit 7 is not in the mask, because depending on the core and on
-+Rx checksum offload it reports a timestamp, an IP header checksum error
-+or a giant frame, and enh_desc_get_rx_status() cannot tell which. In
-+threshold Rx mode, a giant frame that fits one buffer therefore reaches
-+the stack with a verified FCS.
-+
-+Also remove the pr_err that enh_desc_get_rx_status() prints when bit 7
-+is set. Once the MAC stops dropping checksum-error frames, any host on
-+the link can flood the kernel log by sending frames with a bad IPv4
-+header checksum.
-+
-+This prepares for setting DMA_CONTROL_DT, which makes the MAC deliver
-+checksum-error frames instead of dropping them in its Rx FIFO.
-+
-+Fixes: 1b746ce8b397 ("net: stmmac: don't overwrite discard_frame status")
-+Cc: <stable@vger.kernel.org> # 6.6.x: ee0aace5f844: net: stmmac: Correctly handle Rx checksum offload errors
-+Cc: <stable@vger.kernel.org> # 6.6.x
-+Signed-off-by: Christian Schmidbauer <opensource@grische.xyz>
-+Reviewed-by: Maxime Chevallier <maxime.chevallier@bootlin.com>
-+Tested-by: Maxime Chevallier <maxime.chevallier@bootlin.com>
-+Link: https://patch.msgid.link/20261114133640.3285413-3-opensource@grische.xyz
-+Signed-off-by: Paolo Abeni <pabeni@redhat.com>
++Signed-off-by: David Bauer <mail@david-bauer.net>
 +---
-+ ...1000-don-t-discard-frames-with-only-.patch | 76 +++++++++++++++++++
-+ 1 file changed, 76 insertions(+)
-+ create mode 100644 target/linux/generic/pending-6.12/742-01-net-stmmac-dwmac1000-don-t-discard-frames-with-only-.patch
++ ...r-Rx-checksum-errors-in-the-AF_XDP-z.patch | 59 ++++++++++++++++
++ ...1000-don-t-discard-frames-with-only-.patch | 69 +++++++++++++++++++
++ 2 files changed, 128 insertions(+)
++ create mode 100644 target/linux/ipq806x/patches-6.18/130-net-stmmac-honour-Rx-checksum-errors-in-the-AF_XDP-z.patch
++ create mode 100644 target/linux/ipq806x/patches-6.18/131-net-stmmac-dwmac1000-don-t-discard-frames-with-only-.patch
 +
-+diff --git a/target/linux/generic/pending-6.12/742-01-net-stmmac-dwmac1000-don-t-discard-frames-with-only-.patch b/target/linux/generic/pending-6.12/742-01-net-stmmac-dwmac1000-don-t-discard-frames-with-only-.patch
++diff --git a/target/linux/ipq806x/patches-6.18/130-net-stmmac-honour-Rx-checksum-errors-in-the-AF_XDP-z.patch b/target/linux/ipq806x/patches-6.18/130-net-stmmac-honour-Rx-checksum-errors-in-the-AF_XDP-z.patch
 +new file mode 100644
-+index 0000000000..59fa07240b
++index 0000000000..4fafff4434
 +--- /dev/null
-++++ b/target/linux/generic/pending-6.12/742-01-net-stmmac-dwmac1000-don-t-discard-frames-with-only-.patch
-+@@ -0,0 +1,76 @@
-++From a87e5bf1827bceffdbca574cc4626335925e4362 Mon Sep 17 00:00:00 2001
+++++ b/target/linux/ipq806x/patches-6.18/130-net-stmmac-honour-Rx-checksum-errors-in-the-AF_XDP-z.patch
++@@ -0,0 +1,59 @@
+++From fcfc52fcf89a3076c3a9afbbc70c0fecd2b5fc8d Mon Sep 17 00:00:00 2001
+++From: Christian Schmidbauer <opensource@grische.xyz>
+++Date: Sat, 14 Nov 2026 14:36:37 +0100
+++Subject: [PATCH 1/3] net: stmmac: honour Rx checksum errors in the AF_XDP
+++ zero-copy path
+++
+++Commit ee0aace5f844 ("net: stmmac: Correctly handle Rx checksum offload
+++errors") taught stmmac_rx() to honour the csum_none status, but
+++stmmac_dispatch_skb_zc() still ignores it and sets CHECKSUM_UNNECESSARY
+++for every IP frame whenever the checksum offload engine (CoE) is
+++enabled.
+++
+++Since commit fe4042797651 ("net: stmmac: dwmac4: stop hardware from
+++dropping checksum-error packets") dwmac4 delivers such frames instead of
+++dropping them, so this path receives them.
+++
+++Mark the skb CHECKSUM_NONE when csum_none is set, as stmmac_rx() does.
+++
+++Fixes: bba2556efad6 ("net: stmmac: Enable RX via AF_XDP zero-copy")
+++Cc: <stable@vger.kernel.org>
+++Signed-off-by: Christian Schmidbauer <opensource@grische.xyz>
+++Reviewed-by: Maxime Chevallier <maxime.chevallier@bootlin.com>
+++Link: https://patch.msgid.link/20261114133640.3285413-2-opensource@grische.xyz
+++Signed-off-by: Paolo Abeni <pabeni@redhat.com>
+++---
+++ drivers/net/ethernet/stmicro/stmmac/stmmac_main.c | 8 +++++---
+++ 1 file changed, 5 insertions(+), 3 deletions(-)
+++
+++--- a/drivers/net/ethernet/stmicro/stmmac/stmmac_main.c
++++++ b/drivers/net/ethernet/stmicro/stmmac/stmmac_main.c
+++@@ -5198,7 +5198,7 @@ static struct sk_buff *stmmac_construct_
+++ 
+++ static void stmmac_dispatch_skb_zc(struct stmmac_priv *priv, u32 queue,
+++ 				   struct dma_desc *p, struct dma_desc *np,
+++-				   struct xdp_buff *xdp)
++++				   struct xdp_buff *xdp, int status)
+++ {
+++ 	struct stmmac_rxq_stats *rxq_stats = &priv->xstats.rxq_stats[queue];
+++ 	struct stmmac_channel *ch = &priv->channel[queue];
+++@@ -5223,7 +5223,8 @@ static void stmmac_dispatch_skb_zc(struc
+++ 		stmmac_rx_vlan(priv->dev, skb);
+++ 	skb->protocol = eth_type_trans(skb, priv->dev);
+++ 
+++-	if (unlikely(!coe) || !stmmac_has_ip_ethertype(skb))
++++	if (unlikely(!coe) || !stmmac_has_ip_ethertype(skb) ||
++++	    (status & csum_none))
+++ 		skb_checksum_none_assert(skb);
+++ 	else
+++ 		skb->ip_summed = CHECKSUM_UNNECESSARY;
+++@@ -5450,7 +5451,8 @@ read_again:
+++ 
+++ 		switch (res) {
+++ 		case STMMAC_XDP_PASS:
+++-			stmmac_dispatch_skb_zc(priv, queue, p, np, buf->xdp);
++++			stmmac_dispatch_skb_zc(priv, queue, p, np, buf->xdp,
++++					       status);
+++ 			xsk_buff_free(buf->xdp);
+++ 			break;
+++ 		case STMMAC_XDP_CONSUMED:
++diff --git a/target/linux/ipq806x/patches-6.18/131-net-stmmac-dwmac1000-don-t-discard-frames-with-only-.patch b/target/linux/ipq806x/patches-6.18/131-net-stmmac-dwmac1000-don-t-discard-frames-with-only-.patch
++new file mode 100644
++index 0000000000..9da4f43bbd
++--- /dev/null
+++++ b/target/linux/ipq806x/patches-6.18/131-net-stmmac-dwmac1000-don-t-discard-frames-with-only-.patch
++@@ -0,0 +1,69 @@
+++From 596c9408682feba536d7f39de97959807eb3ba1c Mon Sep 17 00:00:00 2001
 ++From: Christian Schmidbauer <opensource@grische.xyz>
 ++Date: Sat, 14 Nov 2026 14:36:38 +0100
-++Subject: [PATCH 1/2] net: stmmac: dwmac1000: don't discard frames with only a
+++Subject: [PATCH 2/3] net: stmmac: dwmac1000: don't discard frames with only a
 ++ checksum error
-++
-++[ Upstream commit 596c9408682feba536d7f39de97959807eb3ba1c ]
 ++
 ++On dwmac1000 with enhanced descriptors, the hardware sets the Error
 ++Summary (ES) bit of the Rx descriptor not only for L2 errors but also
@@ -118,11 +151,9 @@ index 000000000..55f698d3e
 ++ drivers/net/ethernet/stmicro/stmmac/enh_desc.c | 8 ++++----
 ++ 1 file changed, 4 insertions(+), 4 deletions(-)
 ++
-++diff --git a/drivers/net/ethernet/stmicro/stmmac/enh_desc.c b/drivers/net/ethernet/stmicro/stmmac/enh_desc.c
-++index 937b7a0466fc..a9c6cf76799e 100644
 ++--- a/drivers/net/ethernet/stmicro/stmmac/enh_desc.c
 +++++ b/drivers/net/ethernet/stmicro/stmmac/enh_desc.c
-++@@ -200,9 +200,6 @@ static int enh_desc_get_rx_status(struct stmmac_extra_stats *x,
+++@@ -200,9 +200,6 @@ static int enh_desc_get_rx_status(struct
 ++ 		if (unlikely(rdes0 & RDES0_OVERFLOW_ERROR))
 ++ 			x->rx_gmac_overflow++;
 ++ 
@@ -132,7 +163,7 @@ index 000000000..55f698d3e
 ++ 		if (unlikely(rdes0 & RDES0_COLLISION))
 ++ 			x->rx_collision++;
 ++ 		if (unlikely(rdes0 & RDES0_RECEIVE_WATCHDOG))
-++@@ -214,7 +211,10 @@ static int enh_desc_get_rx_status(struct stmmac_extra_stats *x,
+++@@ -214,7 +211,10 @@ static int enh_desc_get_rx_status(struct
 ++ 		if (unlikely(rdes0 & RDES0_CRC_ERROR)) {
 ++ 			x->rx_crc_errors++;
 ++ 		}
@@ -144,75 +175,47 @@ index 000000000..55f698d3e
 ++ 	}
 ++ 
 ++ 	/* After a payload csum error, the ES bit is set.
-++-- 
-++2.54.0
-++
 +-- 
-+2.54.0
++2.52.0
 +
-diff --git a/patches/openwrt/0015-net-stmmac-dwmac1000-stop-hardware-from-dropping-che.patch b/patches/openwrt/0015-net-stmmac-dwmac1000-stop-hardware-from-dropping-che.patch
+diff --git a/patches/openwrt/0015-ipq806x-backport-stmmac-checksum-error-frame-deliver.patch b/patches/openwrt/0015-ipq806x-backport-stmmac-checksum-error-frame-deliver.patch
 new file mode 100644
-index 000000000..2bd3ade56
+index 00000000..897bd903
 --- /dev/null
-+++ b/patches/openwrt/0015-net-stmmac-dwmac1000-stop-hardware-from-dropping-che.patch
-@@ -0,0 +1,125 @@
-+From b7555f32a4fc50b80aabec7b3404831683326f59 Mon Sep 17 00:00:00 2001
-+From: Christian Schmidbauer <opensource@grische.xyz>
-+Date: Mon, 23 Nov 2026 19:01:50 +0100
-+Subject: [PATCH 15/15] net: stmmac: dwmac1000: stop hardware from dropping
-+ checksum-error packets
++++ b/patches/openwrt/0015-ipq806x-backport-stmmac-checksum-error-frame-deliver.patch
+@@ -0,0 +1,96 @@
++From 821495cc6c073b3c7c6894b90e88c268a91fd42a Mon Sep 17 00:00:00 2001
++From: Grische <github@grische.xyz>
++Date: Sat, 21 Nov 2026 17:35:49 +0100
++Subject: [PATCH] ipq806x: backport stmmac checksum-error frame delivery
 +
-+[ Upstream commit 2dd48c4615a67ebb1762c2b0d79801be1949fcfb ]
++Backport the third patch of the stmmac Rx checksum series. Without it
++the dwmac1000 MAC drops frames with a checksum error in hardware, so
++VXLAN over IPv6 with zero UDP checksums still fails on ipq806x.
 +
-+When the checksum offload engine (CoE) is enabled, the dwmac1000 MAC
-+silently drops any frame for which the engine detects a checksum error,
-+before the driver sees it.
++The upstream dwmac1000.h hunk does not apply on 6.18, because
++DMA_CONTROL_DT is still defined there. The patch keeps only the
++dwmac1000_dma.c change.
 +
-+This breaks VXLAN over IPv6 with zero UDP checksums, which RFC 6935 and
-+RFC 6936 allow for tunnels.
-+
-+Set DMA_CONTROL_DT so that such frames are delivered instead of dropped,
-+as commit fe4042797651 ("net: stmmac: dwmac4: stop hardware from
-+dropping checksum-error packets") did for dwmac4. CoE remains enabled,
-+so the driver still sees the error status and marks the skb
-+CHECKSUM_NONE for the stack to verify.
-+
-+Set the bit only with enhanced descriptors. The normal descriptor parser
-+does not report a checksum-only error to the stack, so cores that use
-+it keep dropping such frames in hardware anyway.
-+
-+Tested on an Aruba AP-325 (ipq806x-gmac-dwmac) with Rx checksum offload
-+on.
-+
-+Link: https://lore.kernel.org/all/20250625132117.1b3264e8@kernel.org/
-+Link: https://github.com/freifunk-gluon/gluon/issues/3783
-+Fixes: 47dd7a540b8a ("net: add support for STMicroelectronics Ethernet controllers.")
-+Cc: <stable@vger.kernel.org> # 6.6.x: ee0aace5f844: net: stmmac: Correctly handle Rx checksum offload errors
-+Cc: <stable@vger.kernel.org> # 6.6.x
-+Signed-off-by: Christian Schmidbauer <opensource@grische.xyz>
-+Reviewed-by: Maxime Chevallier <maxime.chevallier@bootlin.com>
-+Tested-by: Maxime Chevallier <maxime.chevallier@bootlin.com>
 +Link: https://patch.msgid.link/20261114133640.3285413-4-opensource@grische.xyz
-+Signed-off-by: Paolo Abeni <pabeni@redhat.com>
-+[ Drop the dwmac1000.h hunk because 6.12 still defines DMA_CONTROL_DT. ]
-+---
-+ ...1000-stop-hardware-from-dropping-che.patch | 72 +++++++++++++++++++
-+ 1 file changed, 72 insertions(+)
-+ create mode 100644 target/linux/generic/pending-6.12/742-02-net-stmmac-dwmac1000-stop-hardware-from-dropping-che.patch
 +
-+diff --git a/target/linux/generic/pending-6.12/742-02-net-stmmac-dwmac1000-stop-hardware-from-dropping-che.patch b/target/linux/generic/pending-6.12/742-02-net-stmmac-dwmac1000-stop-hardware-from-dropping-che.patch
++Assisted-by: Claude:claude-opus-5-5
++---
++ ...1000-stop-hardware-from-dropping-che.patch | 66 +++++++++++++++++++
++ 1 file changed, 66 insertions(+)
++ create mode 100644 target/linux/ipq806x/patches-6.18/132-net-stmmac-dwmac1000-stop-hardware-from-dropping-che.patch
++
++diff --git a/target/linux/ipq806x/patches-6.18/132-net-stmmac-dwmac1000-stop-hardware-from-dropping-che.patch b/target/linux/ipq806x/patches-6.18/132-net-stmmac-dwmac1000-stop-hardware-from-dropping-che.patch
 +new file mode 100644
-+index 0000000000..be4b27303f
++index 0000000000..21cf014fca
 +--- /dev/null
-++++ b/target/linux/generic/pending-6.12/742-02-net-stmmac-dwmac1000-stop-hardware-from-dropping-che.patch
-+@@ -0,0 +1,72 @@
-++From f526588de021a946906e0167668fbc14aa3bd2c7 Mon Sep 17 00:00:00 2001
+++++ b/target/linux/ipq806x/patches-6.18/132-net-stmmac-dwmac1000-stop-hardware-from-dropping-che.patch
++@@ -0,0 +1,66 @@
+++From 2dd48c4615a67ebb1762c2b0d79801be1949fcfb Mon Sep 17 00:00:00 2001
 ++From: Christian Schmidbauer <opensource@grische.xyz>
 ++Date: Sat, 14 Nov 2026 14:36:39 +0100
-++Subject: [PATCH 2/2] net: stmmac: dwmac1000: stop hardware from dropping
+++Subject: [PATCH 3/3] net: stmmac: dwmac1000: stop hardware from dropping
 ++ checksum-error packets
-++
-++[ Upstream commit 2dd48c4615a67ebb1762c2b0d79801be1949fcfb ]
 ++
 ++When the checksum offload engine (CoE) is enabled, the dwmac1000 MAC
 ++silently drops any frame for which the engine detects a checksum error,
@@ -244,13 +247,12 @@ index 000000000..2bd3ade56
 ++Tested-by: Maxime Chevallier <maxime.chevallier@bootlin.com>
 ++Link: https://patch.msgid.link/20261114133640.3285413-4-opensource@grische.xyz
 ++Signed-off-by: Paolo Abeni <pabeni@redhat.com>
-++[ Drop the dwmac1000.h hunk because 6.12 still defines DMA_CONTROL_DT. ]
+++[Backport to 6.18. DMA_CONTROL_DT is still defined in dwmac1000.h, so
+++the dwmac1000.h hunk is dropped.]
 ++---
 ++ drivers/net/ethernet/stmicro/stmmac/dwmac1000_dma.c | 8 ++++++++
 ++ 1 file changed, 8 insertions(+)
 ++
-++diff --git a/drivers/net/ethernet/stmicro/stmmac/dwmac1000_dma.c b/drivers/net/ethernet/stmicro/stmmac/dwmac1000_dma.c
-++index 118a22406a2e..35067347e258 100644
 ++--- a/drivers/net/ethernet/stmicro/stmmac/dwmac1000_dma.c
 +++++ b/drivers/net/ethernet/stmicro/stmmac/dwmac1000_dma.c
 ++@@ -15,6 +15,7 @@
@@ -261,7 +263,7 @@ index 000000000..2bd3ade56
 ++ 
 ++ static void dwmac1000_dma_axi(void __iomem *ioaddr, struct stmmac_axi *axi)
 ++ {
-++@@ -157,6 +158,13 @@ static void dwmac1000_dma_operation_mode_rx(struct stmmac_priv *priv,
+++@@ -153,6 +154,13 @@ static void dwmac1000_dma_operation_mode
 ++ {
 ++ 	u32 csr6 = readl(ioaddr + DMA_CHAN_CONTROL(channel));
 ++ 
@@ -275,12 +277,9 @@ index 000000000..2bd3ade56
 ++ 	if (mode == SF_DMA_MODE) {
 ++ 		pr_debug("GMAC: enable RX store and forward mode\n");
 ++ 		csr6 |= DMA_CONTROL_RSF;
-++-- 
-++2.54.0
-++
 +-- 
-+2.54.0
++2.52.0
 +
 -- 
-2.54.0
+2.52.0
 

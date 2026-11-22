@@ -1,6 +1,6 @@
 GLUON_BUILD_DIR := gluon-build
 GLUON_GIT_URL := https://github.com/freifunk-gluon/gluon.git
-GLUON_GIT_REF := v2026.1-rc1
+GLUON_GIT_REF := bfed690ce09b12e09cf7016218f617dffc9e1700 # 2026-11-09 gluon-next
 
 PATCH_DIR := ./patches
 SECRET_KEY_FILE ?= ${HOME}/.gluon-secret-key
@@ -93,6 +93,9 @@ update-targets: gluon-update gluon-patch
 	ls -1 ${GLUON_BUILD_DIR}/targets/ | grep -v "\.inc" | grep -v "\.mk" | grep -v '^generic$$' > targets
 	git diff targets
 
-# Gluon's build container for GLUON_GIT_REF, used by CI and for local builds
+# Gluon's build container for GLUON_GIT_REF, used by CI and for local builds.
+# gluon-next pins a commit of Gluon's next branch, which has no image of its own: use the next container.
 gluon-build-image:
-	@echo ghcr.io/freifunk-gluon/gluon-build:${GLUON_GIT_REF}
+	@ref='$(strip ${GLUON_GIT_REF})'; \
+	if echo "$$ref" | grep -Eqx '[0-9a-f]{40}'; then ref=next; fi; \
+	echo "ghcr.io/freifunk-gluon/gluon-build:$$ref"

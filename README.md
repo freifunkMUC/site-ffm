@@ -23,7 +23,7 @@ make
 
 ### Containerised building
 
-The CI builds inside Gluon's official build container ([gluon-build](https://github.com/freifunk-gluon/gluon/pkgs/container/gluon-build)) for `GLUON_GIT_REF` in the [Makefile](Makefile), so bumping Gluon there also updates the container. The same container can be used locally:
+The CI builds inside Gluon's official build container ([gluon-build](https://github.com/freifunk-gluon/gluon/pkgs/container/gluon-build)) for `GLUON_GIT_REF` in the [Makefile](Makefile) (on gluon-next, which pins a commit, the `next` container), so bumping Gluon there also updates the container. The same container can be used locally:
 
 ```sh
 docker pull "$(make -s gluon-build-image)"
