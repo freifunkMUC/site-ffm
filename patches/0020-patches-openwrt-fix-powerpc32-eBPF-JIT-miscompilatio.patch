@@ -1,6 +1,6 @@
-From 96d0a86f24e316a0bedcf9e48fd495b8dded0ae6 Mon Sep 17 00:00:00 2001
+From 429027982927046dfb8631cec3da837020b14835 Mon Sep 17 00:00:00 2001
 From: Grische <github@grische.xyz>
-Date: Sun, 22 Nov 2026 06:06:48 +0100
+Date: Sun, 22 Nov 2026 06:20:13 +0100
 Subject: [PATCH] patches/openwrt: fix powerpc32 eBPF JIT miscompilations
 
 The powerpc32 eBPF JIT used by mpc85xx and apm821xx miscompiles
@@ -14,19 +14,19 @@ Carry the pending series by Lukas Stockner until it is upstream.
 
 Assisted-by: Claude:claude-opus-5-5
 ---
- ...x-powerpc32-eBPF-JIT-miscompilations.patch | 418 ++++++++++++++++++
- 1 file changed, 418 insertions(+)
+ ...x-powerpc32-eBPF-JIT-miscompilations.patch | 450 ++++++++++++++++++
+ 1 file changed, 450 insertions(+)
  create mode 100644 patches/openwrt/0023-kernel-fix-powerpc32-eBPF-JIT-miscompilations.patch
 
 diff --git a/patches/openwrt/0023-kernel-fix-powerpc32-eBPF-JIT-miscompilations.patch b/patches/openwrt/0023-kernel-fix-powerpc32-eBPF-JIT-miscompilations.patch
 new file mode 100644
-index 00000000..5f1b839b
+index 00000000..ddcc347f
 --- /dev/null
 +++ b/patches/openwrt/0023-kernel-fix-powerpc32-eBPF-JIT-miscompilations.patch
-@@ -0,0 +1,418 @@
-+From 4ecf9f453b9561ec84a1f2883968549fc5b389ca Mon Sep 17 00:00:00 2001
+@@ -0,0 +1,450 @@
++From 0aaf7b99afdbd06a53e04a0b1eed1bfbe207d938 Mon Sep 17 00:00:00 2001
 +From: Grische <github@grische.xyz>
-+Date: Sun, 22 Nov 2026 06:06:41 +0100
++Date: Sun, 22 Nov 2026 06:20:13 +0100
 +Subject: [PATCH] kernel: fix powerpc32 eBPF JIT miscompilations
 +
 +The powerpc32 eBPF JIT, used by mpc85xx and apm821xx, passes the wrong
@@ -38,18 +38,19 @@ index 00000000..5f1b839b
 +
 +Add the pending series by Lukas Stockner, which also brings kfunc call
 +code for the 32-bit JIT and a bpf_kptr_xchg() fix for 32-bit big-endian.
-+The kfunc commit is adapted to 6.6, which has no separate fimage.
++Two commits are adapted to 6.6, which has no ctx->is_subprog and no
++separate fimage.
 +
 +Link: https://github.com/lukasstockner/linux/tree/ppc32-ebpf-jit-fixes
 +Assisted-by: Claude:claude-opus-5-5
 +---
-+ ...fix-argument-passing-for-subprograms.patch |  66 ++++++++++
++ ...fix-argument-passing-for-subprograms.patch |  96 ++++++++++++++
 + ...pc32-bpf-don-t-fold-consecutive-MOVs.patch |  37 ++++++
 + ...tch-fifth-argument-in-BPF-subprogram.patch |  38 ++++++
 + ...nsider-all-registers-as-used-in-call.patch |  59 +++++++++
-+ .../347-WIP-PPC32-kfunc-support.patch         | 120 ++++++++++++++++++
++ .../347-WIP-PPC32-kfunc-support.patch         | 121 ++++++++++++++++++
 + .../pending-6.6/348-WIP-kptr-fix.patch        |  26 ++++
-+ 6 files changed, 346 insertions(+)
++ 6 files changed, 377 insertions(+)
 + create mode 100644 target/linux/generic/pending-6.6/343-powerpc32-bpf-fix-argument-passing-for-subprograms.patch
 + create mode 100644 target/linux/generic/pending-6.6/344-powerpc32-bpf-don-t-fold-consecutive-MOVs.patch
 + create mode 100644 target/linux/generic/pending-6.6/345-powerpc32-bpf-fetch-fifth-argument-in-BPF-subprogram.patch
@@ -59,11 +60,11 @@ index 00000000..5f1b839b
 +
 +diff --git a/target/linux/generic/pending-6.6/343-powerpc32-bpf-fix-argument-passing-for-subprograms.patch b/target/linux/generic/pending-6.6/343-powerpc32-bpf-fix-argument-passing-for-subprograms.patch
 +new file mode 100644
-+index 0000000000..f1b505a1af
++index 0000000000..54160d1be1
 +--- /dev/null
 ++++ b/target/linux/generic/pending-6.6/343-powerpc32-bpf-fix-argument-passing-for-subprograms.patch
-+@@ -0,0 +1,66 @@
-++From eabe9d5fdb460b0ecb6a2f1d6a5a2972669baba8 Mon Sep 17 00:00:00 2001
++@@ -0,0 +1,96 @@
+++From f7abfa8c8b0ddfc44b52091a080df5998b1138f8 Mon Sep 17 00:00:00 2001
 ++From: Lukas Stockner <lukas@lukasstockner.de>
 ++Date: Fri, 20 Nov 2026 15:21:53 +0100
 ++Subject: [PATCH 343/348] powerpc32/bpf: fix argument passing for subprograms
@@ -88,10 +89,40 @@ index 00000000..5f1b839b
 ++
 ++Fixes: 51c66ad849a7 ("powerpc/bpf: Implement extended BPF on PPC32")
 ++Signed-off-by: Lukas Stockner <lukas@lukasstockner.de>
-++---
-++ arch/powerpc/net/bpf_jit_comp32.c | 16 ++++++++++++----
-++ 1 file changed, 12 insertions(+), 4 deletions(-)
 ++
+++[ Backport to 6.6: there is no ctx->is_subprog yet. Add it to struct
+++  codegen_context and set it from fp->aux->func_idx in
+++  bpf_int_jit_compile(). ]
+++---
+++ arch/powerpc/net/bpf_jit.h        |  1 +
+++ arch/powerpc/net/bpf_jit_comp.c   |  1 +
+++ arch/powerpc/net/bpf_jit_comp32.c | 16 ++++++++++++----
+++ 3 files changed, 14 insertions(+), 4 deletions(-)
+++
+++diff --git a/arch/powerpc/net/bpf_jit.h b/arch/powerpc/net/bpf_jit.h
+++index 72b7bb34fade..8bf11b659fd9 100644
+++--- a/arch/powerpc/net/bpf_jit.h
++++++ b/arch/powerpc/net/bpf_jit.h
+++@@ -137,6 +137,7 @@ struct codegen_context {
+++ 	int b2p[MAX_BPF_JIT_REG + 2];
+++ 	unsigned int exentry_idx;
+++ 	unsigned int alt_exit_addr;
++++	bool is_subprog;
+++ };
+++ 
+++ #define bpf_to_ppc(r)	(ctx->b2p[r])
+++diff --git a/arch/powerpc/net/bpf_jit_comp.c b/arch/powerpc/net/bpf_jit_comp.c
+++index 37043dfc1add..aca014eb51cf 100644
+++--- a/arch/powerpc/net/bpf_jit_comp.c
++++++ b/arch/powerpc/net/bpf_jit_comp.c
+++@@ -117,6 +117,7 @@ struct bpf_prog *bpf_int_jit_compile(struct bpf_prog *fp)
+++ 
+++ 	/* Make sure that the stack is quadword aligned. */
+++ 	cgctx.stack_size = round_up(fp->aux->stack_depth, 16);
++++	cgctx.is_subprog = fp->aux->func_idx != 0;
+++ 
+++ 	/* Scouting faux-generate pass 0 */
+++ 	if (bpf_jit_build_body(fp, 0, &cgctx, addrs, 0, false)) {
 ++diff --git a/arch/powerpc/net/bpf_jit_comp32.c b/arch/powerpc/net/bpf_jit_comp32.c
 ++index 06f886850a93..f4f76ae61df9 100644
 ++--- a/arch/powerpc/net/bpf_jit_comp32.c
@@ -131,11 +162,11 @@ index 00000000..5f1b839b
 ++
 +diff --git a/target/linux/generic/pending-6.6/344-powerpc32-bpf-don-t-fold-consecutive-MOVs.patch b/target/linux/generic/pending-6.6/344-powerpc32-bpf-don-t-fold-consecutive-MOVs.patch
 +new file mode 100644
-+index 0000000000..5d92ee689d
++index 0000000000..94c71f57f8
 +--- /dev/null
 ++++ b/target/linux/generic/pending-6.6/344-powerpc32-bpf-don-t-fold-consecutive-MOVs.patch
 +@@ -0,0 +1,37 @@
-++From b867a7f950798a9699cea11a9c5760cc9e86636c Mon Sep 17 00:00:00 2001
+++From 48da5992f5c671e16429cc9e646e97269a73500b Mon Sep 17 00:00:00 2001
 ++From: Lukas Stockner <lukas@lukasstockner.de>
 ++Date: Sat, 21 Nov 2026 14:17:40 +0100
 ++Subject: [PATCH 344/348] powerpc32/bpf: don't fold consecutive MOVs
@@ -174,11 +205,11 @@ index 00000000..5f1b839b
 ++
 +diff --git a/target/linux/generic/pending-6.6/345-powerpc32-bpf-fetch-fifth-argument-in-BPF-subprogram.patch b/target/linux/generic/pending-6.6/345-powerpc32-bpf-fetch-fifth-argument-in-BPF-subprogram.patch
 +new file mode 100644
-+index 0000000000..32dd042971
++index 0000000000..91c9dfeba8
 +--- /dev/null
 ++++ b/target/linux/generic/pending-6.6/345-powerpc32-bpf-fetch-fifth-argument-in-BPF-subprogram.patch
 +@@ -0,0 +1,38 @@
-++From 177723eb29ae4984232cc56e04e79c1414a411af Mon Sep 17 00:00:00 2001
+++From 424c51bbaca7229b6bdb3d2b9bebca4e5fbc4d2e Mon Sep 17 00:00:00 2001
 ++From: Lukas Stockner <lukas@lukasstockner.de>
 ++Date: Fri, 20 Nov 2026 15:31:41 +0100
 ++Subject: [PATCH 345/348] powerpc32/bpf: fetch fifth argument in BPF
@@ -218,11 +249,11 @@ index 00000000..5f1b839b
 ++
 +diff --git a/target/linux/generic/pending-6.6/346-powerpc32-bpf-consider-all-registers-as-used-in-call.patch b/target/linux/generic/pending-6.6/346-powerpc32-bpf-consider-all-registers-as-used-in-call.patch
 +new file mode 100644
-+index 0000000000..7bdee9bbbd
++index 0000000000..cfbaaa82c8
 +--- /dev/null
 ++++ b/target/linux/generic/pending-6.6/346-powerpc32-bpf-consider-all-registers-as-used-in-call.patch
 +@@ -0,0 +1,59 @@
-++From 82713d6c2d790fd8ca96c85b82f71d33a503269b Mon Sep 17 00:00:00 2001
+++From 3f6e28959705d54f9173fa9b3de6f630e491242c Mon Sep 17 00:00:00 2001
 ++From: Lukas Stockner <lukas@lukasstockner.de>
 ++Date: Fri, 20 Nov 2026 15:33:37 +0100
 ++Subject: [PATCH 346/348] powerpc32/bpf: consider all registers as used in
@@ -283,28 +314,29 @@ index 00000000..5f1b839b
 ++
 +diff --git a/target/linux/generic/pending-6.6/347-WIP-PPC32-kfunc-support.patch b/target/linux/generic/pending-6.6/347-WIP-PPC32-kfunc-support.patch
 +new file mode 100644
-+index 0000000000..56c1c6b2c2
++index 0000000000..d926ed554f
 +--- /dev/null
 ++++ b/target/linux/generic/pending-6.6/347-WIP-PPC32-kfunc-support.patch
-+@@ -0,0 +1,120 @@
-++From b5d54ee3dc11b58aae4764fdb2dc8988ab45671c Mon Sep 17 00:00:00 2001
++@@ -0,0 +1,121 @@
+++From c4c90cd7ed3ca827c4403d81bb880f0f65f829b1 Mon Sep 17 00:00:00 2001
 ++From: Lukas Stockner <lukas@lukasstockner.de>
 ++Date: Fri, 20 Nov 2026 15:36:34 +0100
 ++Subject: [PATCH 347/348] WIP: PPC32 kfunc support
 ++
+++[ Backport to 6.6: drop the fimage argument, 6.6 has no separate fimage. ]
 ++---
 ++ arch/powerpc/net/bpf_jit_comp32.c | 90 +++++++++++++++++++++++++++++++
 ++ 1 file changed, 90 insertions(+)
 ++
 ++diff --git a/arch/powerpc/net/bpf_jit_comp32.c b/arch/powerpc/net/bpf_jit_comp32.c
-++index 6d3e953cad17..4dda839d4df5 100644
+++index 6d3e953cad17..494531415e30 100644
 ++--- a/arch/powerpc/net/bpf_jit_comp32.c
 +++++ b/arch/powerpc/net/bpf_jit_comp32.c
 ++@@ -232,6 +232,89 @@ int bpf_jit_emit_func_call_rel(u32 *image, struct codegen_context *ctx, u64 func
 ++ 	return 0;
 ++ }
 ++ 
-+++static int bpf_jit_emit_kfunc_call(struct bpf_prog *fp, u32 *image, u32 *fimage, struct codegen_context *ctx, const struct bpf_insn *insn, u64 func_addr)
++++static int bpf_jit_emit_kfunc_call(struct bpf_prog *fp, u32 *image, struct codegen_context *ctx, const struct bpf_insn *insn, u64 func_addr)
 +++{
 +++	const struct btf_func_model *fm;
 +++	int next_reg, next_stack, i, ret;
@@ -372,7 +404,7 @@ index 00000000..5f1b839b
 +++		}
 +++	}
 +++
-+++	ret = bpf_jit_emit_func_call_rel(image, fimage, ctx, func_addr);
++++	ret = bpf_jit_emit_func_call_rel(image, ctx, func_addr);
 +++	if (ret)
 +++		return ret;
 +++
@@ -395,7 +427,7 @@ index 00000000..5f1b839b
 ++ 				return ret;
 ++ 
 +++			if (insn[i].src_reg == BPF_PSEUDO_KFUNC_CALL) {
-+++				ret = bpf_jit_emit_kfunc_call(fp, image, fimage, ctx, &insn[i], func_addr);
++++				ret = bpf_jit_emit_kfunc_call(fp, image, ctx, &insn[i], func_addr);
 +++				if (ret)
 +++					return ret;
 +++				break;
@@ -409,11 +441,11 @@ index 00000000..5f1b839b
 ++
 +diff --git a/target/linux/generic/pending-6.6/348-WIP-kptr-fix.patch b/target/linux/generic/pending-6.6/348-WIP-kptr-fix.patch
 +new file mode 100644
-+index 0000000000..f2ef68b6ac
++index 0000000000..84b3f5655a
 +--- /dev/null
 ++++ b/target/linux/generic/pending-6.6/348-WIP-kptr-fix.patch
 +@@ -0,0 +1,26 @@
-++From fc5cfd30c8d941e0a92fd1b2cfac48178c827536 Mon Sep 17 00:00:00 2001
+++From f628522754de2cf8d2a58176977ec52996b47c4a Mon Sep 17 00:00:00 2001
 ++From: Lukas Stockner <lukas@lukasstockner.de>
 ++Date: Fri, 20 Nov 2026 15:36:49 +0100
 ++Subject: [PATCH 348/348] WIP: kptr fix
