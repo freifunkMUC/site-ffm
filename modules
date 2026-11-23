@@ -9,8 +9,8 @@
 GLUON_SITE_FEEDS='community'
 
 PACKAGES_COMMUNITY_REPO=https://github.com/freifunkMUC/community-packages.git
-PACKAGES_COMMUNITY_COMMIT=f973396b348f76d785940d69d43fcc13ae646983
-PACKAGES_COMMUNITY_BRANCH=awlx-parker9-noderoute-simplification
+PACKAGES_COMMUNITY_COMMIT=62256c3012559bd69f71f91bb9e423e138411821
+PACKAGES_COMMUNITY_BRANCH=awlx-parker-dhcp-ap-clientaddr-toggle
 
 # FFBS rewrote main-ffbs-next on gitli. This keeps the commit that
 # gluon-parker 029ea60 pins.
