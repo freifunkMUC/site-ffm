@@ -36,6 +36,12 @@ if ! compgen -G "${gluon_patch_dir}/*.patch" >/dev/null; then
     exit 1
 fi
 
+# Patches apply in name order. Each patch number must be unique.
+if (cd "${gluon_patch_dir}" && printf '%s\n' *.patch | cut -d- -f1 | uniq -d | grep .); then
+    echo "Patch numbers are not unique."
+    exit 1
+fi
+
 # Reset previously applied patches
 reset_gluon_build_dir
 
@@ -47,4 +53,3 @@ if ! git apply --ignore-space-change --ignore-whitespace --whitespace=nowarn --v
 fi
 
 echo "Patching finished."
-popd
