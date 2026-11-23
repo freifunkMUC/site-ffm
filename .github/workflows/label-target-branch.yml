@@ -1,0 +1,35 @@
+---
+name: Label PR with target branch
+
+on:  # yamllint disable-line rule:truthy
+  # Runs the workflow from the base branch and never checks out PR code
+  pull_request_target:
+    types: [opened, reopened, edited]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  label:
+    name: Label PR with target branch
+    runs-on: ubuntu-slim
+    # "edited" also fires on title/body changes, only react to base changes
+    if: github.event.action != 'edited' || github.event.changes.base
+    steps:
+      - name: Apply label named after the target branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          NEW: ${{ github.event.pull_request.base.ref }}
+          OLD: ${{ github.event.changes.base.ref.from }}
+        run: |
+          if [ -n "$OLD" ]; then
+            gh pr edit "$PR" --remove-label "$OLD" || true
+          fi
+          # Skip targets without a matching label, e.g. feature branches
+          if ! gh api --silent "repos/$GH_REPO/labels/$NEW"; then
+            echo "No label '$NEW', skipping"
+            exit 0
+          fi
+          gh pr edit "$PR" --add-label "$NEW"
