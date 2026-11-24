@@ -13,10 +13,10 @@ PACKAGES_COMMUNITY_COMMIT=7ee3afcac1449989979a61647916536a0728c0f9
 PACKAGES_COMMUNITY_BRANCH=main
 
 ##	OpenWrt base
-#		The intel-mips target (AVM FRITZ!Box 7560, 7580 and 7590) needs
-#		kernel 6.18 and is not part of OpenWrt yet. Gluon next pins OpenWrt
-#		main, which lacks the target, so it cannot be built from Gluon's
-#		own base.
+#		The intel-mips target (AVM FRITZ!Box 7560, 7580, 7583 VDSL and 7590)
+#		needs kernel 6.18 and is not part of OpenWrt yet. Gluon next pins
+#		OpenWrt main, which lacks the target, so it cannot be built from
+#		Gluon's own base.
 #
 #		scripts/modules.sh sources Gluon's modules file first and this one
 #		second, so these assignments override Gluon's own pin. Gluon has
@@ -25,4 +25,4 @@ PACKAGES_COMMUNITY_BRANCH=main
 #		therefore uses names Gluon does not set itself.
 OPENWRT_REPO=${SITE_OPENWRT_REPO:-https://github.com/grische/openwrt.git}
 OPENWRT_BRANCH=${SITE_OPENWRT_BRANCH:-intel-mips-xrx500}
-OPENWRT_COMMIT=${SITE_OPENWRT_COMMIT:-cffcf59a9a18b2db10d8bb84ab826cad4b147b00}
+OPENWRT_COMMIT=${SITE_OPENWRT_COMMIT:-bc7c9482b28be719a6e0a24ff2de8cb04e172046}
