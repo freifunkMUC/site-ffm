@@ -3,12 +3,12 @@ From: Grische <github@grische.xyz>
 Date: Sat, 19 Sep 2026 10:31:13 +0200
 Subject: [PATCH] targets: add intel-mips-xrx500
 
-AVM FRITZ!Box 7560 (GRX350), 7580 and 7590 (GRX550), the three devices of
-OpenWrt's intel-mips/xrx500 subtarget. The kernel image is the same for
-all three and each device's image carries its own device tree appended,
-so they are ordinary sibling devices of one subtarget.
+AVM FRITZ!Box 7560 (GRX350), 7580, 7583 VDSL and 7590 (GRX550), four
+devices of OpenWrt's intel-mips/xrx500 subtarget. The kernel image is the
+same for all four and each device's image carries its own device tree
+appended, so they are ordinary sibling devices of one subtarget.
 
-factory = false on all three, because OpenWrt builds no factory image for
+factory = false on all four, because OpenWrt builds no factory image for
 them. Device/NAND also emits -eva-kernel.bin and -eva-filesystem.bin for
 the first installation. They are not listed in extra_images, so they
 stay in openwrt/bin/targets/.
@@ -43,19 +43,19 @@ Assisted-by: Claude:claude-opus-5
 Assisted-by: Claude:claude-fable-5
 Signed-off-by: Grische <github@grische.xyz>
 ---
- targets/intel-mips-xrx500 | 84 +++++++++++++++++++++++++++++++++++++++
+ targets/intel-mips-xrx500 | 88 +++++++++++++++++++++++++++++++++++++++
  targets/targets.mk        |  1 +
- 2 files changed, 85 insertions(+)
+ 2 files changed, 89 insertions(+)
  create mode 100644 targets/intel-mips-xrx500
 
 diff --git a/targets/intel-mips-xrx500 b/targets/intel-mips-xrx500
 new file mode 100644
-index 00000000..37f47f24
+index 00000000..cb81bc79
 --- /dev/null
 +++ b/targets/intel-mips-xrx500
-@@ -0,0 +1,84 @@
-+-- AVM FRITZ!Box 7560 (GRX350), 7580 and 7590 (GRX550). One kernel serves all
-+-- three, with each board's device tree appended to its own image.
+@@ -0,0 +1,88 @@
++-- AVM FRITZ!Box 7560 (GRX350), 7580, 7583 VDSL and 7590 (GRX550). One kernel
++-- serves all four, with each board's device tree appended to its own image.
 +
 +packages {
 +	-- Switch inspection on a deployed node. ethtool -S reads the hardware MIB
@@ -132,6 +132,10 @@ index 00000000..37f47f24
 +})
 +
 +device('avm-fritz-box-7580', 'avm_fritz7580', {
++	factory = false,
++})
++
++device('avm-fritz-box-7583-vdsl', 'avm_fritz7583-vdsl', {
 +	factory = false,
 +})
 +
