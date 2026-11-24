@@ -1,0 +1,36 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: awlx <6527744+awlx@users.noreply.github.com>
+Date: Tue, 24 Nov 2026 15:31:53 +0100
+Subject: [PATCH] gluon-mesh-batman-adv: announce the captive portal in router
+ advertisements
+
+Pass the captive portal API URI to uradvd (RFC 8910, RA option 37) when
+noderoute has written it to /tmp/captive_portal. noderoute writes the
+file only when the Parker config service sends captive_portal_url.
+--captive-portal needs uradvd from the freifunkMUC fork. Without the
+file, the RA does not change.
+---
+ .../gluon-mesh-batman-adv/luasrc/lib/gluon/radvd/arguments | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/package/gluon-mesh-batman-adv/luasrc/lib/gluon/radvd/arguments b/package/gluon-mesh-batman-adv/luasrc/lib/gluon/radvd/arguments
+index 9052b35..974e7a3 100755
+--- a/package/gluon-mesh-batman-adv/luasrc/lib/gluon/radvd/arguments
++++ b/package/gluon-mesh-batman-adv/luasrc/lib/gluon/radvd/arguments
+@@ -31,6 +31,13 @@ if adv_mtu then
+ 	io.write(" --adv-link-mtu " .. adv_mtu)
+ end
+ 
++-- The captive portal API URI (RFC 8910). noderoute writes the file only
++-- when the config service sends one.
++local captive_portal = util.readfile("/tmp/captive_portal")
++if captive_portal then
++	io.write(" --captive-portal " .. captive_portal)
++end
++
+ if site.radvd() then
+ 	if site.radvd.preferred_lifetime() then
+ 		io.write(" --preferred-lifetime " .. site.radvd.preferred_lifetime())
+-- 
+2.56.1
+
