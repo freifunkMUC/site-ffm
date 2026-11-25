@@ -1,0 +1,122 @@
+From a248724637888f276c605a5fbebadc5acb9e3025 Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Thu, 19 Nov 2026 18:19:19 +0100
+Subject: [PATCH 1/3] patches/openwrt: nvmem: don't defer forever on a missing
+ layout cell
+
+A consumer of an NVMEM cell never probes if the layout of the NVMEM
+device is bound but did not add the cell. Return -ENOENT instead of
+-EPROBE_DEFER once the layout device is bound, so that the consumer can
+fall back to another address. The AMIT P-section layout in the next
+patch relies on it.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ ...-t-defer-forever-on-a-missing-layout.patch | 95 +++++++++++++++++++
+ 1 file changed, 95 insertions(+)
+ create mode 100644 patches/openwrt/0023-kernel-nvmem-don-t-defer-forever-on-a-missing-layout.patch
+
+diff --git a/patches/openwrt/0023-kernel-nvmem-don-t-defer-forever-on-a-missing-layout.patch b/patches/openwrt/0023-kernel-nvmem-don-t-defer-forever-on-a-missing-layout.patch
+new file mode 100644
+index 00000000..edc1ff52
+--- /dev/null
++++ b/patches/openwrt/0023-kernel-nvmem-don-t-defer-forever-on-a-missing-layout.patch
+@@ -0,0 +1,95 @@
++From c0c8dc6fd5a72371c5d1f88d308996fabb57c778 Mon Sep 17 00:00:00 2001
++From: Grische <github@grische.xyz>
++Date: Thu, 19 Nov 2026 18:02:39 +0100
++Subject: [PATCH] kernel: nvmem: don't defer forever on a missing layout
++ cell
++
++A consumer of an NVMEM cell never probes if the layout of the NVMEM
++device is bound but did not add the cell. of_nvmem_cell_get() returns
++-EPROBE_DEFER for every cell that a layout lacks, also after the probe
++of the layout has finished.
++
++Add a pending patch that returns -ENOENT once the layout device is
++bound, so that the consumer can fall back, for example to a random MAC
++address. The AMIT P-section layout in the next commit relies on it.
++
++Signed-off-by: Grische <github@grische.xyz>
++Assisted-by: Claude:claude-opus-5-5
++---
++ ...fer-forever-on-a-missing-layout-cell.patch | 64 +++++++++++++++++++
++ 1 file changed, 64 insertions(+)
++ create mode 100644 target/linux/generic/pending-6.6/806-nvmem-core-don-t-defer-forever-on-a-missing-layout-cell.patch
++
++diff --git a/target/linux/generic/pending-6.6/806-nvmem-core-don-t-defer-forever-on-a-missing-layout-cell.patch b/target/linux/generic/pending-6.6/806-nvmem-core-don-t-defer-forever-on-a-missing-layout-cell.patch
++new file mode 100644
++index 0000000000..faf5e59223
++--- /dev/null
+++++ b/target/linux/generic/pending-6.6/806-nvmem-core-don-t-defer-forever-on-a-missing-layout-cell.patch
++@@ -0,0 +1,64 @@
+++From: Grische <github@grische.xyz>
+++Date: Thu, 19 Nov 2026 04:20:30 +0100
+++Subject: [PATCH] nvmem: core: don't defer forever on a cell that a bound layout lacks
+++
+++Commit fc29fd821d9a ("nvmem: core: Rework layouts to become regular
+++devices") made of_nvmem_cell_get() return -EPROBE_DEFER when the NVMEM
+++device has a layout and the cell is not found. This lets a consumer
+++wait for the layout driver, which adds the cells in its probe. Once
+++that probe has finished, a missing cell never appears, but
+++of_nvmem_cell_get() still returns -EPROBE_DEFER and the consumer never
+++probes.
+++
+++A layout that parses the contents of the device can lack a cell on
+++some units. The U-Boot environment layout, for example, adds a cell
+++only for a variable that is set. If the device tree describes the
+++"ethaddr" cell and the environment does not set ethaddr, an Ethernet
+++driver that takes its address from the cell never probes. After the
+++deferred probe timeout, the kernel logs "deferred probe pending" for
+++the Ethernet device.
+++
+++Return -EPROBE_DEFER only while the layout device is not bound, and
+++-ENOENT after that. The consumer can then fall back, for example to a
+++random MAC address.
+++
+++Read the bound state before the lookup, so that a cell that the layout
+++adds after a failed lookup leads to -EPROBE_DEFER and not to -ENOENT.
+++
+++Fixes: fc29fd821d9a ("nvmem: core: Rework layouts to become regular devices")
+++Assisted-by: Claude:claude-fable-5-2 Claude:claude-opus-5-5 sparse
+++Signed-off-by: Grische <github@grische.xyz>
+++---
+++ drivers/nvmem/core.c |    9 ++++++++-
+++ 1 file changed, 8 insertions(+), 1 deletion(-)
+++
+++--- a/drivers/nvmem/core.c
++++++ b/drivers/nvmem/core.c
+++@@ -1523,6 +1523,7 @@ struct nvmem_cell *of_nvmem_cell_get(str
+++ 	struct nvmem_cell_entry *cell_entry;
+++ 	struct nvmem_cell *cell;
+++ 	struct of_phandle_args cell_spec;
++++	bool layout_bound;
+++ 	int index = 0;
+++ 	int cell_index = 0;
+++ 	int ret;
+++@@ -1573,12 +1574,18 @@ struct nvmem_cell *of_nvmem_cell_get(str
+++ 		return ERR_PTR(ret);
+++ 	}
+++ 
++++	/*
++++	 * A layout adds all its cells in its probe, so a cell that is missing
++++	 * once the layout device is bound will never appear. Read the bound
++++	 * state first, as the probe may add the cell right after the lookup.
++++	 */
++++	layout_bound = nvmem->layout && device_is_bound(&nvmem->layout->dev);
+++ 	cell_entry = nvmem_find_cell_entry_by_node(nvmem, cell_np);
+++ 	of_node_put(cell_np);
+++ 	if (!cell_entry) {
+++ 		__nvmem_device_put(nvmem);
+++ 		nvmem_layout_module_put(nvmem);
+++-		if (nvmem->layout)
++++		if (nvmem->layout && !layout_bound)
+++ 			return ERR_PTR(-EPROBE_DEFER);
+++ 		else
+++ 			return ERR_PTR(-ENOENT);
++-- 
++2.54.0
++
+-- 
+2.54.0
+

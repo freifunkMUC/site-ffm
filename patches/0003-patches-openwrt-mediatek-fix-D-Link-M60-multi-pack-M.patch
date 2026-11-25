@@ -1,0 +1,85 @@
+From 35c76d17767c02230e70c0adbb5f680296138d19 Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Thu, 19 Nov 2026 18:19:19 +0100
+Subject: [PATCH 3/3] patches/openwrt: mediatek: fix D-Link M60 multi-pack MAC
+ addresses
+
+D-Link AQUILA PRO AI M60 units sold in a multi-pack all get the same
+MAC addresses, because the device tree reads the base address from a
+fixed offset in the Odm partition. Switch the M60 to the AMIT P-section
+layout, which finds the address by its record ID. Single-pack units
+keep their addresses.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ ...-fix-D-Link-M60-MAC-addresses-on-mul.patch | 58 +++++++++++++++++++
+ 1 file changed, 58 insertions(+)
+ create mode 100644 patches/openwrt/0025-mediatek-filogic-fix-D-Link-M60-MAC-addresses-on-mul.patch
+
+diff --git a/patches/openwrt/0025-mediatek-filogic-fix-D-Link-M60-MAC-addresses-on-mul.patch b/patches/openwrt/0025-mediatek-filogic-fix-D-Link-M60-MAC-addresses-on-mul.patch
+new file mode 100644
+index 00000000..6d7136ea
+--- /dev/null
++++ b/patches/openwrt/0025-mediatek-filogic-fix-D-Link-M60-MAC-addresses-on-mul.patch
+@@ -0,0 +1,58 @@
++From 5762ac33c68dde436718f7f22d35f7803b140b87 Mon Sep 17 00:00:00 2001
++From: Grische <github@grische.xyz>
++Date: Wed, 18 Nov 2026 22:21:54 +0100
++Subject: [PATCH] mediatek: filogic: fix D-Link M60 MAC addresses on
++ multi-pack units
++
++D-Link AQUILA PRO AI M60 units sold in a multi-pack come up with the
++same MAC addresses. All units whose address starts with dc:ea:e7:ae
++use 06:00:dc:ea:e7:ae on WAN and 06:00:dc:ea:e7:af on LAN.
++
++The device tree reads the base address from offset 0x81 of the Odm
++partition. Odm is a list of records with different sizes. The record
++with the model name suffix holds "M60" on single-pack units and
++"M60-2" on multi-pack units, which moves the address from 0x81 to
++0x83. Offset 0x81 then holds the size field of the address record and
++the first four bytes of the address.
++
++Use the AMIT P-section layout, which finds the address by its CSID.
++Keep the offsets for WAN (+0), LAN and label (+1), 2.4 GHz (+2) and
++5 GHz (+5).
++
++Single-pack units keep their addresses. Multi-pack units get the
++addresses that match their label.
++
++Fixes: 7271ee587c ("mediatek: filogic: Add support for D-Link AQUILA PRO AI M60")
++Signed-off-by: Grische <github@grische.xyz>
++Assisted-by: Claude:claude-fable-5-2 Claude:claude-opus-5-5
++---
++ .../mediatek/dts/mt7986a-dlink-aquila-pro-ai-m60-a1.dts  | 9 ++-------
++ 1 file changed, 2 insertions(+), 7 deletions(-)
++
++diff --git a/target/linux/mediatek/dts/mt7986a-dlink-aquila-pro-ai-m60-a1.dts b/target/linux/mediatek/dts/mt7986a-dlink-aquila-pro-ai-m60-a1.dts
++index e805554a13..89b1c6b6d3 100644
++--- a/target/linux/mediatek/dts/mt7986a-dlink-aquila-pro-ai-m60-a1.dts
+++++ b/target/linux/mediatek/dts/mt7986a-dlink-aquila-pro-ai-m60-a1.dts
++@@ -276,17 +276,12 @@
++ 				read-only;
++ 
++ 				nvmem-layout {
++-					compatible = "fixed-layout";
++-					#address-cells = <1>;
++-					#size-cells = <1>;
+++					compatible = "amit,psection";
++ 
++-					macaddr_odm: macaddr@81 {
++-						compatible = "mac-base";
++-						reg = <0x81 0x6>;
+++					macaddr_odm: base-mac-address {
++ 						#nvmem-cell-cells = <1>;
++ 					};
++ 				};
++-
++ 			};
++ 
++ 			partition@69c0000 {
++-- 
++2.54.0
++
+-- 
+2.54.0
+

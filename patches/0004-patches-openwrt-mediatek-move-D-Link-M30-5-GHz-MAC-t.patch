@@ -1,0 +1,101 @@
+From ef459966b03f7d4ae646da0432407371f781e2e3 Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Mon, 23 Nov 2026 18:41:32 +0100
+Subject: [PATCH 4/5] patches/openwrt: mediatek: move D-Link M30 5 GHz MAC to
+ the device tree
+
+The D-Link AQUILA PRO AI M30 hotplug script reads the base address
+from offset 0x81 of the Odm partition to set the 5 GHz address. Give
+each band its own address cell in the device tree instead, so that the
+next patch can change how the base address is found. The addresses
+stay the same.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ ...-set-D-Link-M30-5-GHz-MAC-address-in.patch | 74 +++++++++++++++++++
+ 1 file changed, 74 insertions(+)
+ create mode 100644 patches/openwrt/0026-mediatek-filogic-set-D-Link-M30-5-GHz-MAC-address-in.patch
+
+diff --git a/patches/openwrt/0026-mediatek-filogic-set-D-Link-M30-5-GHz-MAC-address-in.patch b/patches/openwrt/0026-mediatek-filogic-set-D-Link-M30-5-GHz-MAC-address-in.patch
+new file mode 100644
+index 00000000..1dcb0953
+--- /dev/null
++++ b/patches/openwrt/0026-mediatek-filogic-set-D-Link-M30-5-GHz-MAC-address-in.patch
+@@ -0,0 +1,74 @@
++From 9a15c394fbecbb80fe1471e8a8102a4214f2b9f9 Mon Sep 17 00:00:00 2001
++From: Grische <github@grische.xyz>
++Date: Fri, 20 Nov 2026 23:30:29 +0100
++Subject: [PATCH] mediatek: filogic: set D-Link M30 5 GHz MAC address in the
++ device tree
++
++The wifi node of the D-Link AQUILA PRO AI M30 has one MAC address
++cell, so both bands get the 2.4 GHz address (base +2). The wifi
++hotplug script reads the base address from offset 0x81 of the Odm
++partition again and sets the 5 GHz address to base +3.
++
++Give each band its own address cell in the device tree and drop the
++hotplug script entry. The addresses stay the same. The next commit
++changes how the device tree finds the base address, and the hotplug
++script would keep reading the fixed offset.
++
++Signed-off-by: Grische <github@grische.xyz>
++Assisted-by: Claude:claude-opus-5-5
++---
++ .../mt7981b-dlink-aquila-pro-ai-m30-a1.dts    | 20 +++++++++++++++++--
++ .../etc/hotplug.d/ieee80211/11_fix_wifi_mac   |  4 ----
++ 2 files changed, 18 insertions(+), 6 deletions(-)
++
++diff --git a/target/linux/mediatek/dts/mt7981b-dlink-aquila-pro-ai-m30-a1.dts b/target/linux/mediatek/dts/mt7981b-dlink-aquila-pro-ai-m30-a1.dts
++index dc14fce2b6..cbb32c7b1e 100644
++--- a/target/linux/mediatek/dts/mt7981b-dlink-aquila-pro-ai-m30-a1.dts
+++++ b/target/linux/mediatek/dts/mt7981b-dlink-aquila-pro-ai-m30-a1.dts
++@@ -268,10 +268,26 @@
++ };
++ 
++ &wifi {
+++	#address-cells = <1>;
+++	#size-cells = <0>;
++ 	status = "okay";
++ 
++-	nvmem-cells = <&eeprom_factory_0>, <&macaddr_odm 2>;
++-	nvmem-cell-names = "eeprom", "mac-address";
+++	nvmem-cells = <&eeprom_factory_0>;
+++	nvmem-cell-names = "eeprom";
+++
+++	band@0 {
+++		/* 2.4 GHz */
+++		reg = <0>;
+++		nvmem-cells = <&macaddr_odm 2>;
+++		nvmem-cell-names = "mac-address";
+++	};
+++
+++	band@1 {
+++		/* 5 GHz */
+++		reg = <1>;
+++		nvmem-cells = <&macaddr_odm 3>;
+++		nvmem-cell-names = "mac-address";
+++	};
++ };
++ 
++ &i2c0 {
++diff --git a/target/linux/mediatek/filogic/base-files/etc/hotplug.d/ieee80211/11_fix_wifi_mac b/target/linux/mediatek/filogic/base-files/etc/hotplug.d/ieee80211/11_fix_wifi_mac
++index aa70cfc0c3..5a198f611b 100644
++--- a/target/linux/mediatek/filogic/base-files/etc/hotplug.d/ieee80211/11_fix_wifi_mac
+++++ b/target/linux/mediatek/filogic/base-files/etc/hotplug.d/ieee80211/11_fix_wifi_mac
++@@ -94,10 +94,6 @@ case "$board" in
++ 		[ "$PHYNBR" = "0" ] && echo "$addr" > /sys${DEVPATH}/macaddress
++ 		[ "$PHYNBR" = "1" ] && macaddr_setbit_la $(macaddr_add $addr 1) > /sys${DEVPATH}/macaddress
++ 		;;
++-	dlink,aquila-pro-ai-m30-a1)
++-		addr=$(mtd_get_mac_binary "Odm" 0x81)
++-		[ "$PHYNBR" = "1" ] && macaddr_add $addr 3 > /sys${DEVPATH}/macaddress
++-		;;
++ 	glinet,gl-mt6000|\
++ 	glinet,gl-x3000|\
++ 	glinet,gl-xe3000)
++-- 
++2.54.0
++
+-- 
+2.54.0
+

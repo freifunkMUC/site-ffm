@@ -1,0 +1,79 @@
+From fee9079a3126adbe86c327b0c85c85ef4a10f344 Mon Sep 17 00:00:00 2001
+From: Grische <github@grische.xyz>
+Date: Mon, 23 Nov 2026 18:41:32 +0100
+Subject: [PATCH 5/5] patches/openwrt: mediatek: fix D-Link M30 multi-pack MAC
+ addresses
+
+D-Link AQUILA PRO AI M30 units sold in a multi-pack all get the same
+MAC addresses, like the M60. Switch the M30 to the AMIT P-section
+layout, which finds the address by its record ID. Single-pack units
+keep their addresses.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ ...-fix-D-Link-M30-MAC-addresses-on-mul.patch | 53 +++++++++++++++++++
+ 1 file changed, 53 insertions(+)
+ create mode 100644 patches/openwrt/0027-mediatek-filogic-fix-D-Link-M30-MAC-addresses-on-mul.patch
+
+diff --git a/patches/openwrt/0027-mediatek-filogic-fix-D-Link-M30-MAC-addresses-on-mul.patch b/patches/openwrt/0027-mediatek-filogic-fix-D-Link-M30-MAC-addresses-on-mul.patch
+new file mode 100644
+index 00000000..ee261fac
+--- /dev/null
++++ b/patches/openwrt/0027-mediatek-filogic-fix-D-Link-M30-MAC-addresses-on-mul.patch
+@@ -0,0 +1,53 @@
++From 33f6626f0f9ea9df77a2183982f3cc2a41b61152 Mon Sep 17 00:00:00 2001
++From: Grische <github@grische.xyz>
++Date: Fri, 20 Nov 2026 23:30:29 +0100
++Subject: [PATCH] mediatek: filogic: fix D-Link M30 MAC addresses on multi-pack
++ units
++
++D-Link AQUILA PRO AI M30 units sold in a multi-pack come up with the
++same MAC addresses, like the M60. The device tree reads the base
++address from offset 0x81 of the Odm partition. On a multi-pack unit
++the longer model name suffix moves the address to a later offset. On
++the "M30/CP" unit tested in PR #24967 it is at 0x87.
++
++Use the AMIT P-section layout, which finds the address by its CSID.
++Keep the offsets for WAN (+0), LAN and label (+1), 2.4 GHz (+2) and
++5 GHz (+3).
++
++Single-pack units keep their addresses. Multi-pack units get the
++address that is stored for them in Odm.
++
++Fixes: 29cca6cfee4b ("filogic: Add support for D-Link AQUILA PRO AI M30")
++Signed-off-by: Grische <github@grische.xyz>
++Assisted-by: Claude:claude-opus-5-5
++---
++ .../mediatek/dts/mt7981b-dlink-aquila-pro-ai-m30-a1.dts  | 9 ++-------
++ 1 file changed, 2 insertions(+), 7 deletions(-)
++
++diff --git a/target/linux/mediatek/dts/mt7981b-dlink-aquila-pro-ai-m30-a1.dts b/target/linux/mediatek/dts/mt7981b-dlink-aquila-pro-ai-m30-a1.dts
++index cbb32c7b1e..fd610743d6 100644
++--- a/target/linux/mediatek/dts/mt7981b-dlink-aquila-pro-ai-m30-a1.dts
+++++ b/target/linux/mediatek/dts/mt7981b-dlink-aquila-pro-ai-m30-a1.dts
++@@ -205,17 +205,12 @@
++ 				read-only;
++ 
++ 				nvmem-layout {
++-					compatible = "fixed-layout";
++-					#address-cells = <1>;
++-					#size-cells = <1>;
+++					compatible = "amit,psection";
++ 
++-					macaddr_odm: macaddr@81 {
++-						compatible = "mac-base";
++-						reg = <0x81 0x6>;
+++					macaddr_odm: base-mac-address {
++ 						#nvmem-cell-cells = <1>;
++ 					};
++ 				};
++-				
++ 			};
++ 
++ 			partition@69c0000 {
++-- 
++2.54.0
++
+-- 
+2.54.0
+
