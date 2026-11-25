@@ -1,6 +1,6 @@
 GLUON_BUILD_DIR := gluon-build
 GLUON_GIT_URL := https://github.com/ffbs/gluon-parker.git
-GLUON_GIT_REF := 029ea6027c5b88740b653daeb30c002ec15d294c # 2026-09-24 v2025.1.x-parker
+GLUON_GIT_REF := fb24ac429d9033e584a8ba57e759b5748ae23ae2 # 2026-11-22 v2026.1.x-parker
 
 PATCH_DIR := ./patches
 SECRET_KEY_FILE ?= ${HOME}/.gluon-secret-key
