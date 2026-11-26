@@ -36,9 +36,12 @@ if ! compgen -G "${gluon_patch_dir}/*.patch" >/dev/null; then
     exit 1
 fi
 
-# Patches apply in name order. Each patch number must be unique.
-if (cd "${gluon_patch_dir}" && printf '%s\n' *.patch | cut -d- -f1 | uniq -d | grep .); then
-    echo "Patch numbers are not unique."
+# Patches apply in name order. Patches below 1000 keep their names from
+# gluon-v2025.1.x, so they cherry-pick between both branches without a
+# rename. Those names can share a number. Parker-only patches use 1000 and
+# up, and each of these numbers must be unique.
+if (cd "${gluon_patch_dir}" && printf '%s\n' *.patch | cut -d- -f1 | awk '$1 >= 1000' | uniq -d | grep .); then
+    echo "Patch numbers from 1000 up are not unique."
     exit 1
 fi
 
