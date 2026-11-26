@@ -9,13 +9,13 @@ GLUON_TARGETS ?= $(shell cat targets | tr '\n' ' ')
 GLUON_AUTOUPDATER_ENABLED := 1
 
 # Release name of an untagged build. Tag the release with this name.
-GLUON_RELEASE_NEXT ?= v2026.11.1-parker4
+GLUON_RELEASE_NEXT ?= v2026.11.2-parker-next1
 
 ifneq (,$(shell git describe --exact-match --tags 2>/dev/null))
-	GLUON_AUTOUPDATER_BRANCH := parker
+	GLUON_AUTOUPDATER_BRANCH := parker_next
 	GLUON_RELEASE := $(shell git describe --tags 2>/dev/null)
 else
-	GLUON_AUTOUPDATER_BRANCH := parker
+	GLUON_AUTOUPDATER_BRANCH := parker_next
 	EXP_FALLBACK = $(shell date '+%Y%m%d')
 	BUILD_NUMBER ?= exp$(EXP_FALLBACK)
 	GLUON_RELEASE := $(GLUON_RELEASE_NEXT)~$(BUILD_NUMBER)
@@ -53,7 +53,7 @@ else # only run for specific gluon devices (works only for a single GLUON_TARGET
 endif
 
 manifest: build
-	for branch in parker experimental testing stable; do \
+	for branch in parker_next experimental testing stable; do \
 		${GLUON_MAKE} manifest GLUON_AUTOUPDATER_BRANCH=$$branch;\
 	done
 	mv -f ${GLUON_BUILD_DIR}/output/* ./output/

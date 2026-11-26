@@ -4,9 +4,14 @@ This document is for release managers. Nodes change from the normal
 FFMUC firmware to Parker automatically. Users do not do a step. Nodes
 do not need config mode.
 
+This branch is parker-next (Gluon v2026.1.x). Its autoupdater branch is
+`parker_next`. Gluon allows only letters, digits and `_` in a branch name.
+The images are in the `parker-next/sysupgrade` directory of the firmware
+server. A parker-next node does not install a parker (Gluon v2025.1) image.
+
 ## How it works
 
-1. The Parker build makes a manifest for each branch: `parker`,
+1. The Parker build makes a manifest for each branch: `parker_next`,
    `experimental`, `testing` and `stable` (see `make manifest`).
 2. The release managers publish the Parker images and, for example, the
    Parker `stable.manifest` in the `stable` directory of the firmware
@@ -21,14 +26,14 @@ do not need config mode.
    | Mesh VPN on or off, bandwidth limit, wired mesh | Kept by Gluon. |
    | Domain (for example `ffmuc_muc_cty`) | Each old domain code is an alias of a Parker domain. |
    | WireGuard key | `ff-mesh-vpn-parker-migrate` moves it to Parker. The broker sees the same public key. |
-   | Autoupdater branch | Set to `parker` by `update_channel` in `site.conf`. |
+   | Autoupdater branch | Set to `parker_next` by `update_channel` in `site.conf`. |
 
 ```mermaid
 flowchart LR
     R[Parker release] -->|stable.manifest,<br/>signed by stable signers| S[(Firmware server<br/>stable/sysupgrade)]
     N[Node on normal firmware,<br/>branch stable] -->|autoupdater| S
     S --> P[Node on Parker,<br/>same key and settings]
-    P -->|autoupdater| B[(parker/sysupgrade)]
+    P -->|autoupdater| B[(parker-next/sysupgrade)]
 ```
 
 ## One mesh for all domains
