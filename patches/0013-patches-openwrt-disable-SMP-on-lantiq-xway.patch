@@ -1,4 +1,4 @@
-From 0b42305f28915db0a553180cad6dcb9ba86a0d43 Mon Sep 17 00:00:00 2001
+From dae2120209f1aa92da552ff1ecae9e716bf76497 Mon Sep 17 00:00:00 2001
 From: Grische <github@grische.xyz>
 Date: Mon, 9 Nov 2026 01:45:30 +0100
 Subject: [PATCH] patches/openwrt: disable SMP on lantiq xway
@@ -8,20 +8,23 @@ it enabled again. A FRITZ!Box 7312 (AR9) on OpenWrt 24.10 reboots about
 1.6 times per hour, so disable SMP to test this as the cause.
 
 Assisted-by: Claude:claude-opus-5-5
+
+parker-next: ported to OpenWrt 25.12 (kernel 6.12).
 ---
- ...0023-lantiq-xway-disable-SMP-support.patch | 101 ++++++++++++++++++
- 1 file changed, 101 insertions(+)
+ ...0023-lantiq-xway-disable-SMP-support.patch | 109 ++++++++++++++++++
+ 1 file changed, 109 insertions(+)
  create mode 100644 patches/openwrt/0023-lantiq-xway-disable-SMP-support.patch
 
 diff --git a/patches/openwrt/0023-lantiq-xway-disable-SMP-support.patch b/patches/openwrt/0023-lantiq-xway-disable-SMP-support.patch
 new file mode 100644
-index 00000000..e77d8eab
+index 0000000..5654079
 --- /dev/null
 +++ b/patches/openwrt/0023-lantiq-xway-disable-SMP-support.patch
-@@ -0,0 +1,101 @@
+@@ -0,0 +1,109 @@
++From 1a3fc267099f5a212abd6228c7f9260aff805078 Mon Sep 17 00:00:00 2001
 +From: Grische <github@grische.xyz>
 +Date: Mon, 9 Nov 2026 01:45:30 +0100
-+Subject: lantiq: xway: disable SMP support
++Subject: [PATCH 5/5] lantiq: xway: disable SMP support
 +
 +OpenWrt 23.05 dropped SMP on the xway subtarget in commit 64d8c277cde0
 +("Revert "lantiq: xway: kernel: enable SMP support""). That revert was
@@ -37,11 +40,14 @@ index 00000000..e77d8eab
 +reboots is not confirmed yet, so this change also serves as the test.
 +
 +Assisted-by: Claude:claude-opus-5-5
++---
++ target/linux/lantiq/xway/config-6.12 | 32 +---------------------------
++ 1 file changed, 1 insertion(+), 31 deletions(-)
 +
-+diff --git a/target/linux/lantiq/xway/config-6.6 b/target/linux/lantiq/xway/config-6.6
-+index a51e0f9c2de3ddb4be07d54528bf229461cb13f3..2b6f0c7888c6c9fc5e45ae4a9e2d78a1ae1c1e55 100644
-+--- a/target/linux/lantiq/xway/config-6.6
-++++ b/target/linux/lantiq/xway/config-6.6
++diff --git a/target/linux/lantiq/xway/config-6.12 b/target/linux/lantiq/xway/config-6.12
++index 955abbe..4a47c41 100644
++--- a/target/linux/lantiq/xway/config-6.12
+++++ b/target/linux/lantiq/xway/config-6.12
 +@@ -2,32 +2,21 @@ CONFIG_ADM6996_PHY=y
 + CONFIG_AR8216_PHY=y
 + CONFIG_AT803X_PHY=y
@@ -76,12 +82,13 @@ index 00000000..e77d8eab
 + CONFIG_MTD_NAND_CORE=y
 + CONFIG_MTD_NAND_ECC=y
 + CONFIG_MTD_NAND_ECC_SW_HAMMING=y
-+@@ -37,43 +26,24 @@ CONFIG_MTD_UBI=y
++@@ -37,44 +26,25 @@ CONFIG_MTD_UBI=y
 + CONFIG_MTD_UBI_BEB_LIMIT=20
 + CONFIG_MTD_UBI_BLOCK=y
 + CONFIG_MTD_UBI_WL_THRESHOLD=4096
 +-CONFIG_NEED_SRCU_NMI_SAFE=y
 +-CONFIG_NET_FLOW_LIMIT=y
++ # CONFIG_NET_SWITCHDEV is not set
 + CONFIG_NLS=y
 +-CONFIG_NR_CPUS=2
 +-CONFIG_PADATA=y
@@ -120,6 +127,9 @@ index 00000000..e77d8eab
 + CONFIG_XXHASH=y
 + CONFIG_ZLIB_DEFLATE=y
 + CONFIG_ZLIB_INFLATE=y
++-- 
++2.56.1
++
 -- 
-2.54.0
+2.56.1
 

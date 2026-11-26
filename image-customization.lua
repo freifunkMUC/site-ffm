@@ -29,7 +29,6 @@ packages{
     'ffmuc-ebpf-clat',
     'ffmuc-ipv6-ra-filter',
     '-gluon-ebtables-limit-arp',
-    '-gluon-radv-filterd',
     'iwinfo',
     'respondd-module-airtime',
 }
@@ -94,7 +93,7 @@ pkgs_usb_storage = {
     'block-mount',
     'blkid',
     'kmod-fs-ext4',
-    'kmod-fs-ntfs',
+    'kmod-fs-ntfs3',
     'kmod-fs-vfat',
     'kmod-usb-storage',
     'kmod-usb-storage-extras',-- Card Readers
@@ -118,6 +117,7 @@ pkgs_usb_net = {
     'kmod-usb-net-asix-ax88179',
     'kmod-usb-net-cdc-eem',
     'kmod-usb-net-cdc-ether',
+    'kmod-usb-net-cdc-ncm',
     'kmod-usb-net-cdc-subset',
     'kmod-usb-net-dm9601-ether',
     'kmod-usb-net-hso',
@@ -211,14 +211,6 @@ if include_usb then
     packages(pkgs_usb_net)
     packages(pkgs_usb_serial)
     packages(pkgs_usb_storage)
-end
-
--- device has no reset button and requires a special package to go into setup mode
--- https://github.com/freifunk-gluon/community-packages/tree/master/ffda-network-setup-mode
-if device({
-    'zyxel-nwa55axe',
-}) then
-    packages {'ffda-network-setup-mode'}
 end
 
 if target('x86', '64') then

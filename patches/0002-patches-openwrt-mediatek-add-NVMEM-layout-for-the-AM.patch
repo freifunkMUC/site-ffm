@@ -1,7 +1,7 @@
-From e0d93862fda4e9be34df0702319a060d052bcbd2 Mon Sep 17 00:00:00 2001
+From 50fd1fdc8b79ce5086190a696eadc7e482e82926 Mon Sep 17 00:00:00 2001
 From: Grische <github@grische.xyz>
 Date: Thu, 19 Nov 2026 18:19:19 +0100
-Subject: [PATCH 2/3] patches/openwrt: mediatek: add NVMEM layout for the AMIT
+Subject: [PATCH] patches/openwrt: mediatek: add NVMEM layout for the AMIT
  P-section
 
 D-Link devices built by AMIT keep their factory data in the Odm
@@ -10,21 +10,23 @@ that looks up the base MAC address by its record ID and enable it on
 filogic.
 
 Assisted-by: Claude:claude-opus-5-5
+
+parker-next: ported to OpenWrt 25.12 (kernel 6.12).
 ---
- ...EM-layout-driver-for-the-AMIT-P-sect.patch | 386 ++++++++++++++++++
- 1 file changed, 386 insertions(+)
+ ...EM-layout-driver-for-the-AMIT-P-sect.patch | 385 ++++++++++++++++++
+ 1 file changed, 385 insertions(+)
  create mode 100644 patches/openwrt/0024-mediatek-add-NVMEM-layout-driver-for-the-AMIT-P-sect.patch
 
 diff --git a/patches/openwrt/0024-mediatek-add-NVMEM-layout-driver-for-the-AMIT-P-sect.patch b/patches/openwrt/0024-mediatek-add-NVMEM-layout-driver-for-the-AMIT-P-sect.patch
 new file mode 100644
-index 00000000..d39d716d
+index 0000000..2d9ec1c
 --- /dev/null
 +++ b/patches/openwrt/0024-mediatek-add-NVMEM-layout-driver-for-the-AMIT-P-sect.patch
-@@ -0,0 +1,386 @@
-+From cd80074e88d80b1be2551110bfe90fd66fb9c1e8 Mon Sep 17 00:00:00 2001
+@@ -0,0 +1,385 @@
++From 97db13bec73c344444188d00bbe072a4df1bb15b Mon Sep 17 00:00:00 2001
 +From: Grische <github@grische.xyz>
 +Date: Wed, 18 Nov 2026 22:21:54 +0100
-+Subject: [PATCH] mediatek: add NVMEM layout driver for the AMIT P-section
++Subject: [PATCH 1/5] mediatek: add NVMEM layout driver for the AMIT P-section
 +
 +The D-Link devices built by AMIT keep their factory data in the "Odm"
 +partition, which the OEM firmware calls the P-section. It consists of
@@ -50,31 +52,31 @@ index 00000000..d39d716d
 +Signed-off-by: Grische <github@grische.xyz>
 +Assisted-by: Claude:claude-fable-5-2 Claude:claude-opus-5-5
 +---
-+ target/linux/mediatek/filogic/config-6.6      |   1 +
-+ target/linux/mediatek/mt7622/config-6.6       |   1 +
-+ target/linux/mediatek/mt7623/config-6.6       |   1 +
-+ target/linux/mediatek/mt7629/config-6.6       |   1 +
++ target/linux/mediatek/filogic/config-6.12     |   1 +
++ target/linux/mediatek/mt7622/config-6.12      |   1 +
++ target/linux/mediatek/mt7623/config-6.12      |   1 +
++ target/linux/mediatek/mt7629/config-6.12      |   1 +
 + ...-nvmem-add-layout-for-AMIT-P-section.patch | 292 ++++++++++++++++++
 + 5 files changed, 296 insertions(+)
-+ create mode 100644 target/linux/mediatek/patches-6.6/451-nvmem-add-layout-for-AMIT-P-section.patch
++ create mode 100644 target/linux/mediatek/patches-6.12/451-nvmem-add-layout-for-AMIT-P-section.patch
 +
-+diff --git a/target/linux/mediatek/filogic/config-6.6 b/target/linux/mediatek/filogic/config-6.6
-+index 607d1b3c6f..69dacb8368 100644
-+--- a/target/linux/mediatek/filogic/config-6.6
-++++ b/target/linux/mediatek/filogic/config-6.6
-+@@ -316,6 +316,7 @@ CONFIG_NVMEM_AN8855_EFUSE=y
++diff --git a/target/linux/mediatek/filogic/config-6.12 b/target/linux/mediatek/filogic/config-6.12
++index 1fae94f..d2e3a39 100644
++--- a/target/linux/mediatek/filogic/config-6.12
+++++ b/target/linux/mediatek/filogic/config-6.12
++@@ -337,6 +337,7 @@ CONFIG_NVMEM_AN8855_EFUSE=y
 + CONFIG_NVMEM_BLOCK=y
 + CONFIG_NVMEM_LAYOUTS=y
 + CONFIG_NVMEM_LAYOUT_ADTRAN=y
 ++CONFIG_NVMEM_LAYOUT_AMIT_PSECTION=y
++ CONFIG_NVMEM_LAYOUT_U_BOOT_ENV=y
 + CONFIG_NVMEM_MTK_EFUSE=y
 + CONFIG_NVMEM_SYSFS=y
-+ CONFIG_OF=y
-+diff --git a/target/linux/mediatek/mt7622/config-6.6 b/target/linux/mediatek/mt7622/config-6.6
-+index bdfb06af76..fd4a91a9ca 100644
-+--- a/target/linux/mediatek/mt7622/config-6.6
-++++ b/target/linux/mediatek/mt7622/config-6.6
-+@@ -317,6 +317,7 @@ CONFIG_NVMEM=y
++diff --git a/target/linux/mediatek/mt7622/config-6.12 b/target/linux/mediatek/mt7622/config-6.12
++index 55bef84..19c02ac 100644
++--- a/target/linux/mediatek/mt7622/config-6.12
+++++ b/target/linux/mediatek/mt7622/config-6.12
++@@ -330,6 +330,7 @@ CONFIG_NVMEM=y
 + CONFIG_NVMEM_BLOCK=y
 + CONFIG_NVMEM_LAYOUTS=y
 + CONFIG_NVMEM_LAYOUT_ADTRAN=y
@@ -82,11 +84,11 @@ index 00000000..d39d716d
 + CONFIG_NVMEM_MTK_EFUSE=y
 + CONFIG_NVMEM_SYSFS=y
 + CONFIG_OF=y
-+diff --git a/target/linux/mediatek/mt7623/config-6.6 b/target/linux/mediatek/mt7623/config-6.6
-+index 8fd0f3a599..1e0b6002ad 100644
-+--- a/target/linux/mediatek/mt7623/config-6.6
-++++ b/target/linux/mediatek/mt7623/config-6.6
-+@@ -425,6 +425,7 @@ CONFIG_NR_CPUS=4
++diff --git a/target/linux/mediatek/mt7623/config-6.12 b/target/linux/mediatek/mt7623/config-6.12
++index e55d2d4..bc7afe0 100644
++--- a/target/linux/mediatek/mt7623/config-6.12
+++++ b/target/linux/mediatek/mt7623/config-6.12
++@@ -468,6 +468,7 @@ CONFIG_NR_CPUS=4
 + CONFIG_NVMEM=y
 + CONFIG_NVMEM_LAYOUTS=y
 + # CONFIG_NVMEM_LAYOUT_ADTRAN is not set
@@ -94,24 +96,24 @@ index 00000000..d39d716d
 + CONFIG_NVMEM_MTK_EFUSE=y
 + # CONFIG_NVMEM_SPMI_SDAM is not set
 + CONFIG_NVMEM_SYSFS=y
-+diff --git a/target/linux/mediatek/mt7629/config-6.6 b/target/linux/mediatek/mt7629/config-6.6
-+index 661f31ced6..db875785f7 100644
-+--- a/target/linux/mediatek/mt7629/config-6.6
-++++ b/target/linux/mediatek/mt7629/config-6.6
-+@@ -239,6 +239,7 @@ CONFIG_NR_CPUS=2
-+ CONFIG_NVMEM=y
++diff --git a/target/linux/mediatek/mt7629/config-6.12 b/target/linux/mediatek/mt7629/config-6.12
++index a27e1f1..da8c5c2 100644
++--- a/target/linux/mediatek/mt7629/config-6.12
+++++ b/target/linux/mediatek/mt7629/config-6.12
++@@ -247,6 +247,7 @@ CONFIG_NVMEM=y
 + CONFIG_NVMEM_LAYOUTS=y
++ CONFIG_NVMEM_LAYOUT_ASCII_ENV=y
 + # CONFIG_NVMEM_LAYOUT_ADTRAN is not set
 ++# CONFIG_NVMEM_LAYOUT_AMIT_PSECTION is not set
 + # CONFIG_NVMEM_MTK_EFUSE is not set
 + CONFIG_NVMEM_SYSFS=y
 + CONFIG_OF=y
-+diff --git a/target/linux/mediatek/patches-6.6/451-nvmem-add-layout-for-AMIT-P-section.patch b/target/linux/mediatek/patches-6.6/451-nvmem-add-layout-for-AMIT-P-section.patch
++diff --git a/target/linux/mediatek/patches-6.12/451-nvmem-add-layout-for-AMIT-P-section.patch b/target/linux/mediatek/patches-6.12/451-nvmem-add-layout-for-AMIT-P-section.patch
 +new file mode 100644
-+index 0000000000..123ed86c5e
++index 0000000..123ed86
 +--- /dev/null
-++++ b/target/linux/mediatek/patches-6.6/451-nvmem-add-layout-for-AMIT-P-section.patch
-+@@ -0,0 +1,292 @@
+++++ b/target/linux/mediatek/patches-6.12/451-nvmem-add-layout-for-AMIT-P-section.patch
++@@ -0,0 +1,291 @@
 ++From: Grische <github@grische.xyz>
 ++Date: Thu, 19 Nov 2026 00:29:23 +0100
 ++Subject: [PATCH] nvmem: layouts: Add AMIT P-section layout driver
@@ -182,11 +184,10 @@ index 00000000..d39d716d
 ++ 	select CRC8
 ++--- a/drivers/nvmem/layouts/Makefile
 +++++ b/drivers/nvmem/layouts/Makefile
-++@@ -7,3 +7,4 @@ obj-$(CONFIG_NVMEM_LAYOUT_SL28_VPD) += s
-++ obj-$(CONFIG_NVMEM_LAYOUT_ONIE_TLV) += onie-tlv.o
-++ obj-$(CONFIG_NVMEM_LAYOUT_U_BOOT_ENV) += u-boot-env.o
+++@@ -10,2 +10,3 @@ obj-$(CONFIG_NVMEM_LAYOUT_U_BOOT_ENV) += u-boot-env.o
 ++ obj-$(CONFIG_NVMEM_LAYOUT_ADTRAN) += adtran.o
 +++obj-$(CONFIG_NVMEM_LAYOUT_AMIT_PSECTION) += amit-psection.o
+++ obj-$(CONFIG_NVMEM_LAYOUT_ASCII_ENV) += ascii-env.o
 ++--- /dev/null
 +++++ b/drivers/nvmem/layouts/amit-psection.c
 ++@@ -0,0 +1,214 @@
@@ -405,8 +406,8 @@ index 00000000..d39d716d
 +++MODULE_LICENSE("GPL");
 +++MODULE_DESCRIPTION("NVMEM layout driver for the AMIT P-section");
 +-- 
-+2.54.0
++2.56.1
 +
 -- 
-2.54.0
+2.56.1
 

@@ -1,0 +1,46 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: awlx <6527744+awlx@users.noreply.github.com>
+Date: Wed, 25 Nov 2026 13:44:16 +0100
+Subject: [PATCH] build: drop site negations that only cancel feature packages
+
+With apk (OpenWrt 25.12) each "-pkg" entry of a device goes into one
+"apk del" call when the image is made. If a site negates a package
+that only a feature selects, this package is never built. Then
+"apk del" stops with "No such package" and removes nothing. On
+devices that change kmod-ath10k-ct to kmod-ath10k (ipq40xx-generic),
+the "apk add" then fails because both packages own the same files.
+
+A site negation that cancels a feature package now only removes the
+package from the selection. It does not go into the removal list.
+---
+ scripts/target_config_lib.lua | 14 ++++++++++++--
+ 1 file changed, 12 insertions(+), 2 deletions(-)
+
+diff --git a/scripts/target_config_lib.lua b/scripts/target_config_lib.lua
+index adf58a6e1498..347e5b7d0a15 100644
+--- a/scripts/target_config_lib.lua
++++ b/scripts/target_config_lib.lua
+@@ -127,8 +127,18 @@ local function site_specific_packages(dev_info)
+ 	-- Read list of packages from site
+ 	site_packages = site_selections['packages']
+ 
+-	-- Concat feature-packages with site-packages
+-	local pkgs = concat_list(feature_inherited_pkgs, site_packages)
++	-- A site negation that only cancels a feature package is dropped here.
++	-- Else it reaches "apk del" for a package that was never built, and apk
++	-- then refuses all removals of the image (e.g. kmod-ath10k-ct).
++	local feature_pkg_set = {}
++	for _, pkg in ipairs(feature_inherited_pkgs) do
++		feature_pkg_set[pkg] = true
++	end
++	local pkgs = feature_inherited_pkgs
++	for _, pkg in ipairs(site_packages) do
++		local cancels_feature = string.sub(pkg, 1, 1) == '-' and feature_pkg_set[strip_neg(pkg)]
++		pkgs = append_to_list(pkgs, pkg, not cancels_feature)
++	end
+ 
+ 	-- Negations for the resulting package-list are dealt with in the calling function
+ 	return pkgs
+-- 
+2.56.1
+
