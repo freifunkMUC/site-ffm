@@ -233,6 +233,11 @@ if target('ramips', 'mt7621') or target('mediatek', 'mt7622') or target('mediate
     }
 end
 
+-- delete the duplicate primary MAC of multi-pack D-Link AQUILA PRO AI M30/M60 units
+if target('mediatek', 'filogic') then
+    packages {'ffmuc-dlink-aquila-mac-fix'}
+end
+
 -- disable devices with not enough flash
 if device({
         'tp-link-archer-c6-v2-eu-ru-jp',
