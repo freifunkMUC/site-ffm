@@ -9,7 +9,7 @@
 GLUON_SITE_FEEDS='community'
 
 PACKAGES_COMMUNITY_REPO=https://github.com/freifunkMUC/community-packages.git
-PACKAGES_COMMUNITY_COMMIT=29194c0cba5f892a63162b3bb61b52cb1921293b
+PACKAGES_COMMUNITY_COMMIT=f1bbc20a1c53c5f1370f2148a74e7be74066cb6a
 # TODO: back to parker-release-2026.11 after community-packages#75 merges
-PACKAGES_COMMUNITY_BRANCH=awlx-ebpf-clat-apk-depends
+PACKAGES_COMMUNITY_BRANCH=awlx-parker-next-standby-carry
 
