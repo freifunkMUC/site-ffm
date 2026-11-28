@@ -12,10 +12,10 @@ GLUON_AUTOUPDATER_ENABLED := 1
 GLUON_RELEASE_NEXT ?= v2026.11.2-parker-next1
 
 ifneq (,$(shell git describe --exact-match --tags 2>/dev/null))
-	GLUON_AUTOUPDATER_BRANCH := parker_next
+	GLUON_AUTOUPDATER_BRANCH := stable
 	GLUON_RELEASE := $(shell git describe --tags 2>/dev/null)
 else
-	GLUON_AUTOUPDATER_BRANCH := parker_next
+	GLUON_AUTOUPDATER_BRANCH := experimental
 	EXP_FALLBACK = $(shell date '+%Y%m%d')
 	BUILD_NUMBER ?= exp$(EXP_FALLBACK)
 	GLUON_RELEASE := $(GLUON_RELEASE_NEXT)~$(BUILD_NUMBER)
@@ -52,6 +52,9 @@ else # only run for specific gluon devices (works only for a single GLUON_TARGET
 	${GLUON_MAKE} download all GLUON_DEVICES="${GLUON_DEVICES}" GLUON_TARGET="${GLUON_TARGETS}"
 endif
 
+# The parker_next manifest is for the transition only. Nodes on the old
+# parker_next branch need it to get this release. Then update_channel in
+# site.conf sets them to experimental.
 manifest: build
 	for branch in parker_next experimental testing stable; do \
 		${GLUON_MAKE} manifest GLUON_AUTOUPDATER_BRANCH=$$branch;\
